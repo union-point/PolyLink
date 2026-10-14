@@ -78,7 +78,12 @@ sections and repeated biography text; these are known defects, not extra domain 
   removes the feed record. Public user 6 loads its own post and contact navigates to
   `message.html?room=room-2`; missing IDs display a recoverable state. Duplicate
   certificate sections and hardcoded owner records were removed.
-- Pending migrations: forum/search, messaging,
+- Forum migrated with separate list/create/topic controllers. Browser-verified six
+  seeded topics, classification filtering, creation returning to the forum, ID-based
+  topic navigation, persistent replies/helpful likes, sorting and safe linked replies.
+  Link formatting uses an inline field because browser prompts are unavailable in
+  the in-app browser; its saved link survives reload.
+- Pending migrations: search, messaging,
   settings, shared behavior and removal of obsolete API/global fixtures.
 
 ## Run
