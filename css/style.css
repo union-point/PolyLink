@@ -187,7 +187,8 @@ nav {
   background: rgba(255, 255, 255, 0.2);
 }
 
-.dropdown-container:hover .dropdown-menu {
+.dropdown-container:hover .dropdown-menu,
+.dropdown-container.menu-open .dropdown-menu {
   display: block;
 }
 

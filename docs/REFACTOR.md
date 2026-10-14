@@ -103,7 +103,11 @@ sections and repeated biography text; these are known defects, not extra domain 
   Language is a saved preference; translation catalogs and actual notification delivery
   remain backend/product requirements. Successful account deletion and credential changes
   still need final lifecycle verification.
-- Pending migrations: shared behavior and removal of obsolete API/global fixtures.
+- Shared behavior migrated: one theme/navigation/logout initializer, keyboard-accessible
+  FAQ and tutorial controls. Browser-verified FAQ Enter toggle, retained support draft
+  with explicit unavailable feedback, tutorial category filtering and unavailable-video
+  feedback. No support submission or playable video is falsely reported as successful.
+- Pending cleanup: obsolete API/global fixtures and final HTTP/contract audit.
 
 ## Run
 

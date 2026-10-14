@@ -103,6 +103,15 @@ export function confirmAction(message) {
 
 export async function bootstrap({ protectedPage = true, requireOnboarding = true } = {}) {
   initializeTheme();
+  document.querySelectorAll('.dropdown-container').forEach(container => {
+    const button = container.querySelector('.dropdown-btn'), menu = container.querySelector('.dropdown-menu');
+    if (!button || !menu) return;
+    button.setAttribute('aria-label', 'Բացել ընտրացանկը'); button.setAttribute('aria-expanded', 'false');
+    const close = () => { container.classList.remove('menu-open'); button.setAttribute('aria-expanded', 'false'); };
+    button.onclick = () => { const expanded = container.classList.toggle('menu-open'); button.setAttribute('aria-expanded', String(expanded)); };
+    container.onkeydown = event => { if (event.key === 'Escape') { close(); button.focus(); } };
+    document.addEventListener('click', event => { if (!container.contains(event.target)) close(); });
+  });
   let leaving = false;
   document.addEventListener('input', event => { event.target.classList?.remove('error'); event.target.removeAttribute?.('aria-invalid'); });
   document.querySelectorAll('nav a[href="login.html"]').forEach(link => link.addEventListener('click', async event => {
