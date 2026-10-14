@@ -13,7 +13,8 @@ export function email(value) {
   return text;
 }
 export function password(value) {
-  const text = required(value, 'password', 128);
+  const text = String(value ?? '');
+  if (!text || text.length > 128) throw new DataError('VALIDATION', 'Խնդրում ենք ստուգել գաղտնաբառը։', { password: 'Պարտադիր դաշտ (առավելագույնը 128 նիշ)' });
   if (text.length < 8 || !/[A-Z]/.test(text) || !/\d/.test(text) || !/[^\w\s]/.test(text)) throw new DataError('VALIDATION', 'Գաղտնաբառը պետք է պարունակի առնվազն 8 նիշ, մեծատառ, թիվ և հատուկ նիշ։', { password: 'Թույլ գաղտնաբառ' });
   return text;
 }

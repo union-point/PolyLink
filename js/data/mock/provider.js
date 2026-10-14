@@ -134,7 +134,7 @@ const operations = {
   'auth.resetPassword': (state, data) => {
     const item = challenge(state, data.recoveryToken, 'recovery');
     if (!item.verified || !item.userId) throw new DataError('FORBIDDEN', 'Նախ վավերացրեք վերականգնման կոդը։');
-    state.credentials[item.userId] = data.digest; item.consumed = true;
+    state.credentials[item.userId] = data.digest; find(state.users, item.userId).passwordChangedAt = now(); item.consumed = true;
     state.challenges.filter(record => record.userId === item.userId).forEach(record => { record.consumed = true; });
     state.sessionUserId = null;
     return null;
@@ -250,7 +250,7 @@ const operations = {
     if (state.users.some(other => other.id !== user.id && other.email === data.email)) throw new DataError('CONFLICT', 'Տվյալ էլ․ փոստն արդեն գրանցված է։');
     user.email = data.email; state.credentials[user.id] = data.newDigest; return profile(state, user);
   },
-  'settings.changePassword': (state, data) => { const user = me(state); if (state.credentials[user.id] !== data.oldDigest) throw new DataError('UNAUTHORIZED', 'Սխալ գաղտնաբառ։'); state.credentials[user.id] = data.newDigest; state.challenges.filter(item => item.userId === user.id).forEach(item => { item.consumed = true; }); return null; },
+  'settings.changePassword': (state, data) => { const user = me(state); if (state.credentials[user.id] !== data.oldDigest) throw new DataError('UNAUTHORIZED', 'Սխալ գաղտնաբառ։'); state.credentials[user.id] = data.newDigest; user.passwordChangedAt = now(); state.challenges.filter(item => item.userId === user.id).forEach(item => { item.consumed = true; }); return null; },
   'settings.deactivate': (state, data) => { const user = me(state); if (state.credentials[user.id] !== data.digest) throw new DataError('UNAUTHORIZED', 'Սխալ գաղտնաբառ։'); user.status = 'deactivated'; state.sessionUserId = null; return null; },
   'settings.deleteAccount': (state, data) => {
     const user = me(state), id = user.id;
@@ -271,7 +271,7 @@ const operations = {
   },
   'settings.export': state => {
     const user = me(state), id = user.id;
-    return { exportedAt: now(), user: profile(state, user), settings: state.settings[id], posts: state.posts.filter(item => item.userId === id), comments: state.comments.filter(item => item.userId === id), topics: state.topics.filter(item => item.userId === id), replies: state.replies.filter(item => item.userId === id).map(({ likes, ...item }) => item), messages: state.messages.filter(item => item.senderId === id).map(({ attachment, ...item }) => ({ ...item, attachment: attachment ? { name: attachment.name, type: attachment.type } : null })) };
+    return { exportedAt: now(), user: profile(state, user), settings: state.settings[id], posts: state.posts.filter(item => item.userId === id), comments: state.comments.filter(item => item.userId === id), topics: state.topics.filter(item => item.userId === id), replies: state.replies.filter(item => item.userId === id).map(({ likes, ...item }) => item), messages: state.messages.filter(item => item.senderId === id) };
   },
 };
 
@@ -332,6 +332,13 @@ export function createMockProvider() {
     }, { write });
     if (result instanceof DataError) throw result;
     if (write) { const event = { operation, at: now() }; notify(event); channel?.postMessage(event); }
+    if (operation === 'settings.export') {
+      const media = await transaction(state => state.media.filter(item => item.userId === me(state).id));
+      const assets = await Promise.all(media.map(item => new Promise((resolve, reject) => {
+        const reader = new FileReader(); reader.onload = () => resolve({ id: item.id, type: item.blob.type, dataUrl: reader.result }); reader.onerror = () => reject(new DataError('STORAGE', 'Չհաջողվեց արտահանել պատկերները։')); reader.readAsDataURL(item.blob);
+      })));
+      return { ...result, media: assets };
+    }
     return hydrate(result);
   }
   return {

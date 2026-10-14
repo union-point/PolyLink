@@ -95,8 +95,15 @@ sections and repeated biography text; these are known defects, not extra domain 
   cancellation and per-user hiding, group history/send/reload and emoji insertion.
   Mock incoming messages respect blocking; a deleted participant leaves a read-only
   conversation. Confirmation overlays work without native prompts.
-- Pending migrations:
-  settings, shared behavior and removal of obsolete API/global fixtures.
+- Settings migrated to durable preferences and asynchronous account services. Browser-verified
+  notification/visibility/language/theme reload persistence, failed preference rollback,
+  downloadable owner-only JSON export without credential/challenge data, incorrect-password
+  account feedback and deactivate/delete cancellation. Public profiles render email only
+  when the provider includes it. Exports preserve stable media references and image data.
+  Language is a saved preference; translation catalogs and actual notification delivery
+  remain backend/product requirements. Successful account deletion and credential changes
+  still need final lifecycle verification.
+- Pending migrations: shared behavior and removal of obsolete API/global fixtures.
 
 ## Run
 

@@ -16,6 +16,12 @@ start(async () => {
   main.querySelector('.fullname').textContent = user.name;
   main.querySelector('.job-title').textContent = user.jobTitle;
   main.querySelector('.desc p').textContent = user.description;
+  if (user.email) {
+    const address = document.createElement('a');
+    address.href = `mailto:${encodeURIComponent(user.email)}`;
+    address.textContent = user.email;
+    main.querySelector('.desc').appendChild(address);
+  }
   const avatar = document.createElement('img'); avatar.className = 'profile-photo'; avatar.src = safeUrl(user.avatar || 'image/logo.png', { image: true }); avatar.alt = user.name;
   document.querySelector('.profile-photo-area > .profile-photo').replaceChildren(avatar);
   document.querySelector('.banner-photo').style.backgroundImage = `url("${safeUrl(user.cover, { image: true })}")`;
