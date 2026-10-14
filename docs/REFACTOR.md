@@ -86,6 +86,9 @@ sections and repeated biography text; these are known defects, not extra domain 
 - Search migrated. Browser-verified six seeded people, text query, combined
   specialization/institute/graduation-year filters, empty results, and correct
   `user.html?id=6` navigation. Contact actions share conversation services.
+- Session/navigation lifecycle verified: ending the mock session in the developer
+  tab redirects an open protected page to login; Back cannot reopen it while signed
+  out. Session/reset signals and cached-page verification are centralized.
 - Pending migrations: messaging,
   settings, shared behavior and removal of obsolete API/global fixtures.
 

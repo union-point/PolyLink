@@ -30,8 +30,9 @@ export function initializeCodeInputs(purpose, onVerified) {
     resend.style.opacity = left || resending ? '0.5' : '1';
     resend.setAttribute('aria-disabled', String(Boolean(left || resending)));
   }
-  updateTimer(); const interval = setInterval(updateTimer, 1000);
-  window.addEventListener('pagehide', () => clearInterval(interval), { once: true });
+  updateTimer(); let interval = setInterval(updateTimer, 1000);
+  window.addEventListener('pagehide', () => clearInterval(interval));
+  window.addEventListener('pageshow', event => { if (event.persisted) { updateTimer(); interval = setInterval(updateTimer, 1000); } });
   resend.onclick = async () => {
     if (resending || context.resendAt > Date.now()) return;
     resending = true; updateTimer();

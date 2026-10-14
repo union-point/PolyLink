@@ -94,15 +94,27 @@ export function confirmAction(message) {
 
 export async function bootstrap({ protectedPage = true, requireOnboarding = true } = {}) {
   initializeTheme();
+  let leaving = false;
   document.addEventListener('input', event => { event.target.classList?.remove('error'); event.target.removeAttribute?.('aria-invalid'); });
   document.querySelectorAll('nav a[href="login.html"]').forEach(link => link.addEventListener('click', async event => {
     event.preventDefault();
-    await pending(null, document.querySelector('main') || document.body, async () => { await auth.logout(); location.href = 'login.html'; });
+    leaving = true;
+    const done = await pending(null, document.querySelector('main') || document.body, async () => { await auth.logout(); location.href = 'login.html'; });
+    if (!done) leaving = false;
   }));
   if (!protectedPage) return null;
   const user = await auth.me();
   if (!user && protectedPage) { location.replace('login.html'); return null; }
   if (user && protectedPage && requireOnboarding && !user.onboardingComplete) { location.replace('profile_info.html'); return null; }
+  const validateSession = (nextUser, error, event) => {
+    if (leaving) return;
+    if (error) { showError(document.querySelector('main') || document.body, error); return; }
+    if (!nextUser) { leaving = true; location.replace('login.html'); }
+    else if (nextUser.id !== user.id || event?.operation === 'reset') { leaving = true; location.reload(); }
+  };
+  const unsubscribe = await auth.subscribeSession(validateSession);
+  window.addEventListener('pagehide', event => { if (!event.persisted) unsubscribe(); });
+  window.addEventListener('pageshow', event => { if (event.persisted) { leaving = false; auth.me().then(next => validateSession(next)).catch(error => validateSession(null, error)); } });
   return user;
 }
 
