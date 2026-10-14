@@ -101,8 +101,11 @@ sections and repeated biography text; these are known defects, not extra domain 
   account feedback and deactivate/delete cancellation. Public profiles render email only
   when the provider includes it. Exports preserve stable media references and image data.
   Language is a saved preference; translation catalogs and actual notification delivery
-  remain backend/product requirements. Successful account deletion and credential changes
-  still need final lifecycle verification.
+  remain backend/product requirements. Successful credential/email changes, privacy filtering, deactivate/reactivate and account
+  deletion were verified against the real provider using a disposable in-memory transaction
+  adapter, including old credential rejection, raw password whitespace, deletion graph,
+  surviving other-user data and read-only conversations. This does not replace browser
+  persistence checks, which were performed separately.
 - Shared behavior migrated: one theme/navigation/logout initializer, keyboard-accessible
   FAQ and tutorial controls. Browser-verified FAQ Enter toggle, retained support draft
   with explicit unavailable feedback, tutorial category filtering and unavailable-video
@@ -122,3 +125,18 @@ From the repository root: `python3 server.py`, then open `http://localhost:8000/
 To avoid an occupied port: `python3 server.py --port 8001`. The development server
 uses `Cache-Control: no-store` so imported modules refresh during manual verification.
 ES modules must be served over HTTP rather than opened as `file://` URLs.
+
+## Final verification and boundaries
+
+- Initial page reads disable the existing shell until ready; failed initialization exposes
+  a retry control. Browser-verified injected profile-load failure and successful retry.
+- All live JavaScript modules pass syntax checks; local imports and HTML script sources
+  resolve. No product controller imports Axios or accesses the mock store.
+- Desktop flows were exercised incrementally above. The in-app browser viewport override
+  still measured 835 pixels after requesting 390, so a true mobile layout check could not
+  be confirmed. Existing responsive CSS is retained; mobile visual acceptance remains a
+  manual check in a browser that applies its device viewport.
+- HTTP adapter checks simulate responses, not a running backend. Chat, settings, second
+  factor and reply/like route contracts remain explicitly unsupported in HTTP mode.
+- Offline means no backend. Font/CDN dependencies can still require internet. Saved
+  language/notification preferences do not provide translation or email delivery.

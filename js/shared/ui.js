@@ -137,7 +137,22 @@ export async function bootstrap({ protectedPage = true, requireOnboarding = true
 }
 
 export function start(controller) {
-  const run = () => controller().catch(error => showError(document.querySelector('main') || document.querySelector('form') || document.body, error));
+  const run = async () => {
+    // Controls must not act on empty shells while the initial service reads are pending.
+    const roots = [...document.body.children].filter(element => !['SCRIPT', 'STYLE', 'LINK'].includes(element.tagName));
+    const previous = roots.map(element => element.inert);
+    roots.forEach(element => { element.inert = true; });
+    const loading = document.createElement('p'); loading.setAttribute('role', 'status'); loading.textContent = 'Բեռնվում է...';
+    loading.style.cssText = 'position:fixed;bottom:12px;left:12px;padding:8px 16px;background:var(--card-background,#fff);z-index:10000';
+    document.body.appendChild(loading);
+    try { await controller(); }
+    catch (error) {
+      const container = document.querySelector('main') || document.querySelector('form') || document.body;
+      showError(container, error);
+      const retry = document.createElement('button'); retry.className = 'primary-btn'; retry.textContent = 'Կրկին փորձել'; retry.onclick = () => location.reload(); container.appendChild(retry);
+    }
+    finally { loading.remove(); roots.forEach((element, index) => { element.inert = previous[index]; }); }
+  };
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', run, { once: true });
   else run();
 }
