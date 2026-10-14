@@ -20,7 +20,16 @@ export function createHttpProvider(transportPromise = loadTransport()) {
         api.setToken(body.accessToken);
         return { status: 'authenticated', user: normalizeUser(body.user || unwrap(await api.request(routes['auth.me']()))) };
       }
-      if (operation === 'auth.me' || operation.startsWith('profiles.') && ['get', 'update', 'onboard', 'upload'].includes(operation.split('.')[1])) return normalizeUser(body);
+      if (operation === 'profiles.upload' && !(body?.id ?? body?.UserId)) {
+        if (typeof body?.url !== 'string' || !body.url) throw new DataError('CONTRACT', 'API պատասխանը չի պարունակում լուսանկարի հասցեն։');
+        const user = normalizeUser(unwrap(await api.request(routes['auth.me']())));
+        if (!user) throw new DataError('UNAUTHORIZED', 'Նախ մուտք գործեք։');
+        return { ...user, [args[0] === 'avatar' ? 'avatar' : 'cover']: body.url };
+      }
+      if (operation === 'auth.me' || operation.startsWith('profiles.') && ['get', 'update', 'onboard', 'upload'].includes(operation.split('.')[1])) {
+        if (body == null && operation !== 'auth.me') throw new DataError('CONTRACT', 'API պատասխանը չի պարունակում պրոֆիլը։');
+        return normalizeUser(body);
+      }
       if (operation === 'auth.register') return body;
       if (operation.endsWith('.delete')) return null;
       if (operation === 'posts.list') return list(body, normalizePost).filter(post => (!args[0]?.category || post.category === args[0].category) && (!args[0]?.sphere || post.sphere === args[0].sphere));

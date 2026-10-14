@@ -109,7 +109,12 @@ sections and repeated biography text; these are known defects, not extra domain 
   feedback. No support submission or playable video is falsely reported as successful.
 - Obsolete disconnected API/core wrappers, duplicate profile utilities/theme and public
   render fixtures removed after verifying they have no live imports or script tags.
-  Profile identity now travels exclusively in the URL. Final HTTP/contract audit pending.
+  Profile identity now travels exclusively in the URL. HTTP adapter audited with the actual pinned Axios library and an injected response adapter
+  (temporary verification script, no project dependency/test toolchain). Verified shared
+  concurrent refresh, bounded retry/token clearing, network rejection, success envelopes,
+  numeric SQL-name IDs, login, upload URL/multipart, empty lists, unsupported operations
+  making no request, malformed profile rejection, encoded IDs, write allowlists and
+  recovery payloads. No live backend exists, so server compatibility remains unverified.
 
 ## Run
 

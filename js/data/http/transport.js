@@ -27,11 +27,12 @@ export function createTransport(axios) {
   });
   api.interceptors.response.use(response => response, async error => {
     const request = error.config;
-    if (error.response?.status !== 401 || !request || request._retried || noRefresh.test(request.url)) throw error;
+    if (error.response?.status !== 401 || !request || noRefresh.test(request.url)) throw error;
+    if (request._retried) { localStorage.removeItem(tokenKey); throw error; }
     request._retried = true;
     if (!refreshing) refreshing = axios.post(`${config.apiBaseUrl}/auth/refresh`, {}, { withCredentials: true, timeout: 15000 })
       .then(response => {
-        const token = response.data?.accessToken;
+        const token = (response.data?.data ?? response.data)?.accessToken;
         if (!token) throw new DataError('CONTRACT', 'Refresh response is missing accessToken.');
         localStorage.setItem(tokenKey, token);
         return token;
