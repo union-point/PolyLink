@@ -11,6 +11,25 @@ is a persistent mock demo with no API server. CDN dependencies still require int
 - `js/config.js` selects `mock` or `http`. Missing backend contracts must fail explicitly.
 - Use manual browser verification, without introducing a Node build/test toolchain.
 
+## Incremental phases and completion gates
+
+| Phase | Independent scope | Gate before moving on | Status |
+| --- | --- | --- | --- |
+| 0 | Source/DB context and original screenshots | Evidence separated from README claims | Complete |
+| 1 | Configuration, DTO/error/validation contracts, mock store and HTTP adapters | One provider boundary; reset/session and unsupported operations explicit | Complete |
+| 2 | Announcement feed/comments | Filter/create/reload/failure-retained draft and shared records | Complete |
+| 3 | Login/register/onboarding and recovery/2FA | Validation, navigation, challenge expiry/replay and persistent session | Complete |
+| 4 | Owner/public profiles and media/education/certificates/posts | Durable CRUD, ownership, contact navigation and shared rendering | Complete |
+| 5 | Forum and people search | IDs, replies/likes/sort and combined filters persist | Complete |
+| 6 | Direct/group chat | Distinct histories, failed-send retry, attachment persistence and menu/incoming events | Complete |
+| 7 | Settings/account lifecycle/export | Durable preferences, rollback, isolated lifecycle invariants and own-data export | Complete |
+| 8 | Shared page behavior, legacy removal and current docs | Valid imports, explicit unsupported contracts and final audit | Complete; true mobile visual QA unconfirmed |
+
+Every independently reviewable change was committed before the next block. The initial
+uncommitted work was separated into baseline/context, contracts, persistent mock provider,
+and HTTP/service boundary commits. Later features/fixes have their own commits. Browser
+manual QA is the project convention; temporary adapter checks added no build/test dependency.
+
 ## Baseline
 
 `baseline/profile-desktop.png` and `baseline/events-desktop.png` capture the original
@@ -40,16 +59,15 @@ sections and repeated biography text; these are known defects, not extra domain 
 6. Check cross-feature references and reset. Reset must affect only mock-owned data.
 7. Inspect the Git diff, record evidence here, and make one focused commit.
 
-## Progress
+## Progress (chronological evidence; later entries supersede earlier pending notes)
 
 - Baseline/context documentation captured.
 - Baseline initialization fixes verified: forum filters leave one matching card; registration
   initializes without errors; duplicate classic/module auth script tags removed.
 - Provider infrastructure and a developer-only `dev-tools.html` are introduced.
   Browser-verified: seeded session initializes, sign-out survives reload, reset restores
-  the session, and the developer page emits no console errors. Existing product pages
-  are not yet migrated.
-- Service/mock/HTTP contracts are scaffolding until browser verification and feature wiring.
+  the session, and the developer page emits no console errors. Product pages were migrated in the subsequent blocks below.
+- Initial service/mock/HTTP scaffolding was subsequently wired and verified per feature.
 - Announcements migrated and browser-verified: both filters, empty state, invalid-save
   feedback, unique IDs (`post-101` after reload), persistent plain-text comments,
   a delayed failed save that retains the modal/draft, and a successful retry.
@@ -60,7 +78,7 @@ sections and repeated biography text; these are known defects, not extra domain 
   login, seeded login navigates to profile, mismatched registration passwords fail,
   new registration navigates to onboarding, lecturer controls hide study years,
   reversed years fail, and a valid graduate onboarding persists a new demo session.
-  The owner profile still renders legacy fixtures until its migration.
+  Owner profile migration followed in its own commit.
 - Recovery/2FA migrated. Browser-verified: wrong codes stay on verification, six-digit
   clipboard paste works, mismatched reset passwords fail, reset returns to login,
   old credentials fail and new demo credentials succeed. 2FA preference creates a
@@ -71,7 +89,7 @@ sections and repeated biography text; these are known defects, not extra domain 
   education required/chronological checks, create/edit/reopen/reload, cancel/delete
   confirmation and durable deletion. Avatar upload survives reload as an IndexedDB
   blob (decoded image width 1024). Confirmation layering was corrected.
-  Certificate/post/public-profile migration remains a separate next step.
+  Certificates/posts/public profiles followed in a separate commit.
 - Certificates, owner announcements and public profiles migrated to shared service-backed
   rendering. Browser-verified certificate validation/create/edit/reopen/reload/delete;
   owner post create/edit/comment appears on the feed and public profile; owner deletion
@@ -140,3 +158,10 @@ ES modules must be served over HTTP rather than opened as `file://` URLs.
   factor and reply/like route contracts remain explicitly unsupported in HTTP mode.
 - Offline means no backend. Font/CDN dependencies can still require internet. Saved
   language/notification preferences do not provide translation or email delivery.
+
+- Recovery audit additionally verified that resend removes prior verification and email
+  changes consume outstanding challenges; stale proof cannot reset the account afterward.
+- Current README/JavaScript/profile references and both standalone context files describe
+  the refactored architecture and distinguish mock behavior from backend requirements.
+
+Final desktop profile evidence: [profile screenshot](verification/profile-desktop.png).

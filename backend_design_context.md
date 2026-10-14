@@ -8,7 +8,7 @@ This file is standalone: it summarizes domain requirements, storage, existing HT
 
 Evidence:
 
-- Root HTML and `js/`: feature scope, user interactions, DTO fields and declared Axios routes; many behaviors are fixtures or UI-only.
+- Root HTML and `js/`: current feature services, DTOs, HTTP adapter and persistent mock domain behavior. These are frontend contracts and examples, not a production backend.
 - `DB/polylink_table_creation.sql`: original tables, constraints, defaults and later registry additions.
 - `DB/migrate_to_references.sql`: intended normalized education, lecturer, post, role and language design.
 - `DB/diagram_new.png`: normalized ER diagram, with a certificate URL-length discrepancy.
@@ -17,7 +17,7 @@ Evidence:
 - `DB/fill-syntetic-data.sql`, `fill_posts.sql`, `fill_forum.sql`: sample data and relationship examples; fake hashes and fixed IDs are not production requirements.
 - `DB/queries.sql`: intended joins/aggregates; contains exploratory queries and a trailing incomplete SELECT.
 
-`DB/` is excluded by `.gitignore`; a fresh repository clone may not contain these assets. The `.bak` file was inventoried but not restored or inspected as a live database. Neither the diagram nor the report proves the actual backup schema. Existing READMEs are secondary and overstate implemented capabilities.
+`DB/` is excluded by `.gitignore`; a fresh repository clone may not contain these assets. The `.bak` file was inventoried but not restored or inspected as a live database. Neither the diagram nor the report proves the actual backup schema. Pre-refactor READMEs were secondary and overstated implemented capabilities; current documentation separates durable mocks from live backend support.
 
 **Labels:** *evidenced* = directly in source or report; *derived constraint* = needed to make an evidenced feature consistent/safe; *open decision* = insufficient or conflicting evidence. Proposed missing data is clearly distinguished from existing columns.
 
@@ -37,7 +37,7 @@ Help, tutorials, terms and privacy are static content. No ticket, tutorial-manag
 | --- | --- |
 | Graduate / alumnus | UI and SQL seed use `graduate`; must be eligible via official AlumniRegistry according to report. Education, profile, posts, replies, comments and messaging are implied. |
 | Lecturer | SQL seed uses `lecturer`; onboarding UI uses `teacher`. A verified lecturer must have an appropriate Lecturers row with department/profession. Report requires matching LecturerRegistry. |
-| Unauthenticated visitor | Registration/login/recovery pages exist. Whether public profiles/feed/forum are accessible without login is unspecified; an intended guard suggests member access. |
+| Unauthenticated visitor | Registration/login/recovery pages exist. Current frontend guards public-profile/feed/forum/search/chat/settings as member pages; auth/help/tutorial/policy pages are public. Production access policy must confirm this boundary. |
 | Administrator/moderator/import operator | Operational authority is needed for registries/reference verification, but no such role, permission set or admin UI is defined. Do not invent it as an established product role. |
 
 The database gives each user **one RoleId**, not multiple roles. Neither role is shown to have exclusive publication privileges. Department names used as announcement authors are fixtures; SQL ties each post to an individual Users row, with no organization/service-account entity.
@@ -54,7 +54,7 @@ Evidenced report requirements:
 
 Current registration sends only email/password/firstName/lastName. Role is collected later. Graduate onboarding adds institute, specialization and study years; lecturer mode replaces institute options with department and hides years. Bio/photo are also collected. No diploma number is collected anywhere, although the alumni registry's unique identifier is DiplomaNumber.
 
-Required specification gaps: verification evidence for alumni, canonical role codes (`teacher` versus `lecturer`), email ownership, role-selection timing, pending/rejected/verified account state, proof of registry matching, prevention of repeated claims, multiple diplomas, handling missing registry data and operator authority. Current Users has no registry FK, claim/verification state or onboarding completion field. Matching names alone is insufficient proof of identity. A uniqueness-protected linkage/claim record is a derived data requirement if one registry identity must be claimed only once; its cardinality is an open decision.
+Required specification gaps: verification evidence for alumni, canonical role codes (`teacher` input mapped to canonical `lecturer`), email ownership, role-selection timing, pending/rejected/verified account state, proof of registry matching, prevention of repeated claims, multiple diplomas, handling missing registry data and operator authority. Current Users has no registry FK, claim/verification state or onboarding completion field. Matching names alone is insufficient proof of identity. A uniqueness-protected linkage/claim record is a derived data requirement if one registry identity must be claimed only once; its cardinality is an open decision.
 
 Official registries and diploma numbers must not be exposed through public profile/search responses. Self-edited education must not silently rewrite official eligibility evidence.
 
@@ -122,7 +122,7 @@ Post author is a user, not a department or organization. There is no job-applica
 | ForumReplies | ReplyId; TopicId INT! FK ForumTopics cascade; UserId INT! FK Users without cascade; Content NVARCHAR(MAX)!; CreatedAt DATETIME2! default SYSDATETIME(). |
 | ForumReplyLikes | Composite PK (UserId, ReplyId); UserId FK Users without cascade; ReplyId FK ForumReplies cascade; CreatedAt DATETIME2 default SYSDATETIME(), nullable. |
 
-UI implies professional classification (`major`), reply totals, author names/dates, and newest/oldest/most-helpful sorting. Reply and like counts can be derived; no major FK exists. There is no ParentReplyId or topic-follow/subscription table: discussions are **flat**, despite README claims of threading. Reply buttons currently focus the composer without parent identity. Topic likes, bookmarks, moderation status and edit timestamps are not established schema features.
+UI implies professional classification (`major`), reply totals, author names/dates, and newest/oldest/most-helpful sorting. Reply and like counts can be derived; no major FK exists. There is no ParentReplyId or topic-follow/subscription table: discussions are **flat**, despite README claims of threading. Replies are flat; no parent identity is sent. Topic likes, bookmarks, moderation status and edit timestamps are not established schema features.
 
 ### Chat
 
@@ -154,7 +154,7 @@ Derived data constraints:
 - A password reset needs server-verifiable authorization bound to the account and recovery challenge. The current `{email,code,newPassword}` helper lacks any defined challenge/proof lifecycle; `/verify-code` success must not make email alone sufficient for reset.
 - Refresh sessions need expiry/revocation and defined invalidation after logout, password reset, deactivation or deletion. Exact rotation/multi-device policy is open.
 - Email changes require current credential verification and verified ownership of the replacement address, with university eligibility rules reapplied as appropriate.
-- Password changes require current password verification and server-side new-password validation. UI strength rules are inconsistent: minimum eight characters plus uppercase/digit/special in strength display, weaker submit logic elsewhere. Final policy is open.
+- Password changes require current password verification and server-side new-password validation. Current mock validation requires 8–128 characters with ASCII uppercase, digit and special character and preserves whitespace. Production password policy remains open.
 - Settings promises reversible deactivation and irreversible deletion. There is no account-state field or deletion policy. Define login/reactivation behavior, data retention and dependent-record handling rather than reporting fake success.
 
 ### Profiles and education
@@ -165,7 +165,7 @@ Education needs distinct institution, institute, degree and specialization refer
 
 Education start/end order must be valid; null end means ongoing where allowed. Frontend uses year inputs on onboarding and month inputs on profile, SQL stores dates. Define precision and conversion explicitly; do not fabricate a real graduation day from year/month input. Registry dates are official full dates and should remain distinguishable from user-entered profile dates.
 
-Certificate names must be nonempty despite optional UI inputs. Certificate URLs must be validated and safely exposed. Images require real upload/storage/URL contracts and file type/size constraints; FileReader previews are not uploaded assets. Certificate logos shown by fixtures have no table column; default/derived logo versus stored custom logo is open.
+Certificate names must be nonempty; current mock validates them. Certificate URLs must be validated and safely exposed. Images require real upload/storage/URL contracts and file type/size constraints; Browser preview URLs alone are not server assets; the current mock separately persists image blobs. Certificate logos shown by fixtures have no table column; default/derived logo versus stored custom logo is open.
 
 ### Announcement feed
 
@@ -182,7 +182,7 @@ UI frames the forum as work, careers, professional development and collaboration
 
 Persist topics/replies, authenticated authors, timestamps and helpful reply likes. One user can like a reply once, enforced by composite PK; unliking reverses that relation. Newest/oldest/popular sorting must define stable tie-breaking. Topic counts, role display and likes are derived from joins, not stored author copies.
 
-Major codes are `informatics`, `mechanics`, `electronics`, `civil`, `energy`, `management`; select whether these map to specialization, sphere or their own classification. No current schema or API response commits to one. Topic subscriptions and nested replies would require additional defined data if adopted; they are not established frontend contracts.
+Major codes are `informatics`, `mechanics`, `electronics`, `civil`, `energy`, `management`; select whether these map to specialization, sphere or their own classification. No SQL relationship or production API response commits to one. Topic subscriptions and nested replies would require additional defined data if adopted; they are not established frontend contracts.
 
 ### User discovery and visibility
 
@@ -192,15 +192,15 @@ Graduation-year filtering must derive from an identified education/registry grad
 
 ### Direct and group messaging
 
-Both direct and group communication are evidenced by the report and ChatRooms.IsGroup, although the UI only simulates contacts. Persist rooms, participants and messages. Each read/send/list operation must authorize membership; access to one room must not reveal another room's history.
+Both direct and group communication are evidenced by the report and ChatRooms.IsGroup, with durable mock direct/group histories and shared contact navigation. Persist rooms, participants and messages. Each read/send/list operation must authorize membership; access to one room must not reveal another room's history.
 
 Derived/open invariants:
 
 - Direct rooms normally have two distinct participants; define self-chat, uniqueness of user pairs and duplicate-room behavior. Group naming, membership administration, invitations and participant limits are unspecified.
 - Participant changes and message writes require consistent transactions. Define access to messages before joining/after leaving; JoinedAt alone does not establish this policy.
 - UI shows text, image attachments, timestamps, contact snippets, unread badges and status labels. Attachment metadata, read state and presence have no schema or contract. Do not claim delivered/read/online behavior without authoritative state.
-- Menu exposes delete conversation, block user and mute notifications. Specify per-user hiding/deletion versus deleting room history for everyone; blocking direction/scope; per-room versus global muting. All are currently UI-only.
-- Real-time delivery is intended by product descriptions but no socket/SSE/polling mechanism or event protocol is implemented. Ordering, reconnection, duplicate sends and delivery acknowledgements need contracts independent of transport choice.
+- Menu exposes delete conversation, block user and mute notifications. Specify per-user hiding/deletion versus deleting room history for everyone; blocking direction/scope; per-room versus global muting. The mock implements per-user hiding with a timestamp cutoff, per-room mute and directional block records that prohibit direct sends in either direction; these are proposed behavior constraints, not established production policy.
+- Real-time delivery is intended by product descriptions but no backend socket/SSE/polling contract is implemented. Local mock subscriptions/BroadcastChannel demonstrate incoming events. Ordering, reconnection, duplicate sends and delivery acknowledgements need contracts independent of transport choice.
 
 **Encryption decision is mandatory and unresolved.** EncryptedContent suggests ciphertext storage, but chat UI handles plaintext and has no key generation, cryptographic calls or encrypted envelope. Define whether the goal is server-managed encryption or end-to-end encryption. If E2EE is chosen, algorithm/version, nonce/authentication tag, participant public keys, room-key distribution, key rotation, recovery/backups, multi-device access and attachment encryption must be specified; plaintext search/previews/exports may conflict with it. A column name and commented key tables are not proof of encryption.
 
@@ -212,42 +212,42 @@ Notifications target new announcements, replies to the user's topics and direct 
 
 Data export and account deletion must include a defined data scope and authorization; export must exclude passwords, token/challenge material and other users' private data. Local cache clearing is a browser feature and has no established backend route.
 
-## Existing HTTP expectations and DTO boundaries
+## Original HTTP expectations and DTO boundaries (historical evidence)
 
-All declared routes are relative to `http://localhost:3004`; no `/api` prefix. Requests use JSON unless multipart is named. None have a tested backend contract. Below is the full route surface implied by source, including mocked/commented calls.
+All declared routes are relative to `http://localhost:3004`; no `/api` prefix. Requests use JSON unless multipart is named. None have a tested backend contract. The following table records the original mocked/commented route intents, before refactoring. The current contract below supersedes its statements about disconnected consumers; retained route names still have no tested backend.
 
 | Route family | Existing method/path expectations | Data and response constraints |
 | --- | --- | --- |
 | Auth | POST /auth/register, /auth/login, /auth/logout, /auth/refresh, /auth/forgot-password, /auth/verify-code, /auth/reset-password; GET /auth/me | Register: email/password/firstName/lastName. Login: email/password → accessToken. Refresh: {} + cookie → accessToken. Forgot: email. Verify: email/code. Reset: email/code/newPassword. Me body shape unspecified. Logout sends no body. |
-| Onboarding | PUT /users/profile | Declared multipart; current caller sends {}. Field/response contract missing. |
+| Onboarding | PUT /users/profile | Declared multipart; original caller sent {}. Field/response contract missing. |
 | Profile | GET /users/{userId}; PUT and DELETE /users/me | Mutable profile DTO unspecified; public fixture is described below. /users/profile and /users/me overlap. |
 | Profile media | POST /users/me/photo; POST /users/me/banner | FormData file fields photo/banner respectively; URL response field unspecified. |
 | Education | GET and POST /users/me/education; PUT and DELETE /users/me/education/{id} | UI writes institution/degree/startDate/endDate strings; create consumer checks body.success. Needs normalized reference/ID/date resolution. |
 | Certificates | GET and POST /users/me/licenses; PUT and DELETE /users/me/licenses/{id} | Owner forms: name/organization/issueDate/credentialUrl; no enforced response shape. |
 | Announcements | GET /posts, /users/me/posts, /users/{id}/posts; POST /posts; PUT and DELETE /posts/{id} | Feed write: title/content/category; list body is Post[]. Feed create expects body = Post. |
 | Comments | GET and POST /posts/{postId}/comments; PUT and DELETE /posts/{postId}/comments/{commentId} | Create sends text; GET body is Comment[]. Feed POST expects bare Comment; profile/public expects {success:true,data:Comment}. |
-| Forum | GET and POST /forum/topics; GET, PUT and DELETE /forum/topics/{id} | Form implies title/major/content; wrapper bodies/responses unspecified, no page invokes them. |
+| Forum | GET and POST /forum/topics; GET, PUT and DELETE /forum/topics/{id} | Form implies title/major/content; wrapper bodies/responses unspecified, original pages did not invoke them. |
 | Search | GET /search?q={encodedQuery} | Body unspecified, no actual consumer; no existing filter params. |
 
 No route names exist for chat, forum reply/like mutations, eligibility checks, 2FA challenge/enrollment, settings, notification events, work experience, export, deactivation or reference data. Their operations are requirements; future agents must not present guessed paths as existing contracts.
 
 ### Read models and naming reconciliation
 
-Frontend public-profile fixture: `id, name, jobTitle, description, avatar, cover, education[], licenses[]`. Education entries contain `institution, degree, logo, startDate, endDate`; certificate entries contain `title, issuer, date, logo, credential`. A public lookup currently returns the bare object instead of Axios's response wrapper.
+Frontend public-profile fixture: `id, name, jobTitle, description, avatar, cover, education[], licenses[]`. Education entries contain `institution, degree, logo, startDate, endDate`; certificate entries contain `title, issuer, date, logo, credential`. The original public lookup returned the bare object instead of Axios's response wrapper.
 
-Post read model: `id, title, content, category, createdAt, author:{name,avatar}, comments[]`. Comment read model: `id, text, createdAt, author:{name,avatar}`. Some fixture comments omit id; durable APIs must supply it. Author identity is absent from fixtures but needed for profile links and permissions. Current profile/public card counts are hardcoded and cannot be authoritative.
+Post read model: `id, title, content, category, createdAt, author:{name,avatar}, comments[]`. Comment read model: `id, text, createdAt, author:{name,avatar}`. Some fixture comments omit id; durable APIs must supply it. Author identity is absent from fixtures but needed for profile links and permissions. Original profile/public card counts were hardcoded and cannot be authoritative.
 
 Required adapters/contract decisions:
 
 | Concept | Storage / frontend difference |
 | --- | --- |
-| Full name | Users stores FirstName/LastName separately; display combines them. Inline editor submits no HTTP and calls the full-name field name. |
+| Full name | Users stores FirstName/LastName separately; display combines them. Original inline editor submitted no HTTP; current writes split first/last name. |
 | Professional headline | UI jobTitle or title versus Users.Specialization; mapping needs a semantic decision. |
 | Biography/media | About→description; ProfilePhotoUrl→avatar; CoverPhotoUrl→cover. |
 | Certificates | CertificateName/Organization/IssueDate/Url versus owner name/organization/issueDate/credentialUrl and public title/issuer/date/credential. |
 | Comments | Content versus text. |
 | Post types | PostTypeId versus category code; display Name alone may be localized and unsuitable as stable code. |
-| Roles | graduate/lecturer versus UI teacher; no canonical mapping enforced. |
+| Roles | graduate/lecturer versus UI teacher; current adapter maps teacher to lecturer; production role verification is still required. |
 | Dates | DATE versus UI YYYY, YYYY-MM and malformed fixture dates; timestamps need explicit zone. |
 | Envelopes | Arrays/bare objects versus {success,data}; current consumers disagree. |
 
@@ -295,3 +295,110 @@ Unresolved specification decisions to carry forward (not an implementation plan)
 - Actual authoritative database version: locally supplied SQL, diagram, report and unexamined backup must not be assumed identical.
 
 These gaps should remain visible to future agents. The frontend documents an intended user experience, but backend specifications must not copy its authentication bypasses, mock response IDs or simulated success into trusted business behavior.
+
+
+## Current frontend contract after refactoring
+
+This section describes the current frontend boundary as of 14 October 2026. It is a
+technical specification for interoperable behavior, not a backend implementation plan.
+All page controllers now call asynchronous feature services. A persistent IndexedDB
+provider supports offline flows; it is not MS SQL Server, registry verification, secure
+OTP delivery, production password storage, encryption or a production session system.
+
+### Canonical read/write projections
+
+IDs are opaque strings at the frontend boundary; SQL INT IDs may be serialized as strings.
+Timestamps must have an explicit UTC contract. Profile month dates are `YYYY-MM`; optional
+end dates are null. Server DTOs must not expose PasswordHash, registry/diploma records,
+refresh credentials or OTP/challenge secrets.
+
+| Projection | Fields required by the current frontend |
+| --- | --- |
+| User | id, firstName, lastName, name, jobTitle, description, avatar, cover, role (`graduate`/`lecturer`), boolean onboardingComplete, institute, specialization, graduationYear, education[], licenses[]; email only for owner or allowed disclosure; optional passwordChangedAt and lecturer department. |
+| Education | id, institution, degree, institute, specialization, startDate, endDate|null, logo. Normalized SQL reference IDs need an agreed lookup/display projection. |
+| Certificate | id, name, organization, issueDate|null, credentialUrl, logo. Logo storage/default is unresolved. |
+| Author | id, name, avatar. Deleted-author retention/anonymization needs an explicit projection policy. |
+| Post | id, title, rich content, category code, sphere code, createdAt, author, comments[]. |
+| Comment | id, postId, plain text, createdAt, author. |
+| Topic | id, title, rich content, major code, createdAt, author, replyCount. |
+| Reply | id, topicId, rich content, createdAt, author, likeCount, viewer-specific liked boolean. |
+| Conversation | id, isGroup, closed, name, participants[] of Author, viewer-specific muted/blocked/unreadCount, lastMessage|null. |
+| Message | id, roomId, sender Author, plain text, createdAt, optional attachment {url,name,type}. |
+| Settings | isProfilePublic, showEmail, twoFactorEnabled, language hy/en/ru, emailEnabled, newListingNotifications, forumReplyNotifications, directMessageNotifications. |
+
+Writes accept mutable fields only. Server ownership comes from the authenticated principal,
+not body userId/author/id/timestamps. Profile intro writes firstName/lastName/jobTitle/
+description. Onboarding writes role/institute/department/specialization/description/
+startYear/endYear; media is separate. Education/certificates use their mutable projection
+fields. Posts use title/content/category/sphere; comments text; topics title/content/major;
+replies content; chat sends text and an optional image file. Preference writes are partial.
+Generated IDs and final records must be returned after successful create/update.
+
+Current mock limits: names 100, titles 255, rich content 20,000 visible characters,
+comments/messages 5,000, passwords 8–128 with uppercase/digit/special. Nonempty images
+are PNG/JPEG/WebP/GIF ≤5 MiB. These are current UI constraints to reconcile with SQL
+column lengths and production validation, not proof that uploaded bytes are valid images.
+Onboarding requires chronological integer years (1900–2200); profile month ranges require
+start ≤ end. The mock September/June month convention for year-only education must not
+fabricate authoritative dates in production.
+
+### Service and HTTP boundary
+
+The existing central HTTP route adapter supports auth me/login/register/logout/recovery,
+profile read/update/onboarding/media, education/certificate CRUD, post/comment CRUD,
+topic CRUD and people search using the legacy route names above. GET `/users/{id}/posts`
+is the current identified-user read; `/users/me/posts` is an unused historical intent.
+DELETE `/users/me` is not mapped to settings deletion because its confirmation/retention
+contract is missing.
+
+Bare bodies and `{data:...}` / `{success:true,data:...}` are normalized; lists must be
+arrays. `{success:false,message,fieldErrors}` and status errors fail clearly. Missing
+resource identity, role or boolean onboarding state is a contract error. Login needs
+`{accessToken,user?}` (otherwise /auth/me is read) or a challenge result. Refresh accepts
+`{accessToken}` or its data envelope and has one shared bounded retry on 401. Media writes
+need a complete User or `{url}`, with an authenticated profile read for the latter.
+
+Current recovery controllers require `{challengeId,expiresAt?,resendAfter?}` from forgot,
+`{recoveryToken}` from verification and proof-bound reset semantics. The retained legacy
+HTTP verify/reset bodies still use email/code and email/code/newPassword respectively.
+Reconcile this mismatch explicitly; do not treat the local challenge/proof as production
+security. Second-factor and resend paths are unmapped.
+
+No HTTP mappings exist for forum replies/likes, any chat operation or any settings,
+email/password change, deactivation, deletion or export operation. They fail UNSUPPORTED
+without making a request or switching to fixtures. Required semantics are established at
+the service boundary, but path names, transport/realtime events, request details and
+production authorization must be specified. Current filters operate on returned complete
+arrays; bounded server filtering/pagination needs a compatible contract before scale-up.
+
+### Demonstrated mock business rules and production decisions
+
+- A new/reset local dataset automatically signs in one demo account. Logout persists.
+  Production must use server-authenticated identity and must not auto sign in fixtures.
+- Closed/inactive users are absent from other users’ profile/search reads; disclosed email
+  is separately controlled. Closing a profile currently does not hide published posts or
+  discussion authors. Confirm this intended privacy scope.
+- Direct contact reuses a user pair. History/send require membership; blocking prevents
+  direct sends in either direction. Groups have no membership-management product controls.
+- Hiding a conversation is per-user with a history cutoff; reopening/incoming can reveal
+  it again. It does not delete everyone’s room. Mute is separate from global notification
+  preferences. Delivery/read/presence state needs authoritative server events.
+- Deactivation ends the session; valid login reactivates in the mock. Production may need
+  an explicit reactivation policy. Mock deletion removes the account’s resources/messages/
+  media, removes likes/membership and retains other users’ records. A surviving direct room
+  becomes read-only. SQL non-cascading FKs make a deliberate retention transaction mandatory.
+- Export contains own profile/preferences/publications/comments/replies/sent messages and
+  own media assets; excludes credentials/challenges and other participants’ message bodies.
+  Production encryption and retention policy can change the permitted export scope.
+- Mock challenges expire in ten minutes, allow five attempts, resend after 60 seconds and
+  use a fixed demonstration code. A real service requires unpredictable codes, protected
+  proof, expiry/revocation, rate limits and actual delivery; these are absent from SQL.
+- Preferred language is saved but no translations are provided; notification preferences
+  are saved but no delivery pipeline exists. Help submission and tutorial playback display
+  unavailable feedback. No support-ticket/video API or new content entity is inferred.
+
+Production gaps remain: official registry claim/verification, lookup authority and IDs,
+email verification, session/2FA enrollment and recovery, privacy scope, encryption,
+attachments, room state/pair uniqueness, notifications, concurrency/idempotency,
+pagination, deleted-author projections and SQL account-deletion retention. The tables
+and constraints documented earlier remain the source evidence for database design.

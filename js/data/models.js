@@ -4,7 +4,10 @@
  *
  * @typedef {{id:string, firstName:string, lastName:string, name:string,
  * jobTitle:string, description:string, avatar:string, cover:string,
- * role:'graduate'|'lecturer', education:Education[], licenses:Certificate[]}} User
+ * role:'graduate'|'lecturer', onboardingComplete:boolean, email?:string,
+ * institute:string, specialization:string, graduationYear:string,
+ * department?:string, passwordChangedAt?:string|null,
+ * education:Education[], licenses:Certificate[]}} User
  * @typedef {{id:string, institution:string, degree:string, institute:string,
  * specialization:string, startDate:string, endDate:string|null, logo:string}} Education
  * @typedef {{id:string, name:string, organization:string, issueDate:string|null,
@@ -17,14 +20,15 @@
  * author:Author,replyCount:number}} Topic
  * @typedef {{id:string,topicId:string,content:string,createdAt:string,
  * author:Author,likeCount:number,liked:boolean}} Reply
- * @typedef {{id:string,isGroup:boolean,name:string,participants:Author[],
+ * @typedef {{id:string,isGroup:boolean,closed:boolean,name:string,participants:Author[],
  * muted:boolean,blocked:boolean,unreadCount:number,lastMessage:Message|null}} Conversation
  * @typedef {{id:string,roomId:string,sender:Author,text:string,createdAt:string,
  * attachment:{url:string,name:string,type:string}|null}} Message
  * @typedef {{isProfilePublic:boolean,showEmail:boolean,twoFactorEnabled:boolean,
  * language:string,emailEnabled:boolean,newListingNotifications:boolean,
  * forumReplyNotifications:boolean,directMessageNotifications:boolean}} Settings
- * @typedef {{status:'authenticated',user:User}|{status:'challenge',challengeId:string}} LoginResult
+ * @typedef {{status:'authenticated',user:User}|{status:'challenge',challengeId:string,
+ * expiresAt?:number,resendAfter?:number}} LoginResult
  */
 export const categories = Object.freeze({ job: 'Աշխատանք', internship: 'Պրակտիկա', training: 'Դասընթաց' });
 export const majors = Object.freeze({
