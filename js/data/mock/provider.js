@@ -280,7 +280,7 @@ export function createMockProvider() {
   const channel = typeof BroadcastChannel !== 'undefined' ? new BroadcastChannel('polylink-mock-updates') : null;
   const notify = event => listeners.forEach(listener => listener(event));
   if (channel) channel.onmessage = event => notify(event.data);
-  window.addEventListener('pagehide', () => { for (const url of urls.values()) URL.revokeObjectURL(url); channel?.close(); }, { once: true });
+  window.addEventListener('pagehide', event => { if (event.persisted) return; for (const url of urls.values()) URL.revokeObjectURL(url); channel?.close(); });
   async function hydrate(result) {
     const media = await transaction(state => state.media);
     function walk(value) {
