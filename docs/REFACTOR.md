@@ -83,7 +83,10 @@ sections and repeated biography text; these are known defects, not extra domain 
   topic navigation, persistent replies/helpful likes, sorting and safe linked replies.
   Link formatting uses an inline field because browser prompts are unavailable in
   the in-app browser; its saved link survives reload.
-- Pending migrations: search, messaging,
+- Search migrated. Browser-verified six seeded people, text query, combined
+  specialization/institute/graduation-year filters, empty results, and correct
+  `user.html?id=6` navigation. Contact actions share conversation services.
+- Pending migrations: messaging,
   settings, shared behavior and removal of obsolete API/global fixtures.
 
 ## Run

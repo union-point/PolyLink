@@ -1,197 +1,87 @@
 <!DOCTYPE html>
+
 <html lang="hy">
-
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Պոլիտեխնիկի շրջանավարտների հարթակ</title>
-  <link rel="stylesheet" href="./css/search.css">
-  <link rel="stylesheet" href="./css/style.css">
-
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Պոլիտեխնիկի շրջանավարտների հարթակ</title>
+<link href="./css/search.css" rel="stylesheet"/>
+<link href="./css/style.css" rel="stylesheet"/>
 <body>
-
-  <header class="header">
-
-
-    <div class="header-container">
-      <div class="logo-container">
-        <img class="logo-img" src="./image/logo.png" alt="Logo" class="logo-img">
-        <h3 class="logo-text">PolyLink</h3>
-      </div>
-      <nav>
-        <ul class="menu">
-          <li><a href="profile.html" .>Անձնական էջ</a></li>
-          <li><a href="events.html">Իրադարձություններ</a></li>
-          <li><a href="forum.html">Ֆոռում</a></li>
-          <li><a href="message.html">Նամակագրություն</a></li>
-          <li><a href="search.html" class="active">Որոնում</a></li>
-
-        </ul>
-        <!-- Dropdown menu -->
-        <div class="dropdown-container">
-          <button class="dropdown-btn">☰</button>
-          <ul class="dropdown-menu">
-            <li><a href="help.html">Help</a></li>
-            <li><a href="settings.html">Կարգավորումներ</a></li>
-            <li><a href="login.html">Դուրս գալ</a></li>
-          </ul>
-        </div>
-      </nav>
-    </div>
-  </header>
-  <div class="container">
-    <div class="search-container">
-      <div class="search-bar">
-        <input type="text" placeholder="Որոնել...">
-        <button>Որոնել</button>
-      </div>
-
-      <div class="filters">
-        <div class="filter-option">
-          <label for="faculty">Մասնագիտություն՝</label>
-          <select id="faculty">
-            <option>Բոլորը</option>
-            <option>Ծրագրայի ճարտարագիտություն</option>
-            <option>Համակարգչային ճարտարագիտություն </option>
-            <option>Տեղեկատվական տեխնոլոգիաներ </option>
-            <option>Արհեստական բանականություն </option>
-
-          </select>
-
-        </div>
-        <div class="filter-option">
-
-          <label for="year">Ավարտելու տարեթիվ՝</label>
-          <select id="year">
-            <option>Բոլորը</option>
-            <option>2018</option>
-            <option>2019</option>
-            <option>2020</option>
-            <option>2021</option>
-            <option>2022</option>
-            <option>2023</option>
-            <option>2024</option>
-            <option>2025</option>
-          </select>
-        </div>
-        <div class="filter-option">
-
-          <label for="institute">Ինստիտուտ՝</label>
-          <select id="institute">
-            <option>Բոլորը</option>
-            <option>ՏՀՏԷ</option>
-            <option>ՄՄՏՀԴ</option>
-            <option>ԷԷ</option>
-            <option>ԼՔՏ</option>
-          </select>
-        </div>
-      </div>
-    </div>
-
-    <main>
-      <h2>Շրջանավարտներ</h2>
-      <div class="graduates">
-
-        <div class="card">
-          <div class="letter">Ա</div>
-          <h3>Աննա Հարությունյան</h3>
-          <p><strong>Ֆակուլտետ՝</strong> Ինժեներական տնտեսագիտության և կառավարման (2022)</p>
-          <p><strong>Ինստիտուտ՝</strong> Տեղեկատվական և հաղորդակցական տեխնոլոգիաների ու էլեկտրոնիկայի ինստիտուտ</p>
-          <p>Ֆինանսների մենեջեր, «Գլոբալ Բանկ»</p>
-          <div class="card-buttons">
-            <button class="btn-view" data-user-id="5">Դիտել էջը</button>
-            <button class="btn-connect">Կապ հաստատել</button>
-          </div>
-        </div>
-
-        <div class="card">
-          <div class="letter">Գ</div>
-          <h3>Գևորգ Մանուկյան</h3>
-          <p><strong>Ֆակուլտետ՝</strong> Կիրառական մաթեմատիկայի և ֆիզիկայի (2021)</p>
-          <p><strong>Ինստիտուտ՝</strong> Տեղեկատվական և հաղորդակցական տեխնոլոգիաների ու էլեկտրոնիկայի ինստիտուտ</p>
-          <p>Ծրագրավորող, «TechStart»</p>
-          <div class="card-buttons">
-            <button class="btn-view" data-user-id="6">Դիտել էջը</button>
-            <button class="btn-connect">Կապ հաստատել</button>
-          </div>
-        </div>
-
-        <div class="card">
-          <div class="letter">Մ</div>
-          <h3>Մարիամ Գրիգորյան</h3>
-          <p><strong>Ֆակուլտետ՝</strong> Ինժեներական տնտեսագիտության և կառավարման (2021)</p>
-          <p><strong>Ինստիտուտ՝</strong> Լեզվաբանության և քաղաքակրթության տեխնոլոգիաների ինստիտուտ</p>
-          <p>Նախագծի կառավարիչ, «InnovateTech»</p>
-          <div class="card-buttons">
-            <button class="btn-view" data-user-id="8">Դիտել էջը</button>
-            <button class="btn-connect">Կապ հաստատել</button>
-          </div>
-        </div>
-
-        <div class="card">
-          <div class="letter">Լ</div>
-          <h3>Լիլիթ Սարգսյան</h3>
-          <p><strong>Ֆակուլտետ՝</strong> Ինժեներական տնտեսագիտության և կառավարման (2023)</p>
-          <p><strong>Ինստիտուտ՝</strong> Տեղեկատվական և հաղորդակցական տեխնոլոգիաների ու էլեկտրոնիկայի ինստիտուտ</p>
-          <p>Մարքեթինգի մասնագետ, «BrandLab»</p>
-          <div class="card-buttons">
-            <button class="btn-view" data-user-id="7">Դիտել էջը</button>
-            <button class="btn-connect">Կապ հաստատել</button>
-          </div>
-        </div>
-
-        <div class="card">
-          <div class="letter">Մ</div>
-          <h3>Մարիամ Գրիգորյան</h3>
-          <p><strong>Ֆակուլտետ՝</strong> Կիրառական մաթեմատիկայի և ֆիզիկայի (2019)</p>
-          <p><strong>Ինստիտուտ՝</strong> Տեղեկատվական և հաղորդակցական տեխնոլոգիաների ու էլեկտրոնիկայի ինստիտուտ</p>
-          <p>Տվյալների գիտնական, «DataLab»</p>
-          <div class="card-buttons">
-            <button class="btn-view" data-user-id="8">Դիտել էջը</button>
-            <button class="btn-connect">Կապ հաստատել</button>
-          </div>
-        </div>
-
-        <div class="card">
-          <div class="letter">Լ</div>
-          <h3>Լիլիթ Սարգսյան</h3>
-          <p><strong>Ֆակուլտետ՝</strong> Ինժեներական տնտեսագիտության և կառավարման (2021)</p>
-          <p><strong>Ինստիտուտ՝</strong> Լեզվաբանության և քաղաքակրթության տեխնոլոգիաների ինստիտուտ</p>
-          <p>Նախագծի կառավարիչ, «InnovateTech»</p>
-          <div class="card-buttons">
-            <button class="btn-view" data-user-id="7">Դիտել էջը</button>
-            <button class="btn-connect">Կապ հաստատել</button>
-          </div>
-        </div>
-
-        <div class="card">
-          <div class="letter">Ա</div>
-          <h3>Աննա Հարությունյան</h3>
-          <p><strong>Ֆակուլտետ՝</strong> Կիրառական մաթեմատիկայի և ֆիզիկայի (2022)</p>
-          <p><strong>Ինստիտուտ՝</strong> Մեխանիկայի, մեքենագիտության, տրանսպորտի և հիդրավլիկայի ինստիտուտ</p>
-          <p>Համակարգի ճարտարապետ, «CloudSystems»</p>
-          <div class="card-buttons">
-            <button class="btn-view" data-user-id="5">Դիտել էջը</button>
-            <button class="btn-connect">Կապ հաստատել</button>
-          </div>
-        </div>
-
-        <div class="card">
-          <div class="letter">Գ</div>
-          <h3>Գևորգ Մանուկյան</h3>
-          <p><strong>Ֆակուլտետ՝</strong> Ինժեներական տնտեսագիտության և կառավարման (2020)</p>
-          <p><strong>Ինստիտուտ՝</strong> Էներգետիկայի և էլեկտրատեխնիկայի ինստիտուտ</p>
-          <p>Էլեկտրատեխնիկ, «PowerGrid»</p>
-          <div class="card-buttons">
-            <button class="btn-view" data-user-id="6">Դիտել էջը</button>
-            <button class="btn-connect">Կապ հաստատել</button>
-          </div>
-        </div>
-
-      </div>
-    </main>
-  </div>
-  <script src="./js/search.js"></script>
+<header class="header">
+<div class="header-container">
+<div class="logo-container">
+<img alt="Logo" class="logo-img" src="./image/logo.png"/>
+<h3 class="logo-text">PolyLink</h3>
+</div>
+<nav>
+<ul class="menu">
+<li><a .="" href="profile.html">Անձնական էջ</a></li>
+<li><a href="events.html">Իրադարձություններ</a></li>
+<li><a href="forum.html">Ֆոռում</a></li>
+<li><a href="message.html">Նամակագրություն</a></li>
+<li><a class="active" href="search.html">Որոնում</a></li>
+</ul>
+<!-- Dropdown menu -->
+<div class="dropdown-container">
+<button class="dropdown-btn">☰</button>
+<ul class="dropdown-menu">
+<li><a href="help.html">Help</a></li>
+<li><a href="settings.html">Կարգավորումներ</a></li>
+<li><a href="login.html">Դուրս գալ</a></li>
+</ul>
+</div>
+</nav>
+</div>
+</header>
+<div class="container">
+<div class="search-container">
+<div class="search-bar">
+<input placeholder="Որոնել..." type="text"/>
+<button>Որոնել</button>
+</div>
+<div class="filters">
+<div class="filter-option">
+<label for="faculty">Մասնագիտություն՝</label>
+<select id="faculty">
+<option>Բոլորը</option>
+<option>Ծրագրայի ճարտարագիտություն</option>
+<option>Համակարգչային ճարտարագիտություն </option>
+<option>Տեղեկատվական տեխնոլոգիաներ </option>
+<option>Արհեստական բանականություն </option>
+</select>
+</div>
+<div class="filter-option">
+<label for="year">Ավարտելու տարեթիվ՝</label>
+<select id="year">
+<option>Բոլորը</option>
+<option>2018</option>
+<option>2019</option>
+<option>2020</option>
+<option>2021</option>
+<option>2022</option>
+<option>2023</option>
+<option>2024</option>
+<option>2025</option>
+</select>
+</div>
+<div class="filter-option">
+<label for="institute">Ինստիտուտ՝</label>
+<select id="institute">
+<option>Բոլորը</option>
+<option>ՏՀՏԷ</option>
+<option>ՄՄՏՀԴ</option>
+<option>ԷԷ</option>
+<option>ԼՔՏ</option>
+</select>
+</div>
+</div>
+</div>
+<main>
+<h2>Շրջանավարտներ</h2>
+<div class="graduates"></div>
+</main>
+</div>
+<script src="./js/search.js" type="module"></script>
 </body>
-
-</html>
+</head></html>
