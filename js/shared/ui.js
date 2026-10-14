@@ -73,16 +73,25 @@ export function relativeTime(value) {
   return `${Math.floor(minutes / 1440)} օր առաջ`;
 }
 export function confirmAction(message) {
-  const backdrop = document.getElementById('custom-confirm-backdrop');
-  if (!backdrop) return Promise.resolve(confirm(message));
+  let backdrop = document.getElementById('custom-confirm-backdrop');
+  if (!backdrop?.querySelector('#confirm-yes')) {
+    backdrop = document.querySelector('[data-common-confirm]');
+    if (!backdrop) {
+      backdrop = document.createElement('div'); backdrop.dataset.commonConfirm = '';
+      backdrop.style.cssText = 'display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);align-items:center;justify-content:center;backdrop-filter:blur(5px)';
+      backdrop.innerHTML = '<div class="custom-confirm"><p data-confirm-message></p><div class="buttons"><button data-confirm-yes>Այո</button><button data-confirm-no>Ոչ</button></div></div>';
+      document.body.appendChild(backdrop);
+    }
+  }
   return new Promise(resolve => {
     const previous = document.activeElement;
-    const yes = backdrop.querySelector('#confirm-yes'), no = backdrop.querySelector('#confirm-no');
-    document.getElementById('custom-confirm-message').textContent = message;
+    const yes = backdrop.querySelector('#confirm-yes,[data-confirm-yes]'), no = backdrop.querySelector('#confirm-no,[data-confirm-no]');
+    backdrop.querySelector('#custom-confirm-message,[data-confirm-message]').textContent = message;
     backdrop.style.zIndex = '2000';
+    backdrop.style.display = 'flex';
     backdrop.classList.remove('hidden'); backdrop.setAttribute('role', 'dialog'); backdrop.setAttribute('aria-modal', 'true');
     backdrop.setAttribute('aria-label', 'Հաստատել գործողությունը');
-    const finish = answer => { backdrop.classList.add('hidden'); yes.onclick = no.onclick = null; backdrop.onkeydown = null; previous?.focus(); resolve(answer); };
+    const finish = answer => { backdrop.classList.add('hidden'); backdrop.style.display = 'none'; yes.onclick = no.onclick = null; backdrop.onkeydown = null; previous?.focus(); resolve(answer); };
     yes.onclick = () => finish(true); no.onclick = () => finish(false);
     backdrop.onkeydown = event => {
       if (event.key === 'Escape') { event.stopPropagation(); finish(false); }

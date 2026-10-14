@@ -62,7 +62,7 @@ function roomView(state, room) {
   const messages = state.messages.filter(message => message.roomId === room.id && (!pref.deletedAt || message.createdAt > pref.deletedAt));
   const participants = room.participants.map(id => author(state, id));
   const other = room.participants.find(id => id !== userId);
-  return { id: room.id, isGroup: room.isGroup, name: room.name || participants.filter(person => person.id !== userId).map(person => person.name).join(', '), participants,
+  return { id: room.id, isGroup: room.isGroup, closed: room.participants.length < 2, name: room.name || participants.filter(person => person.id !== userId).map(person => person.name).join(', ') || 'Ջնջված օգտատեր', participants,
     muted: pref.muted, blocked: isBlocked(state, userId, other), unreadCount: messages.filter(message => message.senderId !== userId && (!pref.readAt || message.createdAt > pref.readAt)).length,
     lastMessage: messages.length ? messageView(state, messages.at(-1)) : null };
 }
@@ -220,6 +220,7 @@ const operations = {
   'chat.messages': (state, id) => { const room = roomForUser(state, id); const pref = preference(room, me(state).id); return state.messages.filter(message => message.roomId === String(id) && (!pref.deletedAt || message.createdAt > pref.deletedAt)).map(message => messageView(state, message)); },
   'chat.send': (state, roomId, data) => {
     const room = roomForUser(state, roomId), own = me(state).id;
+    if (room.participants.length < 2) throw new DataError('FORBIDDEN', 'Նամակագրությունն ավարտված է։');
     if (room.participants.some(id => id !== own && (isBlocked(state, own, id) || isBlocked(state, id, own)))) throw new DataError('FORBIDDEN', 'Հաղորդագրությունը չի կարող ուղարկվել։ Օգտատերը արգելափակված է։');
     const text = String(data.text || '').trim();
     if (!text && !data.file) throw new DataError('VALIDATION', 'Մուտքագրեք հաղորդագրություն։');
@@ -342,7 +343,14 @@ export function createMockProvider() {
       async failNext(operation, code = 'SERVICE_ERROR', message = 'Ցուցադրական սխալ։ Կրկին փորձեք։') { if (!operations[operation]) throw new DataError('VALIDATION', 'Unknown operation'); await transaction(state => { state.scenario.failures[operation] = { code, message }; }, { write: true }); },
       async clearScenarios() { await transaction(state => { state.scenario = { latency: 0, failures: {} }; }, { write: true }); },
       async incoming(roomId, text) {
-        const result = await transaction(state => { const room = roomForUser(state, roomId); const senderId = room.participants.find(id => id !== me(state).id); if (!senderId) throw new DataError('VALIDATION', 'No other participant'); const message = { id: nextId(state, 'message'), roomId: room.id, senderId, text: required(text, 'text', 5000), createdAt: now(), attachment: null }; state.messages.push(message); preference(room, me(state).id).hidden = false; return messageView(state, message); }, { write: true });
+        const result = await transaction(state => {
+          const room = roomForUser(state, roomId), own = me(state).id;
+          const senderId = room.participants.find(id => id !== own);
+          if (!senderId) throw new DataError('VALIDATION', 'No other participant');
+          if (isBlocked(state, own, senderId) || isBlocked(state, senderId, own)) throw new DataError('FORBIDDEN', 'Օգտատերը արգելափակված է։');
+          const message = { id: nextId(state, 'message'), roomId: room.id, senderId, text: required(text, 'text', 5000), createdAt: now(), attachment: null };
+          state.messages.push(message); preference(room, own).hidden = false; return messageView(state, message);
+        }, { write: true });
         notify({ operation: 'chat.incoming' }); channel?.postMessage({ operation: 'chat.incoming' }); return result;
       },
       operations: Object.keys(operations),

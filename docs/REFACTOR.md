@@ -89,7 +89,13 @@ sections and repeated biography text; these are known defects, not extra domain 
 - Session/navigation lifecycle verified: ending the mock session in the developer
   tab redirects an open protected page to login; Back cannot reopen it while signed
   out. Session/reset signals and cached-page verification are centralized.
-- Pending migrations: messaging,
+- Messaging migrated. Browser-verified distinct histories, text/reload persistence,
+  actual clipboard copying, failed-send draft retention/retry, PNG attachment/reload
+  persistence, incoming-message subscription, mute/block/reload/unblock, delete
+  cancellation and per-user hiding, group history/send/reload and emoji insertion.
+  Mock incoming messages respect blocking; a deleted participant leaves a read-only
+  conversation. Confirmation overlays work without native prompts.
+- Pending migrations:
   settings, shared behavior and removal of obsolete API/global fixtures.
 
 ## Run

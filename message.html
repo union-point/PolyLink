@@ -1,197 +1,74 @@
 <!DOCTYPE html>
+
 <html lang="hy">
-
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Նամակագրություն</title>
-  <link rel="stylesheet" href="./css/message.css">
-  <link rel="stylesheet" href="./css/style.css">
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Նամակագրություն</title>
+<link href="./css/message.css" rel="stylesheet"/>
+<link href="./css/style.css" rel="stylesheet"/>
 </head>
-
 <body>
-  <header class="header">
-    <div class="header-container">
-      <div class="logo-container">
-        <img class="logo-img" src="./image/logo.png" alt="Logo" class="logo-img">
-        <h3 class="logo-text">PolyLink</h3>
-      </div>
-      <nav>
-        <ul class="menu">
-          <li><a href="profile.html">Անձնական էջ</a></li>
-          <li><a href="events.html">Իրադարձություններ</a></li>
-          <li><a href="forum.html">Ֆոռում</a></li>
-          <li><a href="message.html" class="active">Նամակագրություն</a></li>
-          <li><a href="search.html">Որոնում</a></li>
-        </ul>
-        <!-- Dropdown menu -->
-        <div class="dropdown-container">
-          <button class="dropdown-btn">☰</button>
-          <ul class="dropdown-menu">
-            <li><a href="help.html">Help</a></li>
-            <li><a href="settings.html">Կարգավորումներ</a></li>
-            <li><a href="login.html">Դուրս գալ</a></li>
-          </ul>
-        </div>
-      </nav>
-    </div>
-  </header>
-
-  <section class="chat-container">
-    <div class="container">
-      <div class="sidebar">
-        <div class="sidebar-header">
-          <div class="search-box">
-            <input type="text" placeholder="Փնտրել">
-          </div>
-        </div>
-        <div class="chat-list">
-          <div class="chat-item">
-            <div class="avatar">Ա</div>
-            <div class="chat-info">
-              <div class="chat-header">
-                <span class="chat-name">Անահիտ Ստեփանյան</span>
-                <span class="chat-time">14:30</span>
-              </div>
-              <div class="chat-preview">Լավ,կներկայանամ</div>
-            </div>
-          </div>
-          <div class="chat-item">
-            <div class="avatar">Ա</div>
-            <div class="chat-info">
-              <div class="chat-header">
-                <span class="chat-name">Արշակ Խաչատրյան</span>
-                <span class="chat-time">12:15</span>
-              </div>
-              <div class="chat-preview">Բարև ձեզ։</div>
-            </div>
-          </div>
-          <div class="chat-item">
-            <div class="avatar">Ա</div>
-            <div class="chat-info">
-              <div class="chat-header">
-                <span class="chat-name">Արման Մնացականյան</span>
-                <span class="chat-time">11:45</span>
-              </div>
-              <div class="chat-preview">Ձեզ հրավիրում ենք հանդիպման</div>
-            </div>
-          </div>
-          <div class="chat-item">
-            <div class="avatar">Մ</div>
-            <div class="chat-info">
-              <div class="chat-header">
-                <span class="chat-name">Մարիամ Արշակյան</span>
-                <span class="chat-time">10:20</span>
-              </div>
-              <div class="chat-preview">Ժողով ժամը 15:00-ին</div>
-            </div>
-          </div>
-          <div class="chat-item">
-            <div class="avatar">Ե</div>
-            <div class="chat-info">
-              <div class="chat-header">
-                <span class="chat-name">Ելենա Ոսկանյան</span>
-                <span class="chat-time">Երեկ</span>
-              </div>
-              <div class="chat-preview">Շնորհակալություն օգնության համար</div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div class="chat-area">
-        <div class="chat-header-main">
-          <div class="contact-info">
-            <div class="avatar">Վ</div>
-            <div class="contact-details">
-
-              <div class="contact-name">Վաչե Թորոսյան</div>
-              <div class="contact-status">առցանց</div>
-            </div>
-          </div>
-          <div class="chat-actions">
-            <span class="action-icon">🔍</span>
-            <span class="action-icon menu-btn">⋮</span>
-          </div>
-        </div>
-
-        <div class="messages">
-          <div class="message received">
-            <div class="message-content">
-              <div class="message-text">
-                Բարև, ինչպե՞ս ես։
-                <button class="copy-btn" onclick="copyText(this)">📋</button>
-              </div>
-              <div class="message-time">12:30</div>
-            </div>
-          </div>
-          <div class="message sent">
-            <div class="message-content">
-              <div class="message-text">
-                Բարև։ Շնորհակալություն, լավ եմ։ Դո՞ւ ինչպես ես։
-                <button class="copy-btn" onclick="copyText(this)">📋</button>
-              </div>
-              <div class="message-time">12:32</div>
-            </div>
-          </div>
-          <div class="message received">
-            <div class="message-content">
-              <div class="message-text">
-                Նույնպես լավ եմ։ Ուզում էի քեզ հետ կարևոր բան քննարկել։
-                <button class="copy-btn" onclick="copyText(this)">📋</button>
-              </div>
-              <div class="message-time">12:33</div>
-            </div>
-          </div>
-          <div class="message sent">
-            <div class="message-content">
-              <div class="message-text">
-                Իհարկե, ասա։
-                <button class="copy-btn" onclick="copyText(this)">📋</button>
-              </div>
-              <div class="message-time">12:34</div>
-            </div>
-          </div>
-          <div class="message received">
-            <div class="message-content">
-              <div class="message-text">
-                Վաղը ժամը 10:00-ին ունենք հանդիպում։ Կարո՞ղ ես գալ։
-                <button class="copy-btn" onclick="copyText(this)">📋</button>
-              </div>
-              <div class="message-time">12:35</div>
-            </div>
-          </div>
-          <div class="message sent">
-            <div class="message-content">
-              <div class="message-text">
-                Այո, կգամ։ Որտե՞ղ է հանդիպումը։
-                <button class="copy-btn" onclick="copyText(this)">📋</button>
-              </div>
-              <div class="message-time">12:36</div>
-            </div>
-          </div>
-          <div class="message received">
-            <div class="message-content">
-              <div class="message-text">
-                Գրասենյակում, նույն տեղում։
-                <button class="copy-btn" onclick="copyText(this)">📋</button>
-              </div>
-              <div class="message-time">14:30</div>
-            </div>
-          </div>
-        </div>
-
-        <div class="message-input">
-          <span class="input-icon emoji-btn">😊</span>
-          <input type="text" placeholder="Գրել հաղորդագրություն...">
-          <span class="input-icon attachment-btn">📎</span>
-          <span class="input-icon send-icon">➤</span>
-        </div>
-      </div>
-    </div>
-  </section>
-  <script src="./js/chat.js"></script>
-
+<header class="header">
+<div class="header-container">
+<div class="logo-container">
+<img alt="Logo" class="logo-img" src="./image/logo.png"/>
+<h3 class="logo-text">PolyLink</h3>
+</div>
+<nav>
+<ul class="menu">
+<li><a href="profile.html">Անձնական էջ</a></li>
+<li><a href="events.html">Իրադարձություններ</a></li>
+<li><a href="forum.html">Ֆոռում</a></li>
+<li><a class="active" href="message.html">Նամակագրություն</a></li>
+<li><a href="search.html">Որոնում</a></li>
+</ul>
+<!-- Dropdown menu -->
+<div class="dropdown-container">
+<button class="dropdown-btn">☰</button>
+<ul class="dropdown-menu">
+<li><a href="help.html">Help</a></li>
+<li><a href="settings.html">Կարգավորումներ</a></li>
+<li><a href="login.html">Դուրս գալ</a></li>
+</ul>
+</div>
+</nav>
+</div>
+</header>
+<section class="chat-container">
+<div class="container">
+<div class="sidebar">
+<div class="sidebar-header">
+<div class="search-box">
+<input placeholder="Փնտրել" type="text"/>
+</div>
+</div>
+<div class="chat-list"></div>
+</div>
+<div class="chat-area">
+<div class="chat-header-main">
+<div class="contact-info">
+<div class="avatar">Վ</div>
+<div class="contact-details">
+<div class="contact-name"></div>
+<div class="contact-status"></div>
+</div>
+</div>
+<div class="chat-actions">
+<button class="action-icon" type="button">🔍</button>
+<button class="action-icon menu-btn" type="button">⋮</button>
+</div>
+</div>
+<div class="messages"></div>
+<div class="message-input">
+<button class="input-icon emoji-btn" type="button">😊</button>
+<input placeholder="Գրել հաղորդագրություն..." type="text"/>
+<button class="input-icon attachment-btn" type="button">📎</button>
+<button class="input-icon send-icon" type="button">➤</button>
+</div>
+</div>
+</div>
+</section>
+<script src="./js/chat.js" type="module"></script>
 </body>
-
 </html>

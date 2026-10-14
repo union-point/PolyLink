@@ -460,17 +460,20 @@ const seed = {
           "readAt": "2025-10-26T11:00:00Z"
         }
       }
+    },
+    {
+      "id": "room-group",
+      "name": "Մասնագիտական քննարկումներ",
+      "isGroup": true,
+      "participants": [
+        "1",
+        "5",
+        "2"
+      ],
+      "preferences": {}
     }
   ],
   "messages": [
-    {
-      "id": "message-1",
-      "roomId": "room-1",
-      "senderId": "5",
-      "text": "Բարև։ Ինչպե՞ս ես։",
-      "createdAt": "2025-10-26T12:00:00.000Z",
-      "attachment": null
-    },
     {
       "id": "message-2",
       "roomId": "room-2",
@@ -501,6 +504,70 @@ const seed = {
       "senderId": "2",
       "text": "Բարև։ Ինչպե՞ս ես։",
       "createdAt": "2025-10-26T12:00:00.000Z",
+      "attachment": null
+    },
+    {
+      "id": "initial-message-1",
+      "roomId": "room-1",
+      "senderId": "5",
+      "text": "Բարև, ինչպե՞ս ես։",
+      "createdAt": "2025-10-26T12:30:00.000Z",
+      "attachment": null
+    },
+    {
+      "id": "initial-message-2",
+      "roomId": "room-1",
+      "senderId": "1",
+      "text": "Բարև։ Շնորհակալություն, լավ եմ։ Դո՞ւ ինչպես ես։",
+      "createdAt": "2025-10-26T12:31:00.000Z",
+      "attachment": null
+    },
+    {
+      "id": "initial-message-3",
+      "roomId": "room-1",
+      "senderId": "5",
+      "text": "Նույնպես լավ եմ։ Ուզում էի քեզ հետ կարևոր բան քննարկել։",
+      "createdAt": "2025-10-26T12:32:00.000Z",
+      "attachment": null
+    },
+    {
+      "id": "initial-message-4",
+      "roomId": "room-1",
+      "senderId": "1",
+      "text": "Իհարկե, ասա։",
+      "createdAt": "2025-10-26T12:33:00.000Z",
+      "attachment": null
+    },
+    {
+      "id": "initial-message-5",
+      "roomId": "room-1",
+      "senderId": "5",
+      "text": "Վաղը ժամը 10:00-ին ունենք հանդիպում։ Կարո՞ղ ես գալ։",
+      "createdAt": "2025-10-26T12:34:00.000Z",
+      "attachment": null
+    },
+    {
+      "id": "initial-message-6",
+      "roomId": "room-1",
+      "senderId": "1",
+      "text": "Այո, կգամ։ Որտե՞ղ է հանդիպումը։",
+      "createdAt": "2025-10-26T12:35:00.000Z",
+      "attachment": null
+    },
+    {
+      "id": "initial-message-7",
+      "roomId": "room-1",
+      "senderId": "5",
+      "text": "Գրասենյակում, նույն տեղում։",
+      "createdAt": "2025-10-26T12:36:00.000Z",
+      "attachment": null
+    },
+    {
+      "id": "initial-group-message",
+      "roomId": "room-group",
+      "senderId": "2",
+      "text": "Բարի գալուստ մասնագիտական քննարկումների խումբ։",
+      "createdAt": "2025-10-26T13:00:00.000Z",
       "attachment": null
     }
   ],
