@@ -1,14 +1,16 @@
 // ============================================
 // PROFILE SECTIONS MANAGEMENT
 // ============================================
-/* uncomment
 import { Modal, createFormattingToolbar, setupFormattingHandlers } from './profile-modal.js';
-import { formatDate, formatDateRange, formatTimeAgo, showNotification, customConfirm } from './profile-utils.js';
-import { makeEntryEditable } from './profile-editor.js';
+import { monthLabel as formatDate, dateRange as formatDateRange, relativeTime as formatTimeAgo,
+  notify as showNotification, confirmAction as customConfirm, pending, showError } from '../shared/ui.js';
 import { validateForm, initializeValidation } from './profile-validation.js';
-import { setCurrentModal } from './profile-keyboard.js';
-import { createEducation, createComment, getComments } from '../api/profile-api.js';
-*/
+import { profiles, posts } from '../services/index.js';
+import { escapeHtml as e, safeUrl } from '../shared/content.js';
+// Temporary envelope bridges for the not-yet-migrated profile comment renderer.
+const getComments = async id => ({ data: await posts.comments.list(id) });
+const createComment = async (id, data) => ({ data: { success: true, data: await posts.comments.create(id, data) } });
+
 const modal = new Modal();
 
 // ============================================
@@ -94,31 +96,17 @@ function showAddEducationModal() {
     </div>
   `;
 
-  modal.create('Ավելացնել կրթություն', form, async (data) => {
-    // Validate form
-    if (!validateForm(form)) {
-      showNotification('Խնդրում ենք լրացնել բոլոր պարտադիր դաշտերը');
-      return;
-    }
-
-    try {
-      // Call API to create education
-      const response = await createEducation(data);
-
-      if (response.data.success) {
-        addEducationEntry(data);
-        showNotification('Կրթությունը ավելացվել է');
-      }
-    } catch (error) {
-      console.error('Failed to add education:', error);
-      showNotification('Սխալ՝ կրթությունը չի ավելացվել');
-    }
+  modal.create('Ավելացնել կրթություն', form, async data => {
+    if (!validateForm(form)) return false;
+    const record = await profiles.education.create(data);
+    addEducationEntry(record);
+    showNotification('Կրթությունը ավելացվել է');
   });
 
   // Initialize validation for form inputs
   setTimeout(() => {
     initializeValidation(form);
-    setCurrentModal(document.querySelector('.modal-overlay'));
+
   }, 100);
 }
 
@@ -130,15 +118,16 @@ function addEducationEntry(data) {
   const educationSection = document.querySelector('.education-section');
   const newEntry = document.createElement('div');
   newEntry.className = 'item-entry';
+  newEntry.dataset.entryId = data.id;
   newEntry.innerHTML = `
     <div class="item-logo">
-      <div class="cert-logo-bg" style="width: 48px; height: 48px; display: flex; align-items: center; justify-content: center;">
+      ${data.logo ? `<img src="${e(safeUrl(data.logo, { image: true }))}" class="entry-logo" alt="University Logo">` : `<div class="cert-logo-bg" style="width: 48px; height: 48px; display: flex; align-items: center; justify-content: center;">
         <i class="fas fa-graduation-cap" style="color: white; font-size: 20px;"></i>
-      </div>
+      </div>`}
     </div>
     <div class="item-details">
-      <p class="item-title">${data.institution || 'Նոր ուսումնական հաստատություն'}</p>
-      <p class="item-subtitle">${data.degree || 'Աստիճան և մասնագիտություն'}</p>
+      <p class="item-title">${e(data.institution || 'Նոր ուսումնական հաստատություն')}</p>
+      <p class="item-subtitle">${e(data.degree || 'Աստիճան և մասնագիտություն')}</p>
       <p class="item-date">${formatDateRange(data.startDate, data.endDate)}</p>
     </div>
     <div class="edit-icons">
@@ -176,7 +165,7 @@ function editEducation(entry, currentData) {
         <span style="color: #e74c3c; font-size: 16px;">*</span>
       </label>
       <input type="text" id="edu-institution" name="institution" required data-required
-        value="${currentData.institution || ''}"
+        value="${e(currentData.institution || '')}"
         style="width: 100%; padding: 14px 16px; border-radius: 12px; font-size: 15px; background: var(--card-background); color: var(--font-color-primary); border: 2px solid var(--border-color); transition: all 0.3s ease; box-sizing: border-box;"
         placeholder="Օրինակ՝ Հայաստանի ազգային պոլիտեխնիկական համալսարան"
         onfocus="this.style.borderColor='#667eea'; this.style.boxShadow='0 0 0 4px rgba(102, 126, 234, 0.1)'"
@@ -190,7 +179,7 @@ function editEducation(entry, currentData) {
         <span style="color: #e74c3c; font-size: 16px;">*</span>
       </label>
       <input type="text" id="edu-degree" name="degree" required data-required
-        value="${currentData.degree || ''}"
+        value="${e(currentData.degree || '')}"
         style="width: 100%; padding: 14px 16px; border-radius: 12px; font-size: 15px; background: var(--card-background); color: var(--font-color-primary); border: 2px solid var(--border-color); transition: all 0.3s ease; box-sizing: border-box;"
         placeholder="Օրինակ՝ Բակալավրի աստիճան, Ծրագրային ինժեներություն"
         onfocus="this.style.borderColor='#667eea'; this.style.boxShadow='0 0 0 4px rgba(102, 126, 234, 0.1)'"
@@ -208,7 +197,7 @@ function editEducation(entry, currentData) {
             Սկիզբ <span style="color: #e74c3c;">*</span>
           </label>
           <input type="month" id="edu-start" name="startDate" required data-required
-            value="${currentData.startDate || ''}"
+            value="${e(currentData.startDate || '')}"
             style="width: 100%; padding: 12px; border-radius: 10px; font-size: 14px; background: var(--card-background); color: var(--font-color-primary); border: 2px solid var(--border-color); transition: all 0.3s ease; box-sizing: border-box;"
             onfocus="this.style.borderColor='#667eea'; this.style.boxShadow='0 0 0 4px rgba(102, 126, 234, 0.1)'"
             onblur="this.style.borderColor='var(--border-color)'; this.style.boxShadow='none'">
@@ -218,7 +207,7 @@ function editEducation(entry, currentData) {
             Ավարտ
           </label>
           <input type="month" id="edu-end" name="endDate"
-            value="${currentData.endDate || ''}"
+            value="${e(currentData.endDate || '')}"
             style="width: 100%; padding: 12px; border-radius: 10px; font-size: 14px; background: var(--card-background); color: var(--font-color-primary); border: 2px solid var(--border-color); transition: all 0.3s ease; box-sizing: border-box;"
             onfocus="this.style.borderColor='#667eea'; this.style.boxShadow='0 0 0 4px rgba(102, 126, 234, 0.1)'"
             onblur="this.style.borderColor='var(--border-color)'; this.style.boxShadow='none'">
@@ -234,7 +223,10 @@ function editEducation(entry, currentData) {
     </div>
   `;
 
-  modal.create('Փոփոխել կրթությունը', form, (data) => {
+  modal.create('Փոփոխել կրթությունը', form, async data => {
+    if (!validateForm(form)) return false;
+    const record = await profiles.education.update(currentData.id, { ...currentData, ...data });
+    Object.assign(currentData, record);
     // Update the entry with new data
     const titleEl = entry.querySelector('.item-title');
     const subtitleEl = entry.querySelector('.item-subtitle');
@@ -252,13 +244,12 @@ function editEducation(entry, currentData) {
     const deleteBtn = form.querySelector('.delete-entry-btn');
     if (deleteBtn) {
       deleteBtn.addEventListener('click', () => {
-        modal.close();
-        deleteEducation(entry);
+        deleteEducation(entry, currentData.id, deleteBtn, form);
       });
     }
 
     initializeValidation(form);
-    setCurrentModal(document.querySelector('.modal-overlay'));
+
   }, 100);
 }
 
@@ -266,14 +257,16 @@ function editEducation(entry, currentData) {
  * Delete an education entry
  * @param {HTMLElement} entry - Education entry element
  */
-function deleteEducation(entry) {
-  customConfirm("Վստա՞հ եք, որ ցանկանում եք հեռացնել այս կրթությունը։")
-    .then(answer => {
-      if (answer) {
-        entry.remove();
-        showNotification('Կրթությունը հեռացվել է');
-      }
-    });
+async function deleteEducation(entry, id, button, form) {
+  if (button.disabled) return;
+  button.disabled = true;
+  const confirmed = await customConfirm('Վստա՞հ եք, որ ցանկանում եք հեռացնել այս կրթությունը։');
+  button.disabled = false;
+  if (!confirmed) return;
+  modal.saving = true;
+  const saved = await pending(button, form, () => profiles.education.delete(id));
+  modal.saving = false;
+  if (saved) { entry.remove(); modal.close(); showNotification('Կրթությունը հեռացվել է'); }
 }
 
 /**
@@ -286,7 +279,8 @@ function attachEducationHandlers(entry, data) {
 
   if (editIcon) {
     editIcon.style.cursor = 'pointer';
-    editIcon.addEventListener('click', () => editEducation(entry, data));
+    editIcon.tabIndex = 0; editIcon.setAttribute('role', 'button'); editIcon.setAttribute('aria-label', 'Փոփոխել կրթությունը');
+    editIcon.onclick = () => editEducation(entry, data);
   }
 }
 
@@ -877,60 +871,24 @@ function attachAnnouncementHandlers(entry) {
 /**
  * Handle banner photo upload
  */
-function handleBannerUpload() {
-  const input = document.createElement('input');
-  input.type = 'file';
-  input.accept = 'image/*';
-  input.onchange = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        const bannerPhoto = document.querySelector('.banner-photo');
-        bannerPhoto.style.backgroundImage = `url(${event.target.result})`;
-        showNotification('Բանների նկարը թարմացվել է');
-      };
-      reader.readAsDataURL(file);
-    }
+function handleBannerUpload() { uploadPhoto('cover'); }
+function handleProfilePhotoUpload() { uploadPhoto('avatar'); }
+function uploadPhoto(kind) {
+  const input = document.createElement('input'); input.type = 'file'; input.accept = 'image/png,image/jpeg,image/webp,image/gif';
+  input.onchange = async () => {
+    const file = input.files[0]; if (!file) return;
+    const container = document.querySelector('.intro-card');
+    await pending(null, container, async () => {
+      const user = await profiles.upload(kind, file);
+      if (kind === 'cover') document.querySelector('.banner-photo').style.backgroundImage = `url("${safeUrl(user.cover, { image: true })}")`;
+      else document.querySelector('.profile-photo img').src = safeUrl(user.avatar, { image: true });
+      showNotification('Լուսանկարը թարմացվել է');
+    });
   };
   input.click();
 }
 
-/**
- * Handle profile photo upload
- */
-function handleProfilePhotoUpload() {
-  const input = document.createElement('input');
-  input.type = 'file';
-  input.accept = 'image/*';
-  input.onchange = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        const profilePhoto = document.querySelector('.profile-photo img');
-        if (profilePhoto) {
-          profilePhoto.src = event.target.result;
-          showNotification('Պրոֆիլի նկարը թարմացվել է');
-        }
-      };
-      reader.readAsDataURL(file);
-    }
-  };
-  input.click();
-}
-/* uncomment
-export {
-  showAddEducationModal,
-  addEducationEntry,
-  showAddLicenseModal,
-  addLicenseEntry,
-  showAddAnnouncementModal,
-  addAnnouncementEntry,
-  editAnnouncement,
-  deleteAnnouncement,
-  toggleComments,
-  attachAnnouncementHandlers,
-  handleBannerUpload,
-  handleProfilePhotoUpload,
-}*/
+export { showAddEducationModal, addEducationEntry, attachEducationHandlers,
+ showAddLicenseModal, addLicenseEntry, attachLicenseHandlers,
+ showAddAnnouncementModal, addAnnouncementEntry, attachAnnouncementHandlers,
+ handleBannerUpload, handleProfilePhotoUpload };

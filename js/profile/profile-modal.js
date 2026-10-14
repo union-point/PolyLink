@@ -1,3 +1,4 @@
+import { showError } from '../shared/ui.js';
 // ============================================
 // MODAL CLASS
 // ============================================
@@ -8,6 +9,7 @@
 class Modal {
   constructor() {
     this.modal = null;
+    this.saving = false;
   }
 
   /**
@@ -80,6 +82,10 @@ class Modal {
 
     document.body.appendChild(overlay);
     this.modal = overlay;
+    this.previousFocus = document.activeElement;
+    modal.setAttribute('role', 'dialog'); modal.setAttribute('aria-modal', 'true');
+    modal.setAttribute('aria-label', title);
+    (contentEl.querySelector('input,select,textarea,[contenteditable]') || modal.querySelector('button'))?.focus();
 
     // Add animations
     this.addAnimations();
@@ -163,12 +169,14 @@ class Modal {
     const buttonContainer = document.createElement('div');
     buttonContainer.style.cssText = 'display: flex; gap: 12px;';
 
-    const saveBtn = this.createButton('Պահպանել', 'primary-btn', () => {
-      if (onSave) {
-        const formData = this.getFormData(contentEl);
-        onSave(formData);
-      }
-      this.close();
+    const saveBtn = this.createButton('Պահպանել', 'primary-btn', async () => {
+      if (this.saving) return;
+      this.saving = true; saveBtn.disabled = true; saveBtn.setAttribute('aria-busy', 'true');
+      try {
+        const result = onSave ? await onSave(this.getFormData(contentEl)) : undefined;
+        if (result !== false) { this.saving = false; this.close(); }
+      } catch (error) { showError(contentEl, error); }
+      finally { this.saving = false; saveBtn.disabled = false; saveBtn.removeAttribute('aria-busy'); }
     });
 
     const cancelBtn = this.createButton('Չեղարկել', 'secondary-btn', () => this.close());
@@ -224,9 +232,11 @@ class Modal {
    * Close the modal
    */
   close() {
+    if (this.saving) return;
     if (this.modal) {
       this.modal.remove();
       this.modal = null;
+      this.previousFocus?.focus();
     }
   }
 
@@ -358,4 +368,4 @@ function addFormattingStyles() {
   style.setAttribute('data-formatting-styles', 'true');
   document.head.appendChild(style);
 }
-//export { Modal, createFormattingToolbar, setupFormattingHandlers };
+export { Modal, createFormattingToolbar, setupFormattingHandlers };

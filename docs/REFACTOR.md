@@ -66,7 +66,13 @@ sections and repeated biography text; these are known defects, not extra domain 
   old credentials fail and new demo credentials succeed. 2FA preference creates a
   separate login challenge; incorrect codes fail, its resend timer survives reload,
   correct verification succeeds, and revisiting the consumed flow cannot sign in.
-- Pending migrations: profiles, forum/search, messaging,
+- Owner profile core migrated: reads, intro editing, education and photos now use
+  services and explicit modules. Browser-verified intro cancel/save/reload, Ctrl+S,
+  education required/chronological checks, create/edit/reopen/reload, cancel/delete
+  confirmation and durable deletion. Avatar upload survives reload as an IndexedDB
+  blob (decoded image width 1024). Confirmation layering was corrected.
+  Certificate/post/public-profile migration remains a separate next step.
+- Pending migrations: certificates/profile posts/public profile, forum/search, messaging,
   settings, shared behavior and removal of obsolete API/global fixtures.
 
 ## Run

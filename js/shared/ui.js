@@ -65,6 +65,32 @@ export function monthLabel(value) {
   return `${months[month - 1]} ${year} թ.`;
 }
 export function dateRange(start, end) { return `${monthLabel(start)} – ${monthLabel(end)}`; }
+export function relativeTime(value) {
+  const minutes = Math.max(0, Math.floor((Date.now() - new Date(value).getTime()) / 60000));
+  if (!minutes) return 'Հենց հիմա';
+  if (minutes < 60) return `${minutes} րոպե առաջ`;
+  if (minutes < 1440) return `${Math.floor(minutes / 60)} ժամ առաջ`;
+  return `${Math.floor(minutes / 1440)} օր առաջ`;
+}
+export function confirmAction(message) {
+  const backdrop = document.getElementById('custom-confirm-backdrop');
+  if (!backdrop) return Promise.resolve(confirm(message));
+  return new Promise(resolve => {
+    const previous = document.activeElement;
+    const yes = backdrop.querySelector('#confirm-yes'), no = backdrop.querySelector('#confirm-no');
+    document.getElementById('custom-confirm-message').textContent = message;
+    backdrop.style.zIndex = '2000';
+    backdrop.classList.remove('hidden'); backdrop.setAttribute('role', 'dialog'); backdrop.setAttribute('aria-modal', 'true');
+    backdrop.setAttribute('aria-label', 'Հաստատել գործողությունը');
+    const finish = answer => { backdrop.classList.add('hidden'); yes.onclick = no.onclick = null; backdrop.onkeydown = null; previous?.focus(); resolve(answer); };
+    yes.onclick = () => finish(true); no.onclick = () => finish(false);
+    backdrop.onkeydown = event => {
+      if (event.key === 'Escape') { event.stopPropagation(); finish(false); }
+      if (event.key === 'Tab') { event.preventDefault(); (document.activeElement === yes ? no : yes).focus(); }
+    };
+    no.focus();
+  });
+}
 
 export async function bootstrap({ protectedPage = true, requireOnboarding = true } = {}) {
   initializeTheme();
