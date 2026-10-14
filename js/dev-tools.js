@@ -1,5 +1,5 @@
 import { mockControls } from './data/client.js';
-import { auth } from './services/index.js';
+import { auth, settings } from './services/index.js';
 import { start } from './shared/ui.js';
 
 start(async () => {
@@ -18,6 +18,7 @@ start(async () => {
   bind('reset', () => controls.reset());
   bind('logout', () => auth.logout());
   bind('clear', () => controls.clearScenarios());
+  bind('set-2fa', () => settings.update({ twoFactorEnabled: document.getElementById('two-factor').checked }));
   bind('set-latency', () => controls.latency(Number(document.getElementById('latency').value)));
   bind('fail', () => controls.failNext(operations.value, document.getElementById('code').value));
   bind('incoming', () => controls.incoming(document.getElementById('room').value, document.getElementById('text').value));

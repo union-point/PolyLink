@@ -14,3 +14,9 @@ export function requireChallenge(purpose) {
   if (data.purpose !== purpose || !data.challengeId || (data.expiresAt && data.expiresAt <= Date.now())) throw new DataError('VALIDATION', 'Նախ պահանջեք նոր վավերացման կոդ։');
   return data;
 }
+export function rememberChallenge(purpose, result, address) {
+  if (!result?.challengeId) throw new DataError('CONTRACT', 'Verification response is missing challengeId.');
+  const data = { ...result, purpose, email: address, resendAt: Date.now() + (result.resendAfter ?? 60) * 1000 };
+  saveWorkflow(data);
+  return data;
+}

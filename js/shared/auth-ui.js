@@ -1,5 +1,5 @@
 import { DataError } from '../data/errors.js';
-import { saveWorkflow } from '../services/workflow.js';
+import { rememberChallenge } from '../services/workflow.js';
 
 export function initializePasswordControls(passwordId = 'password') {
   document.querySelectorAll('.toggle-password').forEach(button => {
@@ -26,7 +26,7 @@ export function passwordsMatch(first, second) {
 }
 export function goToProfile(user) { location.href = user.onboardingComplete ? 'profile.html' : 'profile_info.html'; }
 export function finishLogin(result) {
-  if (result.status === 'challenge') { saveWorkflow({ ...result, purpose: 'second-factor' }); location.href = '2fa-verify.html'; }
+  if (result.status === 'challenge') { rememberChallenge('second-factor', result); location.href = '2fa-verify.html'; }
   else if (result.user) goToProfile(result.user);
   else throw new DataError('CONTRACT', 'Login response is missing the user.');
 }

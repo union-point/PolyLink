@@ -1,89 +1,24 @@
-//reset-password
-const newPasswordInput = document.getElementById('new-password');
-const confirmPasswordInput = document.getElementById('confirm-password');
-const submitBtn = document.getElementById('submit-btn');
-const strengthBar = document.getElementById('strength-bar');
-const strengthText = document.getElementById('strength-text');
+import { auth } from './services/index.js';
+import { requireChallenge, clearWorkflow } from './services/workflow.js';
+import { start, bootstrap, pending, showError } from './shared/ui.js';
+import { initializePasswordControls, passwordsMatch } from './shared/auth-ui.js';
+import { DataError } from './data/errors.js';
 
-// Toggle password visibility
-document.getElementById('toggle-new').addEventListener('click', function () {
-    const type = newPasswordInput.type === 'password' ? 'text' : 'password';
-    newPasswordInput.type = type;
-    this.textContent = type === 'password' ? '👁️' : '🙈';
-});
-
-document.getElementById('toggle-confirm').addEventListener('click', function () {
-    const type = confirmPasswordInput.type === 'password' ? 'text' : 'password';
-    confirmPasswordInput.type = type;
-    this.textContent = type === 'password' ? '👁️' : '🙈';
-});
-
-// Password validation requirements
-const requirements = {
-    length: { regex: /.{8,}/, element: document.getElementById('req-length') },
-    uppercase: { regex: /[A-Z]/, element: document.getElementById('req-uppercase') },
-    number: { regex: /[0-9]/, element: document.getElementById('req-number') },
-    special: { regex: /[!@#$%^&*(),.?":{}|<>]/, element: document.getElementById('req-special') }
-};
-
-function checkPasswordStrength(password) {
-    let strength = 0;
-    let metRequirements = 0;
-
-    for (const [key, req] of Object.entries(requirements)) {
-        if (req.regex.test(password)) {
-            req.element.classList.add('met');
-            metRequirements++;
-        } else {
-            req.element.classList.remove('met');
-        }
-    }
-
-    // Calculate strength
-    if (metRequirements <= 2) {
-        strength = 'weak';
-        strengthText.textContent = 'Թույլ';
-    } else if (metRequirements <= 3) {
-        strength = 'medium';
-        strengthText.textContent = 'Միջին';
-    } else {
-        strength = 'strong';
-        strengthText.textContent = 'Ուժեղ';
-    }
-
-    // Update strength bar
-    strengthBar.className = 'password-strength-bar ' + strength;
-    strengthText.className = 'strength-text ' + strength;
-
-    return metRequirements === 4;
-}
-
-function validateForm() {
-    const newPassword = newPasswordInput.value;
-    const confirmPassword = confirmPasswordInput.value;
-
-    const allRequirementsMet = checkPasswordStrength(newPassword);
-    const passwordsMatch = newPassword === confirmPassword && newPassword.length > 0;
-
-    //  submitBtn.disabled = !(allRequirementsMet && passwordsMatch);
-}
-
-newPasswordInput.addEventListener('input', validateForm);
-confirmPasswordInput.addEventListener('input', validateForm);
-
-// Form submission
-document.getElementById('reset-form').addEventListener('submit', (e) => {
-    e.preventDefault();
-
-    const newPassword = newPasswordInput.value;
-    const confirmPassword = confirmPasswordInput.value;
-
-
-
-    // Here you would send the new password to your backend
-    console.log('New password set');
-
-    // Show success message and redirect
-    // alert('Գաղտնաբառը հաջողությամբ փոխվել է։ Խնդրում ենք մուտք գործել։');
-    window.location.href = 'profile.html';
+start(async () => {
+  await bootstrap({ protectedPage: false });
+  initializePasswordControls('new-password');
+  const form = document.getElementById('reset-form');
+  let context;
+  try { context = requireChallenge('recovery'); if (!context.recoveryToken) throw new DataError('VALIDATION', 'Նախ հաստատեք վերականգնման կոդը։'); }
+  catch (error) { showError(form, error); form.querySelector('[type="submit"]').disabled = true; return; }
+  document.getElementById('confirm-password').name = 'confirmPassword';
+  form.onsubmit = event => {
+    event.preventDefault();
+    pending(form.querySelector('[type="submit"]'), form, async () => {
+      const password = document.getElementById('new-password').value;
+      passwordsMatch(password, document.getElementById('confirm-password').value);
+      await auth.resetPassword({ recoveryToken: context.recoveryToken, email: context.email, code: context.code, newPassword: password });
+      clearWorkflow(); location.href = 'login.html';
+    });
+  };
 });

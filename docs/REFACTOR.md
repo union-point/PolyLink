@@ -61,7 +61,12 @@ sections and repeated biography text; these are known defects, not extra domain 
   new registration navigates to onboarding, lecturer controls hide study years,
   reversed years fail, and a valid graduate onboarding persists a new demo session.
   The owner profile still renders legacy fixtures until its migration.
-- Pending migrations: recovery/2FA, profiles, forum/search, messaging,
+- Recovery/2FA migrated. Browser-verified: wrong codes stay on verification, six-digit
+  clipboard paste works, mismatched reset passwords fail, reset returns to login,
+  old credentials fail and new demo credentials succeed. 2FA preference creates a
+  separate login challenge; incorrect codes fail, its resend timer survives reload,
+  correct verification succeeds, and revisiting the consumed flow cannot sign in.
+- Pending migrations: profiles, forum/search, messaging,
   settings, shared behavior and removal of obsolete API/global fixtures.
 
 ## Run
