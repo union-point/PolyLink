@@ -107,7 +107,9 @@ sections and repeated biography text; these are known defects, not extra domain 
   FAQ and tutorial controls. Browser-verified FAQ Enter toggle, retained support draft
   with explicit unavailable feedback, tutorial category filtering and unavailable-video
   feedback. No support submission or playable video is falsely reported as successful.
-- Pending cleanup: obsolete API/global fixtures and final HTTP/contract audit.
+- Obsolete disconnected API/core wrappers, duplicate profile utilities/theme and public
+  render fixtures removed after verifying they have no live imports or script tags.
+  Profile identity now travels exclusively in the URL. Final HTTP/contract audit pending.
 
 ## Run
 
