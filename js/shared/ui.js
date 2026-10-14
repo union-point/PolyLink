@@ -54,13 +54,15 @@ export function stateMessage(container, message, { retry } = {}) {
 }
 export function dateTime(value) {
   const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? '' : new Intl.DateTimeFormat('hy-AM', { dateStyle: 'medium', timeStyle: 'short' }).format(date);
+  const months = ['Հունվար', 'Փետրվար', 'Մարտ', 'Ապրիլ', 'Մայիս', 'Հունիս', 'Հուլիս', 'Օգոստոս', 'Սեպտեմբեր', 'Հոկտեմբեր', 'Նոյեմբեր', 'Դեկտեմբեր'];
+  return Number.isNaN(date.getTime()) ? '' : `${date.getDate()} ${months[date.getMonth()]} ${date.getFullYear()}, ${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
 }
 export function monthLabel(value) {
   if (!value) return 'Ներկա';
   const [year, month] = value.split('-').map(Number);
   if (!year || !month) return '';
-  return new Intl.DateTimeFormat('hy-AM', { year: 'numeric', month: 'short' }).format(new Date(year, month - 1, 1));
+  const months = ['հունվ.', 'փետր.', 'մարտ.', 'ապր.', 'մայ.', 'հունիս', 'հուլ.', 'օգ.', 'սեպտ.', 'հոկտ.', 'նոյ.', 'դեկ.'];
+  return `${months[month - 1]} ${year} թ.`;
 }
 export function dateRange(start, end) { return `${monthLabel(start)} – ${monthLabel(end)}`; }
 

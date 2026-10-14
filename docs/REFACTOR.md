@@ -50,7 +50,13 @@ sections and repeated biography text; these are known defects, not extra domain 
   the session, and the developer page emits no console errors. Existing product pages
   are not yet migrated.
 - Service/mock/HTTP contracts are scaffolding until browser verification and feature wiring.
-- Pending migrations: announcements, authentication, profiles, forum/search, messaging,
+- Announcements migrated and browser-verified: both filters, empty state, invalid-save
+  feedback, unique IDs (`post-101` after reload), persistent plain-text comments,
+  a delayed failed save that retains the modal/draft, and a successful retry.
+  Desktop editor/cancel checked against baseline; no console errors. The available
+  browser viewport override did not change its measured width, so mobile visual QA
+  remains pending rather than being reported as passed.
+- Pending migrations: authentication, profiles, forum/search, messaging,
   settings, shared behavior and removal of obsolete API/global fixtures.
 
 ## Run
