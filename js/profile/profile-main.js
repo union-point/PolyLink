@@ -1,10 +1,12 @@
+import { Modal } from './profile-modal.js';
 import { InlineEditor } from './profile-editor.js';
-import { showAddEducationModal, addEducationEntry, showAddLicenseModal, showAddAnnouncementModal, attachLicenseHandlers, attachAnnouncementHandlers, handleBannerUpload, handleProfilePhotoUpload } from './profile-sections.js';
+import { showAddEducationModal, addEducationEntry, showAddLicenseModal, showAddAnnouncementModal, addLicenseEntry, addAnnouncementEntry, handleBannerUpload, handleProfilePhotoUpload } from './profile-sections.js';
 import { initializeKeyboardNavigation } from './profile-keyboard.js';
-import { profiles } from '../services/index.js';
-import { start, bootstrap } from '../shared/ui.js';
+import { profiles, posts } from '../services/index.js';
+import { start, bootstrap, stateMessage } from '../shared/ui.js';
 import { safeUrl } from '../shared/content.js';
 
+const chooser = new Modal();
 start(async () => {
   const session = await bootstrap(); if (!session) return;
   const user = await profiles.get(session.id);
@@ -17,18 +19,30 @@ start(async () => {
   educationSection.querySelectorAll('.item-entry').forEach(entry => entry.remove());
   user.education.forEach(addEducationEntry);
   educationSection.querySelector('.fa-plus').onclick = showAddEducationModal;
-  const editor = new InlineEditor(); editor.onAdd = showAddEducationModal;
-  // Certificates/announcements keep their existing UI until the next focused migration.
-  document.querySelectorAll('.licenses-section').forEach(section => {
-    section.querySelector('.fa-plus').onclick = showAddLicenseModal;
-    section.querySelectorAll('.item-entry').forEach(entry => attachLicenseHandlers(entry, {
-      name: entry.querySelector('.item-title').textContent, organization: entry.querySelector('.item-subtitle').textContent, issueDate: '', credentialUrl: '',
-    }));
-  });
+  const editor = new InlineEditor(); editor.onAdd = () => {
+    const picker = document.createElement('div');
+    const choices = [ ['Կրթություն', showAddEducationModal], ['Հավաստագիր', showAddLicenseModal], ['Հայտարարություն', showAddAnnouncementModal] ];
+    choices.forEach(([name, action]) => { const button = document.createElement('button'); button.className = 'primary-btn'; button.textContent = name; button.style.margin = '8px'; button.onclick = () => { chooser.close(); action(); }; picker.appendChild(button); });
+    chooser.create('Ավելացնել բաժին', picker, null);
+  };
+  const licenses = document.querySelector('.licenses-section');
+  licenses.querySelectorAll('.item-entry').forEach(entry => entry.remove());
+  user.licenses.forEach(addLicenseEntry);
+  licenses.querySelector('.fa-plus').onclick = showAddLicenseModal;
   const announcements = document.querySelector('.announcements-section');
   announcements.querySelector('.fa-plus').onclick = showAddAnnouncementModal;
-  announcements.querySelectorAll('.item-entry').forEach(attachAnnouncementHandlers);
+  async function loadAnnouncements() {
+    announcements.querySelectorAll('.item-entry,[data-announcement-state]').forEach(entry => entry.remove());
+    const status = document.createElement('div'); status.dataset.announcementState = ''; announcements.appendChild(status);
+    stateMessage(status, 'Բեռնվում է...');
+    try {
+      const personalPosts = await posts.list({ userId: user.id });
+      if (personalPosts.length) status.remove(); else stateMessage(status, 'Հայտարարություններ չկան');
+      personalPosts.forEach(addAnnouncementEntry);
+    } catch (error) { stateMessage(status, error.message, { retry: loadAnnouncements }); }
+  }
   document.querySelector('.banner-edit-icon').onclick = handleBannerUpload;
   document.querySelector('.profile-photo-area > .profile-photo').onclick = handleProfilePhotoUpload;
   initializeKeyboardNavigation(editor);
+  await loadAnnouncements();
 });

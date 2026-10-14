@@ -4,6 +4,7 @@ export const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, char 
 
 export function safeUrl(value, { image = false } = {}) {
   const input = String(value || '');
+  if (!input.trim()) return '';
   try {
     const url = new URL(input, location.href);
     if (['http:', 'https:'].includes(url.protocol)) return url.href;

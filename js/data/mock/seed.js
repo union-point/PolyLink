@@ -9,7 +9,7 @@ const seed = {
       "lastName": "Սարգսյան",
       "name": "Գայանե Սարգսյան",
       "jobTitle": "Ծրագրային ճարտարագետ",
-      "description": "Ես սովորում եմ Հայաստանի ազգային Պոլիտեխնիկական համալսարանում, հետաքրքրված եմ վեբ\n              ծրագրավորմամբ և նոր տեխնոլոգիաներով։ Սա իմ անձնական էջն է՝ իմ մասին հիմնական\n              տեղեկություններով։Ես սովորում եմ Հայաստանի ազգային Պոլիտեխնիկական համալսարանում, հետաքրքրված\n              եմ վեբ ծրագրավորմամբ և նոր տեխնոլոգիաներով։ Սա իմ անձնական էջն է՝ իմ մասին հիմնական\n              տեղեկություններով։",
+      "description": "Ես սովորում եմ Հայաստանի ազգային Պոլիտեխնիկական համալսարանում, հետաքրքրված եմ վեբ\n              ծրագրավորմամբ և նոր տեխնոլոգիաներով։ Սա իմ անձնական էջն է՝ իմ մասին հիմնական\n              տեղեկություններով։",
       "avatar": "https://images.pexels.com/photos/733872/pexels-photo-733872.jpeg",
       "cover": "https://images.unsplash.com/photo-1504805572947-34fad45aed93?ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&q=80&w=1470",
       "role": "graduate",
@@ -189,7 +189,7 @@ const seed = {
       "organization": "DeepLearning.AI, Stanford University",
       "issueDate": "2024-02",
       "credentialUrl": "https://www.coursera.org/",
-      "logo": ""
+      "logo": "image/certificate-logo.jpg"
     },
     {
       "id": "certificate-3",

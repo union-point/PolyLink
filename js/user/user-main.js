@@ -1,174 +1,34 @@
-/**
- * Initialize profile buttons
- */
-function initializeProfileButtons() {
-    const profileButton = document.querySelector('.primary-btn');
-    if (profileButton) {
-        profileButton.addEventListener('click', () => {
-            localStorage.setItem('name', name); // ! remove after testing
-            console.log(name);
-            window.location.href = 'message.html';
-        });
-    }
-}
-// Load and display posts
-async function loadPosts() {
-    try {
-        const response = await getUserPosts();
-        const posts = response.data;
+import { profiles, posts, chat } from '../services/index.js';
+import { selectedUserId } from '../services/navigation.js';
+import { educationEntry, certificateEntry, announcementEntry } from '../profile/profile-render.js';
+import { bootstrap, start, stateMessage, pending } from '../shared/ui.js';
+import { safeUrl } from '../shared/content.js';
 
-        const announcementsList = document.querySelector('.announcements-list');
-        if (!announcementsList) return;
-
-        // Clear existing posts
-        announcementsList.innerHTML = '';
-
-        // Render all posts
-        if (posts && posts.length > 0) {
-            posts.forEach(post => {
-                announcementsList.innerHTML += renderPost(post);
-            });
-        } else {
-            announcementsList.innerHTML = '<p style="text-align: center; padding: 2rem; color: var(--text-secondary);">Հայտարարություններ չկան</p>';
-        }
-
-    } catch (error) {
-        console.error('Error loading posts:', error);
-        const announcementsList = document.querySelector('.announcements-list');
-        if (announcementsList) {
-            announcementsList.innerHTML = '<p style="text-align: center; padding: 2rem; color: var(--error-color);">Սխալ՝ հայտարարությունները բեռնելիս</p>';
-        }
-    }
-}
-
-/**
- * Initialize announcements section handlers
- */
-async function initializeAnnouncementsSection() {
-    // Load posts
-
-    await loadPosts()
-    const announcementsSection = document.querySelector('.announcements-list');
-    // Attach handlers to existing announcements
-    const entries = announcementsSection.querySelectorAll('.item-entry');
-    entries.forEach(entry => attachAnnouncementHandlers(entry));
-}
-
-
-/**
- * Attach event handlers to announcement buttons
- * @param {HTMLElement} entry - Announcement entry element
- */
-function attachAnnouncementHandlers(entry) {
-
-    const commentsBtn = entry.querySelector('.btn-comments');
-    const announcementCard = entry.querySelector('.announcement-card');
-
-    if (commentsBtn) {
-        commentsBtn.addEventListener('click', () => toggleComments(announcementCard, commentsBtn));
-    }
-}
-/**
- * Toggle comments section for an announcement
- * @param {HTMLElement} announcementCard - Announcement card element
- * @param {HTMLElement} btnComments - Comments button element
- */
-async function toggleComments(announcementCard, btnComments) {
-    let commentsContainer = announcementCard.querySelector('.comments-container');
-    if (!commentsContainer) {
-        commentsContainer = await createCommentsContainer(announcementCard, btnComments);
-        announcementCard.appendChild(commentsContainer);
-    } else {
-        if (commentsContainer.style.display === 'none') {
-            commentsContainer.style.display = 'block';
-        } else {
-            commentsContainer.style.display = 'none';
-        }
-    }
-}
-
-/**
- * Initialize profile
- */
-async function initializeUserProfile() {
-    try {
-        // Load user profile
-        const response = await getUserProfile();
-        const profile = response;
-        const profileSection = document.querySelector('.main-content');
-        const fullname = profileSection.querySelector('.fullname');
-        name = profile.name;
-        fullname.textContent = profile.name;
-        const jobTitle = profileSection.querySelector('.job-title');
-        jobTitle.textContent = profile.jobTitle;
-        const description = profileSection.querySelector('.desc');
-        description.textContent = profile.description;
-        const banner = document.querySelector('.banner-photo');
-        banner.style.backgroundPosition = "center -150px";
-        banner.style.backgroundImage = `url('${profile.cover}')`;
-
-        const avatar = document.querySelector('.profile-photo');
-        avatar.innerHTML = `<img class="profile-photo" src="${profile.avatar}"
-            alt="Profile">
-`
-
-        const educationList = profileSection.querySelector('.education-list');
-        if (profile.education && profile.education.length > 0) {
-            profile.education.forEach(education => {
-                educationList.innerHTML += `
-            <div class="item-entry" >
-                <div class="item-logo">
-                <img src="${education.logo}" class="entry-logo">
-                </div>
-                <div class="item-details">
-                <p class="item-title">${education.institution}</p>
-                <p class="item-subtitle">${education.degree}</p>
-                <p class="item-date">${formatDateRange(education.startDate, education.endDate)}</p>
-                </div>
-                </div >
-            `;
-            });
-        }
-
-
-        const licensesList = profileSection.querySelector('.licenses-list');
-        if (profile.licenses && profile.licenses.length > 0) {
-            profile.licenses.forEach(license => {
-                licensesList.innerHTML += `
-            <div class="item-entry" >
-                <div class="item-logo cert-logo-bg">
-                ${license.logo ? `<img src="${license.logo}" class="entry-logo">` : `<i class="fas fa-laptop-code cert-icon"></i>`}
-                </div>
-                <div class="item-details">
-                <p class="item-title">${license.title}</p>
-                <p class="item-subtitle">${license.issuer}</p>
-                <p class="item-date">Տրման ամսաթիվ՝ ${formatDate(license.date)}</p>
-                ${license.credential ? `                <button class="show-cred-btn">
-                  Ցուցադրել հավաստագիրը <i class="fas fa-external-link-alt"></i>
-                </button>` : ''}
-                </div>
-                </div >
-            `;
-            });
-        }
-    } catch (error) {
-        console.error('Error loading profile:', error);
-    }
-}
-/**
- * Main initialization function
- */
-function initializeProfile() {
-    // Initialize theme
-    initializeTheme();
-    // Initialize profile
-    initializeUserProfile();
-    // Initialize buttons
-    const name = null;
-    initializeProfileButtons(name);
-    // Initialize announcements section
-    initializeAnnouncementsSection();
-}
-
-// Initialize when DOM is ready
-document.addEventListener('DOMContentLoaded', initializeProfile);
+start(async () => {
+  const currentUser = await bootstrap(); if (!currentUser) return;
+  const main = document.querySelector('.main-content');
+  const id = selectedUserId();
+  if (!id) { stateMessage(main, 'Ընտրեք օգտատիրոջը որոնման էջից։'); return; }
+  let user;
+  try { user = await profiles.get(id); }
+  catch (error) { stateMessage(main, error.message, { retry: () => location.reload() }); return; }
+  document.title = `${user.name} | PolyLink`;
+  main.querySelector('.fullname').textContent = user.name;
+  main.querySelector('.job-title').textContent = user.jobTitle;
+  main.querySelector('.desc p').textContent = user.description;
+  const avatar = document.createElement('img'); avatar.className = 'profile-photo'; avatar.src = safeUrl(user.avatar || 'image/logo.png', { image: true }); avatar.alt = user.name;
+  document.querySelector('.profile-photo-area > .profile-photo').replaceChildren(avatar);
+  document.querySelector('.banner-photo').style.backgroundImage = `url("${safeUrl(user.cover, { image: true })}")`;
+  main.querySelector('.education-list').replaceChildren(...user.education.map(record => educationEntry(record)));
+  main.querySelector('.licenses-list').replaceChildren(...user.licenses.map(record => certificateEntry(record)));
+  const list = main.querySelector('.announcements-list');
+  async function load() {
+    stateMessage(list, 'Բեռնվում է...');
+    try { const records = await posts.list({ userId: id }); list.replaceChildren(...records.map(record => announcementEntry(record))); if (!records.length) stateMessage(list, 'Հայտարարություններ չկան'); }
+    catch (error) { stateMessage(list, error.message, { retry: load }); }
+  }
+  const contact = main.querySelector('.primary-btn');
+  contact.disabled = user.id === currentUser.id;
+  contact.onclick = () => pending(contact, main.querySelector('.intro-card'), async () => { const room = await chat.openDirect(user.id); location.href = `message.html?room=${encodeURIComponent(room.id)}`; });
+  await load();
+});

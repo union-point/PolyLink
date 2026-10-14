@@ -1,136 +1,97 @@
 <!DOCTYPE html>
+
 <html lang="hy">
-
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Աննա Հարությունյան</title>
-
-  <link rel="stylesheet" href="./css/profile.css">
-  <link rel="stylesheet" href="./css/style.css">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-  <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
-
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Օգտատիրոջ էջ | PolyLink</title>
+<link href="./css/profile.css" rel="stylesheet"/>
+<link href="./css/style.css" rel="stylesheet"/>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet"/>
 </head>
-
 <body>
-
-  <header class="header">
-    <div class="header-container">
-      <div class="logo-container">
-        <img class="logo-img" src="./image/logo.png" alt="Logo" class="logo-img">
-        <h3 class="logo-text">PolyLink</h3>
-      </div>
-      <nav>
-        <ul class="menu">
-          <li><a href="profile.html">Անձնական էջ</a></li>
-          <li><a href="events.html">Իրադարձություններ</a></li>
-          <li><a href="forum.html">Ֆոռում</a></li>
-          <li><a href="message.html">Նամակագրություն</a></li>
-          <li><a href="search.html">Որոնում</a></li>
-        </ul>
-
-        <!-- Dropdown menu -->
-        <div class="dropdown-container">
-          <button class="dropdown-btn">☰</button>
-          <ul class="dropdown-menu">
-            <li><a href="help.html">Help</a></li>
-            <li><a href="settings.html">Կարգավորումներ</a></li>
-            <li><a href="login.html">Դուրս գալ</a></li>
-          </ul>
-        </div>
-      </nav>
-    </div>
-  </header>
-
-  <div class="profile-container">
-    <div class="profile-header">
-      <div class="banner-photo">
-
-
-      </div>
-      <div class="profile-photo-area">
-        <div class="profile-photo">
-
-        </div>
-      </div>
-    </div>
-
-    <div class="content-wrapper">
-      <main class="main-content">
-        <section class="intro-card">
-          <div class="name-title-section">
-            <h1 class="fullname">Աննա Հարությունյան</h1>
-            <p class="job-title">Վեբ ծրագրավորող</p>
-          </div>
-          <div class="desc">
-            <p>
-              Ես երիտասարդ մասնագետ եմ՝ հետաքրքրված ժամանակակից վեբ տեխնոլոգիաներով,
-              ծրագրային ճարտարապետությամբ և նորարարական լուծումների մշակմամբ։ Սիրում եմ
-              ուսումնասիրել նոր գործիքներ, փորձարկել գաղափարներ և ստեղծել կիրառական
-              նախագծեր, որոնք իրական խնդիրներ են լուծում։ Սա իմ անձնական էջն է, որտեղ կարող եք
-              ավելի շատ տեղեկություններ գտնել իմ փորձի և գործունեության մասին։
-            </p>
-          </div>
-
-          <div class="action-buttons">
-            <button class="primary-btn">Կապ հաստատել</button>
-
-          </div>
-        </section>
-
-
-
-        <section class="profile-section card education-section">
-          <div class="section-header">
-            <h2>Կրթություն</h2>
-          </div>
-          <div class="education-list">
-
-          </div>
-        </section>
-
-        <section class="profile-section card licenses-section">
-          <div class="section-header">
-            <h2>Արտոնագրեր և հավաստագրեր</h2>
-          </div>
-          <div class="licenses-list">
-
-          </div>
-
-        </section>
-
-        <section class="profile-section card announcements-section">
-          <div class="section-header">
-            <h2>Օգտատիրոջ հայտարարությունները</h2>
-          </div>
-          <div class="announcements-list">
-
-          </div>
-        </section>
-      </main>
-
-
-    </div>
-  </div>
-  <div id="custom-confirm-backdrop" class="hidden">
-    <div class="custom-confirm">
-      <p id="custom-confirm-message"></p>
-      <div class="buttons">
-        <button class="primary-btn" id="confirm-yes">Այո</button>
-        <button class="secondary-btn" id="confirm-no">Ոչ</button>
-      </div>
-    </div>
-  </div>
-  <script src="js/api/axios.js"></script>
-  <script src="js/user/user-render.js"></script>
-  <script src="js/user/user-main.js"></script>
-  <script src="js/api/user-api.js"></script>
-  <script src="js/profile/profile-utils.js"></script>
-  <script src="js/api/profile-api.js"></script>
-  <script src="js/profile/profile-theme.js"></script>
-
-  <!-- <script type="module" src="js/profile/profile-main.js"></script> -->
+<header class="header">
+<div class="header-container">
+<div class="logo-container">
+<img alt="Logo" class="logo-img" src="./image/logo.png"/>
+<h3 class="logo-text">PolyLink</h3>
+</div>
+<nav>
+<ul class="menu">
+<li><a href="profile.html">Անձնական էջ</a></li>
+<li><a href="events.html">Իրադարձություններ</a></li>
+<li><a href="forum.html">Ֆոռում</a></li>
+<li><a href="message.html">Նամակագրություն</a></li>
+<li><a href="search.html">Որոնում</a></li>
+</ul>
+<!-- Dropdown menu -->
+<div class="dropdown-container">
+<button class="dropdown-btn">☰</button>
+<ul class="dropdown-menu">
+<li><a href="help.html">Help</a></li>
+<li><a href="settings.html">Կարգավորումներ</a></li>
+<li><a href="login.html">Դուրս գալ</a></li>
+</ul>
+</div>
+</nav>
+</div>
+</header>
+<div class="profile-container">
+<div class="profile-header">
+<div class="banner-photo">
+</div>
+<div class="profile-photo-area">
+<div class="profile-photo">
+</div>
+</div>
+</div>
+<div class="content-wrapper">
+<main class="main-content">
+<section class="intro-card">
+<div class="name-title-section">
+<h1 class="fullname"></h1>
+<p class="job-title"></p>
+</div>
+<div class="desc">
+<p></p>
+</div>
+<div class="action-buttons">
+<button class="primary-btn">Կապ հաստատել</button>
+</div>
+</section>
+<section class="profile-section card education-section">
+<div class="section-header">
+<h2>Կրթություն</h2>
+</div>
+<div class="education-list">
+</div>
+</section>
+<section class="profile-section card licenses-section">
+<div class="section-header">
+<h2>Արտոնագրեր և հավաստագրեր</h2>
+</div>
+<div class="licenses-list">
+</div>
+</section>
+<section class="profile-section card announcements-section">
+<div class="section-header">
+<h2>Օգտատիրոջ հայտարարությունները</h2>
+</div>
+<div class="announcements-list">
+</div>
+</section>
+</main>
+</div>
+</div>
+<div class="hidden" id="custom-confirm-backdrop">
+<div class="custom-confirm">
+<p id="custom-confirm-message"></p>
+<div class="buttons">
+<button class="primary-btn" id="confirm-yes">Այո</button>
+<button class="secondary-btn" id="confirm-no">Ոչ</button>
+</div>
+</div>
+</div>
+<script src="js/user/user-main.js" type="module"></script>
 </body>
-
 </html>

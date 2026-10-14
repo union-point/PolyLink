@@ -72,11 +72,18 @@ sections and repeated biography text; these are known defects, not extra domain 
   confirmation and durable deletion. Avatar upload survives reload as an IndexedDB
   blob (decoded image width 1024). Confirmation layering was corrected.
   Certificate/post/public-profile migration remains a separate next step.
-- Pending migrations: certificates/profile posts/public profile, forum/search, messaging,
+- Certificates, owner announcements and public profiles migrated to shared service-backed
+  rendering. Browser-verified certificate validation/create/edit/reopen/reload/delete;
+  owner post create/edit/comment appears on the feed and public profile; owner deletion
+  removes the feed record. Public user 6 loads its own post and contact navigates to
+  `message.html?room=room-2`; missing IDs display a recoverable state. Duplicate
+  certificate sections and hardcoded owner records were removed.
+- Pending migrations: forum/search, messaging,
   settings, shared behavior and removal of obsolete API/global fixtures.
 
 ## Run
 
 From the repository root: `python3 server.py`, then open `http://localhost:8000/login.html`.
-To avoid an occupied port: `python3 -m http.server 8001 --bind 127.0.0.1`.
+To avoid an occupied port: `python3 server.py --port 8001`. The development server
+uses `Cache-Control: no-store` so imported modules refresh during manual verification.
 ES modules must be served over HTTP rather than opened as `file://` URLs.

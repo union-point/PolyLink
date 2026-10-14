@@ -180,6 +180,7 @@ class Modal {
     });
 
     const cancelBtn = this.createButton('Չեղարկել', 'secondary-btn', () => this.close());
+    if (!onSave) saveBtn.hidden = true;
 
     buttonContainer.appendChild(cancelBtn);
     buttonContainer.appendChild(saveBtn);
