@@ -15,7 +15,7 @@ export function createHttpProvider(transportPromise = loadTransport()) {
       catch (error) { if (operation === 'auth.me' && error?.response?.status === 401) return null; throw error; }
       if (operation === 'auth.logout') { api.setToken(null); return null; }
       if (operation === 'auth.login') {
-        if (body?.challengeId) return { status: 'challenge', challengeId: body.challengeId };
+        if (body?.challengeId) return { status: 'challenge', challengeId: body.challengeId, expiresAt: body.expiresAt, resendAfter: body.resendAfter };
         if (!body?.accessToken) throw new DataError('CONTRACT', 'Login response is missing accessToken.');
         api.setToken(body.accessToken);
         return { status: 'authenticated', user: normalizeUser(body.user || unwrap(await api.request(routes['auth.me']()))) };

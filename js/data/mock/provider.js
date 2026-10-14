@@ -115,7 +115,7 @@ const operations = {
   'auth.resendChallenge': (state, id) => {
     const item = find(state.challenges, id);
     if (item.consumed || Date.now() - item.sentAt < 60000) throw new DataError('VALIDATION', 'Խնդրում ենք սպասել մինչև նոր կոդ պահանջելը։');
-    item.sentAt = Date.now(); item.expiresAt = Date.now() + 600000; item.attempts = 0;
+    item.sentAt = Date.now(); item.expiresAt = Date.now() + 600000; item.attempts = 0; item.verified = false;
     return { challengeId: item.id, expiresAt: item.expiresAt, resendAfter: 60 };
   },
   'auth.forgotPassword': (state, address) => {
@@ -248,7 +248,9 @@ const operations = {
     const user = me(state);
     if (state.credentials[user.id] !== data.oldDigest) throw new DataError('UNAUTHORIZED', 'Սխալ գաղտնաբառ։');
     if (state.users.some(other => other.id !== user.id && other.email === data.email)) throw new DataError('CONFLICT', 'Տվյալ էլ․ փոստն արդեն գրանցված է։');
-    user.email = data.email; state.credentials[user.id] = data.newDigest; return profile(state, user);
+    user.email = data.email; state.credentials[user.id] = data.newDigest;
+    state.challenges.filter(item => item.userId === user.id).forEach(item => { item.consumed = true; });
+    return profile(state, user);
   },
   'settings.changePassword': (state, data) => { const user = me(state); if (state.credentials[user.id] !== data.oldDigest) throw new DataError('UNAUTHORIZED', 'Սխալ գաղտնաբառ։'); state.credentials[user.id] = data.newDigest; user.passwordChangedAt = now(); state.challenges.filter(item => item.userId === user.id).forEach(item => { item.consumed = true; }); return null; },
   'settings.deactivate': (state, data) => { const user = me(state); if (state.credentials[user.id] !== data.digest) throw new DataError('UNAUTHORIZED', 'Սխալ գաղտնաբառ։'); user.status = 'deactivated'; state.sessionUserId = null; return null; },
