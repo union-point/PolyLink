@@ -73,6 +73,7 @@ export async function bootstrap({ protectedPage = true, requireOnboarding = true
     event.preventDefault();
     await pending(null, document.querySelector('main') || document.body, async () => { await auth.logout(); location.href = 'login.html'; });
   }));
+  if (!protectedPage) return null;
   const user = await auth.me();
   if (!user && protectedPage) { location.replace('login.html'); return null; }
   if (user && protectedPage && requireOnboarding && !user.onboardingComplete) { location.replace('profile_info.html'); return null; }

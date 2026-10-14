@@ -56,7 +56,12 @@ sections and repeated biography text; these are known defects, not extra domain 
   Desktop editor/cancel checked against baseline; no console errors. The available
   browser viewport override did not change its measured width, so mobile visual QA
   remains pending rather than being reported as passed.
-- Pending migrations: authentication, profiles, forum/search, messaging,
+- Login/registration/onboarding migrated. Browser-verified: bad credentials stay on
+  login, seeded login navigates to profile, mismatched registration passwords fail,
+  new registration navigates to onboarding, lecturer controls hide study years,
+  reversed years fail, and a valid graduate onboarding persists a new demo session.
+  The owner profile still renders legacy fixtures until its migration.
+- Pending migrations: recovery/2FA, profiles, forum/search, messaging,
   settings, shared behavior and removal of obsolete API/global fixtures.
 
 ## Run
