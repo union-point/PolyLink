@@ -45,7 +45,10 @@ sections and repeated biography text; these are known defects, not extra domain 
 - Baseline/context documentation captured.
 - Baseline initialization fixes verified: forum filters leave one matching card; registration
   initializes without errors; duplicate classic/module auth script tags removed.
-- Provider infrastructure is being introduced; the existing pages are not yet migrated.
+- Provider infrastructure and a developer-only `dev-tools.html` are introduced.
+  Browser-verified: seeded session initializes, sign-out survives reload, reset restores
+  the session, and the developer page emits no console errors. Existing product pages
+  are not yet migrated.
 - Service/mock/HTTP contracts are scaffolding until browser verification and feature wiring.
 - Pending migrations: announcements, authentication, profiles, forum/search, messaging,
   settings, shared behavior and removal of obsolete API/global fixtures.

@@ -1,0 +1,10 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>PolyLink mock controls</title>
+<link rel="stylesheet" href="css/style.css"><style>main{max-width:760px;margin:40px auto;padding:24px}section{padding:16px 0;border-bottom:1px solid #aaa}label{display:block;margin:8px 0}input,select,button{padding:8px;margin:4px}pre{white-space:pre-wrap}</style></head>
+<body><main><h1>Mock demo controls</h1><p>Developer tools; changes affect only the local mock dataset. No backend requests are sent.</p><p><a href="events.html">Announcements</a> · <a href="profile.html">Profile</a> · <a href="login.html">Login</a></p>
+<section><button id="reset">Reset seeded dataset and automatic demo session</button><button id="logout">End demo session</button><button id="clear">Clear injected failures and latency</button></section>
+<section><label>Latency in milliseconds <input id="latency" type="number" min="0" max="30000" value="0"></label><button id="set-latency">Set latency</button></section>
+<section><label>Operation <select id="operation"></select></label><label>Error code <select id="code"><option>SERVICE_ERROR</option><option>UNAUTHORIZED</option><option>FORBIDDEN</option><option>NOT_FOUND</option><option>VALIDATION</option></select></label><button id="fail">Fail the next operation once</button></section>
+<section><label>Conversation ID <input id="room" value="room-1"></label><label>Incoming text <input id="text" value="Նոր ցուցադրական հաղորդագրություն"></label><button id="incoming">Inject incoming message</button></section>
+<section><h2>Current demo session</h2><pre id="session"></pre><p>Seeded accounts: demo.alumni@polytechnic.am and demo.lecturer@polytechnic.am.<br>Password: DemoPass123! · Verification code: 123456.</p></section>
+<p id="result" role="status"></p></main><script type="module" src="js/dev-tools.js"></script></body></html>
