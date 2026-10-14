@@ -1,157 +1,64 @@
 <!DOCTYPE html>
+
 <html lang="hy">
-
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Կարիերայի Ֆորում | Պոլիտեխնիկի Շրջանավարտներ</title>
-    <link rel="stylesheet" href="./css/forum.css">
-    <link rel="stylesheet" href="./css/style.css">
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Կարիերայի Ֆորում | Պոլիտեխնիկի Շրջանավարտներ</title>
+<link href="./css/forum.css" rel="stylesheet"/>
+<link href="./css/style.css" rel="stylesheet"/>
 </head>
-
 <body>
-
-    <header class="header">
-        <div class="header-container">
-            <div class="logo-container">
-                <img class="logo-img" src="./image/logo.png" alt="Logo" class="logo-img">
-                <h3 class="logo-text">PolyLink</h3>
-            </div>
-            <nav>
-                <ul class="menu">
-                    <li><a href="profile.html">Անձնական էջ</a></li>
-                    <li><a href="events.html">Իրադարձություններ</a></li>
-                    <li><a href="forum.html" class="active">Ֆոռում</a></li>
-                    <li><a href="message.html">Նամակագրություն</a></li>
-                    <li><a href="search.html">Որոնում</a></li>
-                </ul>
-                <!-- Dropdown menu -->
-                <div class="dropdown-container">
-                    <button class="dropdown-btn">☰</button>
-                    <ul class="dropdown-menu">
-                        <li><a href="help.html">Help</a></li>
-                        <li><a href="settings.html">Կարգավորումներ</a></li>
-                        <li><a href="login.html">Դուրս գալ</a></li>
-                    </ul>
-                </div>
-            </nav>
-        </div>
-    </header>
-
-    <main class="container">
-        <section class="forum-intro">
-            <h2>Աշխատանքի և Կարիերայի Ֆորում</h2>
-            <p>Այստեղ քննարկվում են միայն աշխատանքի, կարիերայի, համագործակցության և մասնագիտական զարգացման հետ կապված
+<header class="header">
+<div class="header-container">
+<div class="logo-container">
+<img alt="Logo" class="logo-img" src="./image/logo.png"/>
+<h3 class="logo-text">PolyLink</h3>
+</div>
+<nav>
+<ul class="menu">
+<li><a href="profile.html">Անձնական էջ</a></li>
+<li><a href="events.html">Իրադարձություններ</a></li>
+<li><a class="active" href="forum.html">Ֆոռում</a></li>
+<li><a href="message.html">Նամակագրություն</a></li>
+<li><a href="search.html">Որոնում</a></li>
+</ul>
+<!-- Dropdown menu -->
+<div class="dropdown-container">
+<button class="dropdown-btn">☰</button>
+<ul class="dropdown-menu">
+<li><a href="help.html">Help</a></li>
+<li><a href="settings.html">Կարգավորումներ</a></li>
+<li><a href="login.html">Դուրս գալ</a></li>
+</ul>
+</div>
+</nav>
+</div>
+</header>
+<main class="container">
+<section class="forum-intro">
+<h2>Աշխատանքի և Կարիերայի Ֆորում</h2>
+<p>Այստեղ քննարկվում են միայն աշխատանքի, կարիերայի, համագործակցության և մասնագիտական զարգացման հետ կապված
                 թեմաները:
                 Ֆիլտրեք հաղորդագրությունները ըստ ձեր մասնագիտության և միացեք ձեր ոլորտի մասնագետներին:</p>
-        </section>
-
-        <!-- Ֆիլտրման բլոկ -->
-        <div class="filter-section">
-            <label for="major-filter">Մասնագիտություն</label>
-            <select id="major-filter" onchange="filterTopics()">
-                <option value="all">Բոլոր մասնագիտությունները</option>
-                <option value="informatics">Ինֆորմատիկա և ծրագրավորում</option>
-                <option value="mechanics">Մեքենաշինություն և ռոբոտաշինություն</option>
-                <option value="electronics">Էլեկտրոնիկա և հեռահաղորդակցություն</option>
-                <option value="civil">Շինարարություն և ճարտարապետություն</option>
-                <option value="energy">Էներգետիկա և կայուն զարգացում</option>
-                <option value="management">Տեխնիկական կառավարում և տնտեսագիտություն</option>
-            </select>
-        </div>
-
-        <!-- Թեմաներ (բոլորը աշխատանքի հետ կապված) -->
-        <section class="topics" id="topics-container">
-            <div class="topic" data-major="informatics">
-                <div class="topic-header">
-                    <h3><a href="topic.html">Frontend դեվելոփերների համար հնարավորություններ Երևանում</a></h3>
-                    <span class="topic-badge">Ինֆորմատիկա</span>
-
-                </div>
-                <p>Ունենք նոր սթարթափ՝ փնտրում ենք փորձառու ֆրոնտենդ մասնագետներ:</p>
-                <div class="topic-meta">
-                    <span>Ավելացրեց՝ Արմեն Ղազարյան (Ինֆորմատիկա)</span>
-                    <span>14 ապրիլ, 2025</span>
-                    <span>12 պատասխան</span>
-                </div>
-            </div>
-
-            <div class="topic" data-major="mechanics">
-                <div class="topic-header">
-                    <h3><a href="topic.html">Արդյունաբերական ռոբոտների նախագծում – համագործակցություն</a></h3>
-                    <span class="topic-badge">Մեքենաշինություն</span>
-                </div>
-                <p>Փնտրում ենք մեխանիկ ինժեներներ նոր նախագծի համար:</p>
-                <div class="topic-meta">
-                    <span>Ավելացրեց՝ Գագիկ Մանուկյան (Մեքենաշինություն)</span>
-                    <span>12 ապրիլ, 2025</span>
-                    <span>7 պատասխան</span>
-                </div>
-            </div>
-
-            <div class="topic" data-major="electronics">
-                <div class="topic-header">
-
-                    <h3><a href="topic.html">IoT սարքավորումների մշակում – աշխատանքային հնարավորություններ</a></h3>
-                    <span class="topic-badge">Էլեկտրոնիկա</span>
-                </div>
-                <p>Ընկերությունս ընդլայնվում է, փնտրում ենք էլեկտրոնիկայի մասնագետներ:</p>
-                <div class="topic-meta">
-                    <span>Ավելացրեց՝ Նարեկ Հարությունյան (Էլեկտրոնիկա)</span>
-                    <span>10 ապրիլ, 2025</span>
-                    <span>9 պատասխան</span>
-                </div>
-            </div>
-
-            <div class="topic" data-major="civil">
-                <div class="topic-header">
-
-                    <h3><a href="topic.html">Կանաչ շինարարություն – նոր նախագծեր 2025-ին</a></h3>
-                    <span class="topic-badge">Շինարարություն</span>
-                </div>
-                <p>Ունենք նախագիծ՝ էկոլոգիապես մաքուր շենքերի կառուցման համար:</p>
-                <div class="topic-meta">
-                    <span>Ավելացրեց՝ Լիլիթ Բաղդասարյան (Շինարարություն)</span>
-                    <span>8 ապրիլ, 2025</span>
-                    <span>5 պատասխան</span>
-                </div>
-            </div>
-
-            <div class="topic" data-major="energy">
-                <div class="topic-header">
-
-                    <h3><a href="topic.html">Արևային էներգիայի ներդրումներ – փնտրում ենք ինժեներներ</a></h3>
-                    <span class="topic-badge">Էներգետիկա</span>
-                </div>
-                <p>Նոր արևային կայանքների նախագծում՝ համագործակցության հնարավորություն:</p>
-                <div class="topic-meta">
-                    <span>Ավելացրեց՝ Վահան Ղազարյան (Էներգետիկա)</span>
-                    <span>6 ապրիլ, 2025</span>
-                    <span>11 պատասխան</span>
-                </div>
-            </div>
-
-            <div class="topic" data-major="management">
-                <div class="topic-header">
-
-                    <h3><a href="topic.html">Տեխնիկական կառավարիչների համար վարկանիշային ծրագրեր</a></h3>
-                    <span class="topic-badge">Կառավարում</span>
-                </div>
-                <p>Ունենք նոր MBA ծրագիր՝ հատկապես տեխնիկական ֆոն ունեցողների համար:</p>
-                <div class="topic-meta">
-                    <span>Ավելացրեց՝ Էլենա Թովմասյան (Կառավարում)</span>
-                    <span>4 ապրիլ, 2025</span>
-                    <span>4 պատասխան</span>
-                </div>
-            </div>
-        </section>
-
-        <a href="new-topic.html" class="btn new-topic-btn">Նոր աշխատանքային թեմա ստեղծել</a>
-    </main>
-
-
-    <script src="./js/forum.js"></script>
-
+</section>
+<!-- Ֆիլտրման բլոկ -->
+<div class="filter-section">
+<label for="major-filter">Մասնագիտություն</label>
+<select id="major-filter">
+<option value="all">Բոլոր մասնագիտությունները</option>
+<option value="informatics">Ինֆորմատիկա և ծրագրավորում</option>
+<option value="mechanics">Մեքենաշինություն և ռոբոտաշինություն</option>
+<option value="electronics">Էլեկտրոնիկա և հեռահաղորդակցություն</option>
+<option value="civil">Շինարարություն և ճարտարապետություն</option>
+<option value="energy">Էներգետիկա և կայուն զարգացում</option>
+<option value="management">Տեխնիկական կառավարում և տնտեսագիտություն</option>
+</select>
+</div>
+<!-- Թեմաներ (բոլորը աշխատանքի հետ կապված) -->
+<section class="topics" id="topics-container"></section>
+<a class="btn new-topic-btn" href="new-topic.html">Նոր աշխատանքային թեմա ստեղծել</a>
+</main>
+<script src="./js/forum.js" type="module"></script>
 </body>
-
 </html>

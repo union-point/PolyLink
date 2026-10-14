@@ -1,14 +1,13 @@
 // ============================================
 // PROFILE SECTIONS MANAGEMENT
 // ============================================
-/* uncomment
 import { Modal, createFormattingToolbar, setupFormattingHandlers } from './profile-modal.js';
-import { formatDate, formatDateRange, formatTimeAgo, showNotification, customConfirm } from './profile-utils.js';
-import { makeEntryEditable } from './profile-editor.js';
+import { monthLabel as formatDate, dateRange as formatDateRange, relativeTime as formatTimeAgo,
+  notify as showNotification, confirmAction as customConfirm, pending, showError } from '../shared/ui.js';
 import { validateForm, initializeValidation } from './profile-validation.js';
-import { setCurrentModal } from './profile-keyboard.js';
-import { createEducation, createComment, getComments } from '../api/profile-api.js';
-*/
+import { profiles, posts } from '../services/index.js';
+import { certificateEntry, announcementEntry } from './profile-render.js';
+import { escapeHtml as e, safeUrl, sanitizeHtml } from '../shared/content.js';
 const modal = new Modal();
 
 // ============================================
@@ -94,31 +93,17 @@ function showAddEducationModal() {
     </div>
   `;
 
-  modal.create('Ավելացնել կրթություն', form, async (data) => {
-    // Validate form
-    if (!validateForm(form)) {
-      showNotification('Խնդրում ենք լրացնել բոլոր պարտադիր դաշտերը');
-      return;
-    }
-
-    try {
-      // Call API to create education
-      const response = await createEducation(data);
-
-      if (response.data.success) {
-        addEducationEntry(data);
-        showNotification('Կրթությունը ավելացվել է');
-      }
-    } catch (error) {
-      console.error('Failed to add education:', error);
-      showNotification('Սխալ՝ կրթությունը չի ավելացվել');
-    }
+  modal.create('Ավելացնել կրթություն', form, async data => {
+    if (!validateForm(form)) return false;
+    const record = await profiles.education.create(data);
+    addEducationEntry(record);
+    showNotification('Կրթությունը ավելացվել է');
   });
 
   // Initialize validation for form inputs
   setTimeout(() => {
     initializeValidation(form);
-    setCurrentModal(document.querySelector('.modal-overlay'));
+
   }, 100);
 }
 
@@ -130,15 +115,16 @@ function addEducationEntry(data) {
   const educationSection = document.querySelector('.education-section');
   const newEntry = document.createElement('div');
   newEntry.className = 'item-entry';
+  newEntry.dataset.entryId = data.id;
   newEntry.innerHTML = `
     <div class="item-logo">
-      <div class="cert-logo-bg" style="width: 48px; height: 48px; display: flex; align-items: center; justify-content: center;">
+      ${data.logo ? `<img src="${e(safeUrl(data.logo, { image: true }))}" class="entry-logo" alt="University Logo">` : `<div class="cert-logo-bg" style="width: 48px; height: 48px; display: flex; align-items: center; justify-content: center;">
         <i class="fas fa-graduation-cap" style="color: white; font-size: 20px;"></i>
-      </div>
+      </div>`}
     </div>
     <div class="item-details">
-      <p class="item-title">${data.institution || 'Նոր ուսումնական հաստատություն'}</p>
-      <p class="item-subtitle">${data.degree || 'Աստիճան և մասնագիտություն'}</p>
+      <p class="item-title">${e(data.institution || 'Նոր ուսումնական հաստատություն')}</p>
+      <p class="item-subtitle">${e(data.degree || 'Աստիճան և մասնագիտություն')}</p>
       <p class="item-date">${formatDateRange(data.startDate, data.endDate)}</p>
     </div>
     <div class="edit-icons">
@@ -176,7 +162,7 @@ function editEducation(entry, currentData) {
         <span style="color: #e74c3c; font-size: 16px;">*</span>
       </label>
       <input type="text" id="edu-institution" name="institution" required data-required
-        value="${currentData.institution || ''}"
+        value="${e(currentData.institution || '')}"
         style="width: 100%; padding: 14px 16px; border-radius: 12px; font-size: 15px; background: var(--card-background); color: var(--font-color-primary); border: 2px solid var(--border-color); transition: all 0.3s ease; box-sizing: border-box;"
         placeholder="Օրինակ՝ Հայաստանի ազգային պոլիտեխնիկական համալսարան"
         onfocus="this.style.borderColor='#667eea'; this.style.boxShadow='0 0 0 4px rgba(102, 126, 234, 0.1)'"
@@ -190,7 +176,7 @@ function editEducation(entry, currentData) {
         <span style="color: #e74c3c; font-size: 16px;">*</span>
       </label>
       <input type="text" id="edu-degree" name="degree" required data-required
-        value="${currentData.degree || ''}"
+        value="${e(currentData.degree || '')}"
         style="width: 100%; padding: 14px 16px; border-radius: 12px; font-size: 15px; background: var(--card-background); color: var(--font-color-primary); border: 2px solid var(--border-color); transition: all 0.3s ease; box-sizing: border-box;"
         placeholder="Օրինակ՝ Բակալավրի աստիճան, Ծրագրային ինժեներություն"
         onfocus="this.style.borderColor='#667eea'; this.style.boxShadow='0 0 0 4px rgba(102, 126, 234, 0.1)'"
@@ -208,7 +194,7 @@ function editEducation(entry, currentData) {
             Սկիզբ <span style="color: #e74c3c;">*</span>
           </label>
           <input type="month" id="edu-start" name="startDate" required data-required
-            value="${currentData.startDate || ''}"
+            value="${e(currentData.startDate || '')}"
             style="width: 100%; padding: 12px; border-radius: 10px; font-size: 14px; background: var(--card-background); color: var(--font-color-primary); border: 2px solid var(--border-color); transition: all 0.3s ease; box-sizing: border-box;"
             onfocus="this.style.borderColor='#667eea'; this.style.boxShadow='0 0 0 4px rgba(102, 126, 234, 0.1)'"
             onblur="this.style.borderColor='var(--border-color)'; this.style.boxShadow='none'">
@@ -218,7 +204,7 @@ function editEducation(entry, currentData) {
             Ավարտ
           </label>
           <input type="month" id="edu-end" name="endDate"
-            value="${currentData.endDate || ''}"
+            value="${e(currentData.endDate || '')}"
             style="width: 100%; padding: 12px; border-radius: 10px; font-size: 14px; background: var(--card-background); color: var(--font-color-primary); border: 2px solid var(--border-color); transition: all 0.3s ease; box-sizing: border-box;"
             onfocus="this.style.borderColor='#667eea'; this.style.boxShadow='0 0 0 4px rgba(102, 126, 234, 0.1)'"
             onblur="this.style.borderColor='var(--border-color)'; this.style.boxShadow='none'">
@@ -234,7 +220,10 @@ function editEducation(entry, currentData) {
     </div>
   `;
 
-  modal.create('Փոփոխել կրթությունը', form, (data) => {
+  modal.create('Փոփոխել կրթությունը', form, async data => {
+    if (!validateForm(form)) return false;
+    const record = await profiles.education.update(currentData.id, { ...currentData, ...data });
+    Object.assign(currentData, record);
     // Update the entry with new data
     const titleEl = entry.querySelector('.item-title');
     const subtitleEl = entry.querySelector('.item-subtitle');
@@ -252,13 +241,12 @@ function editEducation(entry, currentData) {
     const deleteBtn = form.querySelector('.delete-entry-btn');
     if (deleteBtn) {
       deleteBtn.addEventListener('click', () => {
-        modal.close();
-        deleteEducation(entry);
+        deleteEducation(entry, currentData.id, deleteBtn, form);
       });
     }
 
     initializeValidation(form);
-    setCurrentModal(document.querySelector('.modal-overlay'));
+
   }, 100);
 }
 
@@ -266,14 +254,16 @@ function editEducation(entry, currentData) {
  * Delete an education entry
  * @param {HTMLElement} entry - Education entry element
  */
-function deleteEducation(entry) {
-  customConfirm("Վստա՞հ եք, որ ցանկանում եք հեռացնել այս կրթությունը։")
-    .then(answer => {
-      if (answer) {
-        entry.remove();
-        showNotification('Կրթությունը հեռացվել է');
-      }
-    });
+async function deleteEducation(entry, id, button, form) {
+  if (button.disabled) return;
+  button.disabled = true;
+  const confirmed = await customConfirm('Վստա՞հ եք, որ ցանկանում եք հեռացնել այս կրթությունը։');
+  button.disabled = false;
+  if (!confirmed) return;
+  modal.saving = true;
+  const saved = await pending(button, form, () => profiles.education.delete(id));
+  modal.saving = false;
+  if (saved) { entry.remove(); modal.close(); showNotification('Կրթությունը հեռացվել է'); }
 }
 
 /**
@@ -286,7 +276,8 @@ function attachEducationHandlers(entry, data) {
 
   if (editIcon) {
     editIcon.style.cursor = 'pointer';
-    editIcon.addEventListener('click', () => editEducation(entry, data));
+    editIcon.tabIndex = 0; editIcon.setAttribute('role', 'button'); editIcon.setAttribute('aria-label', 'Փոփոխել կրթությունը');
+    editIcon.onclick = () => editEducation(entry, data);
   }
 }
 
@@ -368,9 +359,8 @@ function showAddLicenseModal() {
     </div>
   `;
 
-  modal.create('Ավելացնել հավաստագիր', form, (data) => {
-    console.log('Certificate added:', data);
-    addLicenseEntry(data);
+  modal.create('Ավելացնել հավաստագիր', form, async data => {
+    addLicenseEntry(await profiles.certificates.create(data));
     showNotification('Հավաստագիրը ավելացվել է');
   });
 }
@@ -380,32 +370,9 @@ function showAddLicenseModal() {
  * @param {Object} data - License data
  */
 function addLicenseEntry(data) {
-  const licenseSection = document.querySelector('.licenses-section');
-  const newEntry = document.createElement('div');
-  newEntry.className = 'item-entry';
-
-  const credentialButton = data.credentialUrl ?
-    `<button class="show-cred-btn" onclick="window.open('${data.credentialUrl}', '_blank')">
-      Ցուցադրել հավաստագիրը <i class="fas fa-external-link-alt"></i>
-    </button>` : '';
-
-  newEntry.innerHTML = `
-    <div class="item-logo cert-logo-bg">
-      <i class="fas fa-certificate cert-icon"></i>
-    </div>
-    <div class="item-details">
-        <p class="item-title">${data.name || 'Նոր հավաստագիր'}</p>
-      <p class="item-subtitle">${data.organization || 'Կազմակերպություն'}</p>
-      <p class="item-date">Տրման ամսաթիվը՝ ${formatDate(data.issueDate)}</p>
-      ${credentialButton}
-    </div>
-    <div class="edit-icons">
-      <i class="fas fa-pencil-alt edit-icon"></i>
-    </div>
-  `;
-
-  licenseSection.appendChild(newEntry);
-  attachLicenseHandlers(newEntry, data);
+  const entry = certificateEntry(data, true);
+  document.querySelector('.licenses-section').appendChild(entry);
+  attachLicenseHandlers(entry, data);
 }
 
 /**
@@ -434,7 +401,7 @@ function editLicense(entry, currentData) {
         Հավաստագրի անվանում
       </label>
       <input type="text" id="cert-name" name="name" 
-        value="${currentData.name || ''}"
+        value="${e(currentData.name || '')}"
         style="width: 100%; padding: 14px 16px; border-radius: 12px; font-size: 15px; background: var(--card-background); color: var(--font-color-primary); border: 2px solid var(--border-color); transition: all 0.3s ease; box-sizing: border-box;"
         placeholder="Օրինակ՝ Python Ծրագրավորում"
         onfocus="this.style.borderColor='#f5576c'; this.style.boxShadow='0 0 0 4px rgba(245, 87, 108, 0.1)'"
@@ -447,7 +414,7 @@ function editLicense(entry, currentData) {
         Կազմակերպություն
       </label>
       <input type="text" id="cert-org" name="organization" 
-        value="${currentData.organization || ''}"
+        value="${e(currentData.organization || '')}"
         style="width: 100%; padding: 14px 16px; border-radius: 12px; font-size: 15px; background: var(--card-background); color: var(--font-color-primary); border: 2px solid var(--border-color); transition: all 0.3s ease; box-sizing: border-box;"
         placeholder="Օրինակ՝ Armenian Code Academy"
         onfocus="this.style.borderColor='#f5576c'; this.style.boxShadow='0 0 0 4px rgba(245, 87, 108, 0.1)'"
@@ -460,7 +427,7 @@ function editLicense(entry, currentData) {
         Տրման ամսաթիվ
       </label>
       <input type="month" id="cert-date" name="issueDate" 
-        value="${currentData.issueDate || ''}"
+        value="${e(currentData.issueDate || '')}"
         style="width: 100%; padding: 12px; border-radius: 10px; font-size: 14px; background: var(--card-background); color: var(--font-color-primary); border: 2px solid var(--border-color); transition: all 0.3s ease; box-sizing: border-box;"
         onfocus="this.style.borderColor='#f5576c'; this.style.boxShadow='0 0 0 4px rgba(245, 87, 108, 0.1)'"
         onblur="this.style.borderColor='var(--border-color)'; this.style.boxShadow='none'">
@@ -473,7 +440,7 @@ function editLicense(entry, currentData) {
         <span style="font-size: 12px; color: var(--font-color-secondary); font-weight: 400; margin-left: 4px;">(ոչ պարտադիր)</span>
       </label>
       <input type="url" id="cert-url" name="credentialUrl" 
-        value="${currentData.credentialUrl || ''}"
+        value="${e(currentData.credentialUrl || '')}"
         style="width: 100%; padding: 14px 16px; border-radius: 12px; font-size: 15px; background: var(--card-background); color: var(--font-color-primary); border: 2px solid var(--border-color); transition: all 0.3s ease; box-sizing: border-box;"
         placeholder="https://..."
         onfocus="this.style.borderColor='#f5576c'; this.style.boxShadow='0 0 0 4px rgba(245, 87, 108, 0.1)'"
@@ -488,33 +455,11 @@ function editLicense(entry, currentData) {
     </div>
   `;
 
-  modal.create('Փոփոխել հավաստագիրը', form, (data) => {
-    // Update the entry with new data
-    const titleEl = entry.querySelector('.item-title');
-    const subtitleEl = entry.querySelector('.item-subtitle');
-    const dateEl = entry.querySelector('.item-date');
-    const credBtn = entry.querySelector('.show-cred-btn');
-
-    if (titleEl) titleEl.textContent = data.name;
-    if (subtitleEl) subtitleEl.textContent = data.organization;
-    if (dateEl) dateEl.textContent = `Տրման ամսաթիվը՝ ${formatDate(data.issueDate)}`;
-
-    // Update or add credential button
-    if (data.credentialUrl) {
-      if (credBtn) {
-        credBtn.onclick = () => window.open(data.credentialUrl, '_blank');
-      } else {
-        const detailsEl = entry.querySelector('.item-details');
-        const newBtn = document.createElement('button');
-        newBtn.className = 'show-cred-btn';
-        newBtn.innerHTML = 'Ցուցադրել հավաստագիրը <i class="fas fa-external-link-alt"></i>';
-        newBtn.onclick = () => window.open(data.credentialUrl, '_blank');
-        detailsEl.appendChild(newBtn);
-      }
-    } else if (credBtn) {
-      credBtn.remove();
-    }
-
+  modal.create('Փոփոխել հավաստագիրը', form, async data => {
+    const saved = await profiles.certificates.update(currentData.id, { ...currentData, ...data });
+    const replacement = certificateEntry(saved, true); entry.replaceWith(replacement);
+    attachLicenseHandlers(replacement, saved);
+    showNotification('Հավաստագիրը թարմացվել է');
   });
 
   // Add delete button handler
@@ -522,8 +467,7 @@ function editLicense(entry, currentData) {
     const deleteBtn = form.querySelector('.delete-entry-btn');
     if (deleteBtn) {
       deleteBtn.addEventListener('click', () => {
-        modal.close();
-        deleteLicense(entry);
+        deleteLicense(entry, currentData.id, deleteBtn, form);
       });
     }
   }, 100);
@@ -533,14 +477,16 @@ function editLicense(entry, currentData) {
  * Delete a license entry
  * @param {HTMLElement} entry - License entry element
  */
-function deleteLicense(entry) {
-  customConfirm("Վստա՞հ եք, որ ցանկանում եք հեռացնել այս հավաստագիրը։")
-    .then(answer => {
-      if (answer) {
-        entry.remove();
-        showNotification('Հավաստագիրը հեռացվել է');
-      }
-    });
+async function deleteLicense(entry, id, button, form) {
+  if (button.disabled) return;
+  button.disabled = true;
+  const confirmed = await customConfirm('Վստա՞հ եք, որ ցանկանում եք հեռացնել այս հավաստագիրը։');
+  button.disabled = false;
+  if (!confirmed) return;
+  modal.saving = true;
+  const saved = await pending(button, form, () => profiles.certificates.delete(id));
+  modal.saving = false;
+  if (saved) { entry.remove(); modal.close(); showNotification('Հավաստագիրը հեռացվել է'); }
 }
 
 /**
@@ -552,7 +498,7 @@ function attachLicenseHandlers(entry, data) {
   const editIcon = entry.querySelector('.fa-pencil-alt');
   if (editIcon) {
     editIcon.style.cursor = 'pointer';
-    editIcon.addEventListener('click', () => editLicense(entry, data));
+    editIcon.onclick = () => editLicense(entry, data);
   }
 }
 
@@ -568,7 +514,7 @@ function showAddAnnouncementModal() {
   form.innerHTML = `
     <div style=" margin-bottom: 16px;">
       <label style="display: block; margin-bottom: 8px; font-weight: 600; color: var(--font-color-primary);">Կատեգորիա</label>
-      <select class="visibility-selector" id="category-selector">
+      <select class="visibility-selector" id="category-selector" name="category">
         <option value="job">Աշխատանք</option>
         <option value="internship">Պրակտիկա</option>
         <option value="training">Դասընթաց</option>
@@ -590,9 +536,8 @@ function showAddAnnouncementModal() {
 
   const toolbar = createFormattingToolbar();
 
-  modal.create('Ավելացնել հայտարարություն', form, (data) => {
-    console.log('Announcement added:', data);
-    addAnnouncementEntry(data);
+  modal.create('Ավելացնել հայտարարություն', form, async data => {
+    addAnnouncementEntry(await posts.create(data));
     showNotification('Հայտարարությունը ավելացվել է');
   }, {
     customFooterLeft: toolbar,
@@ -605,28 +550,12 @@ function showAddAnnouncementModal() {
  * @param {Object} data - Announcement data
  */
 function addAnnouncementEntry(data) {
-  const announcementSection = document.querySelector('.announcements-section');
-  const newEntry = document.createElement('div');
-  newEntry.className = 'item-entry';
-  newEntry.innerHTML = `
-    <div class="announcement-card" data-post-id="${data.id || 0}">
-      <div class="announcement-content">
-        <p><strong>${data.title || 'Նոր հայտարարություն'}</strong>
-        ${data.content || 'Բովանդակություն'}
-        </p>
-      </div>
-      <div class="comments-section">
-        <button class="btn-comments">Մեկնաբանություններ (0)</button>
-        <div class="edit-icons">
-          <button class="btn btn-edit primary-btn">Փոփոխել</button>
-          <button class="btn btn-delete secondary-btn">Հեռացնել</button>
-        </div>
-      </div>
-    </div>
-  `;
-
-  announcementSection.appendChild(newEntry);
-  attachAnnouncementHandlers(newEntry);
+  const section = document.querySelector('.announcements-section');
+  if ([...section.querySelectorAll('.announcement-card')].some(card => card.dataset.postId === data.id)) return;
+  const entry = announcementEntry(data, true);
+  document.querySelector('.announcements-section [data-announcement-state]')?.remove();
+  document.querySelector('.announcements-section').appendChild(entry);
+  attachAnnouncementHandlers(entry);
 }
 
 /**
@@ -635,28 +564,30 @@ function addAnnouncementEntry(data) {
  */
 function editAnnouncement(announcementCard) {
   const contentEl = announcementCard.querySelector('.announcement-content p');
-  const currentTitle = contentEl.querySelector('strong')?.textContent || '';
-  const currentContent = contentEl.innerHTML.replace(/<strong>.*?<\/strong>/, '').trim();
+  const record = announcementCard.record;
+  const currentTitle = record.title;
+  const currentContent = record.content;
 
   const form = document.createElement('div');
   form.innerHTML = `
     <div style="margin-bottom: 16px;">
       <label style="display: block; margin-bottom: 8px; font-weight: 600; color: var(--font-color-primary);">Վերնագիր</label>
-      <input type="text" id="announcement-title" name="title" value="${currentTitle}"
+      <input type="text" id="announcement-title" name="title" value="${e(currentTitle)}"
         style="width: 100%; padding: 10px; border-radius: 8px; font-size: 14px; background: var(--card-background); color: var(--font-color-primary); border: 1px solid var(--border-color);">
     </div>
     <div style="margin-bottom: 16px;">
       <label style="display: block; margin-bottom: 8px; font-weight: 600; color: var(--font-color-primary);">Բովանդակություն</label>
       <div id="announcement-content" data-name="content" contenteditable="true"
-        style="box-sizing:border-box; width: 100%; min-height: 150px; padding: 10px; border: 1px solid var(--border-color); border-radius: 8px; font-size: 14px; background: var(--card-background); color: var(--font-color-primary);">${currentContent}</div>
+        style="box-sizing:border-box; width: 100%; min-height: 150px; padding: 10px; border: 1px solid var(--border-color); border-radius: 8px; font-size: 14px; background: var(--card-background); color: var(--font-color-primary);">${sanitizeHtml(currentContent)}</div>
     </div>
   `;
 
   const toolbar = createFormattingToolbar();
 
-  modal.create('Փոփոխել հայտարարությունը', form, (data) => {
-    console.log(data);
-    contentEl.innerHTML = `<strong>${data.title}</strong> ${data.content}`;
+  modal.create('Փոփոխել հայտարարությունը', form, async data => {
+    const saved = await posts.update(record.id, { ...record, ...data });
+    const entry = announcementEntry(saved, true); announcementCard.closest('.item-entry').replaceWith(entry);
+    attachAnnouncementHandlers(entry);
   }, {
     customFooterLeft: toolbar,
     setupFormatting: (modalElement) => setupFormattingHandlers(modalElement)
@@ -667,207 +598,20 @@ function editAnnouncement(announcementCard) {
  * Delete an announcement
  * @param {HTMLElement} announcementEntry - Announcement entry element
  */
-function deleteAnnouncement(announcementEntry) {
-  customConfirm("Վստա՞հ եք, որ ցանկանում եք հեռացնել այս հայտարարությունը։'")
-    .then(answer => {
-      if (answer) {
-        announcementEntry.remove();
-        console.log("removed");
-      } else {
-        console.log("cancelled");
-      }
-    });
+async function deleteAnnouncement(entry) {
+  const button = entry.querySelector('.btn-delete');
+  if (button.disabled) return;
+  button.disabled = true;
+  const confirmed = await customConfirm('Վստա՞հ եք, որ ցանկանում եք հեռացնել այս հայտարարությունը։');
+  button.disabled = false;
+  if (!confirmed) return;
+  await pending(button, entry, async () => { await posts.delete(entry.querySelector('.announcement-card').dataset.postId); entry.remove(); });
 }
 
-/**
- * Toggle comments section for an announcement
- * @param {HTMLElement} announcementCard - Announcement card element
- * @param {HTMLElement} btnComments - Comments button element
- */
-async function toggleComments(announcementCard, btnComments) {
-  let commentsContainer = announcementCard.querySelector('.comments-container');
-
-  if (!commentsContainer) {
-    commentsContainer = await createCommentsContainer(announcementCard, btnComments);
-    announcementCard.appendChild(commentsContainer);
-  } else {
-    if (commentsContainer.style.display === 'none') {
-      commentsContainer.style.display = 'block';
-    } else {
-      commentsContainer.style.display = 'none';
-    }
-  }
-}
-
-/**
- * Create a comment element from comment data
- * @param {Object} comment - Comment data from backend
- * @returns {HTMLElement} Comment element
- */
-function createCommentElement(comment) {
-  const commentEl = document.createElement('div');
-  commentEl.className = 'comment';
-  commentEl.style.marginBottom = '12px';
-
-  // Format timestamp
-  const timeAgo = formatTimeAgo(comment.createdAt);
-
-  commentEl.innerHTML = `
-    <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
-      <div style="width: 32px; height: 32px; background: var(--border-color); border-radius: 50%; background-image: url('${comment.author?.avatar || ''}'); background-size: cover; background-position: center;"></div>
-      <span style="font-weight: 600; font-size: 14px; color: var(--font-color-primary);">${comment.author?.name || 'Անանուն'}</span>
-      <span style="font-size: 12px; color: var(--font-color-secondary);">${timeAgo}</span>
-    </div>
-    <p style="font-size: 14px; margin: 0; padding-left: 32px; color: var(--font-color-primary);">${comment.text}</p>
-  `;
-
-  return commentEl;
-}
-
-/**
- * Create comments container
- * @param {HTMLElement} announcementCard - Announcement card element
- * @param {HTMLElement} btnComments - Comments button element
- * @returns {HTMLElement} Comments container
- */
-async function createCommentsContainer(announcementCard, btnComments) {
-  const commentsContainer = document.createElement('div');
-  commentsContainer.className = 'comments-container';
-  commentsContainer.style.cssText = `
-    margin-top: 16px;
-    padding-top: 16px;
-    border-top: 1px solid var(--border-color);
-    animation: fadeIn 0.3s ease;
-  `;
-
-  // Comments list container
-  const commentsList = document.createElement('div');
-  commentsList.className = 'comments-list';
-  //load if there is at least one comment
-
-  // Load comments from backend
-  try {
-    const postId = announcementCard.dataset.postId;
-    const response = await getComments(postId);
-    const commentsCount = parseInt(btnComments.textContent.match(/\((\d+)\)/)[1]);
-    if (response.data && response.data.length > 0 && commentsCount > 0) {
-      // Render each comment
-      response.data.forEach(comment => {
-        const commentEl = createCommentElement(comment);
-        commentsList.appendChild(commentEl);
-      });
-
-      // Update comment count
-      btnComments.textContent = `Մեկնաբանություններ (${response.data.length})`;
-    } else {
-      // No comments yet
-      commentsList.innerHTML = `
-        <p style="font-size: 14px; color: var(--font-color-secondary); text-align: center; padding: 16px;">
-          Մեկնաբանություններ դեռ չկան
-        </p>
-      `;
-    }
-  } catch (error) {
-    console.error('Error loading comments:', error);
-    commentsList.innerHTML = `
-      <p style="font-size: 14px; color: var(--font-color-secondary); text-align: center; padding: 16px;">
-        Սխալ՝ մեկնաբանությունները չհաջողվեց բեռնել
-      </p>
-    `;
-  }
-
-  // Add comment form
-  const commentForm = createCommentForm(announcementCard, commentsList, btnComments);
-
-  commentsContainer.appendChild(commentsList);
-  commentsContainer.appendChild(commentForm);
-
-  return commentsContainer;
-}
-
-/**
- * Create comment form
- * @param {HTMLElement} announcementCard - Announcement card element
- * @param {HTMLElement} commentsList - Comments list element
- * @param {HTMLElement} btnComments - Comments button element
- * @returns {HTMLElement} Comment form
- */
-function createCommentForm(announcementCard, commentsList, btnComments) {
-  const commentForm = document.createElement('div');
-  commentForm.style.cssText = `
-    display: flex;
-    gap: 8px;
-    margin-top: 16px;
-  `;
-  commentForm.innerHTML = `
-    <input type="text" placeholder="Գրել մեկնաբանություն..." 
-      style="flex: 1; padding: 8px 12px; border-radius: 12px; font-size: 14px; background: var(--card-background); color: var(--font-color-primary);">
-    <button class = "primary-btn" style="  color: white; border: none; padding: 8px 16px; border-radius: 20px; cursor: pointer;">
-      <i class="fas fa-paper-plane"></i>
-    </button>
-  `;
-
-  // Handle new comment
-  const input = commentForm.querySelector('input');
-  const sendBtn = commentForm.querySelector('button');
-
-  const addComment = async () => {
-    const text = input.value.trim();
-    if (!text) return;
-
-    try {
-      const postId = announcementCard.dataset.postId;
-      const response = await createComment(postId, { text });
-      if (response.data.success) {
-        // Clear "no comments yet" message if it exists
-        const noCommentsMsg = commentsList.querySelector('p');
-        if (noCommentsMsg && noCommentsMsg.textContent.includes('Մեկնաբանություններ դեռ չկան')) {
-          commentsList.innerHTML = '';
-        }
-
-        // Use the helper function to create comment element
-        const newComment = createCommentElement(response.data.data);
-        commentsList.appendChild(newComment);
-        input.value = '';
-
-        // Update count
-        const currentCount = parseInt(btnComments.textContent.match(/\d+/)[0]);
-        btnComments.textContent = `Մեկնաբանություններ (${currentCount + 1})`;
-      }
-    } catch (error) {
-      console.error('Error adding comment:', error);
-    }
-  };
-
-  sendBtn.addEventListener('click', () => addComment());
-  input.onkeypress = (e) => {
-    if (e.key === 'Enter') addComment();
-  };
-
-  return commentForm;
-}
-
-/**
- * Attach event handlers to announcement buttons
- * @param {HTMLElement} entry - Announcement entry element
- */
 function attachAnnouncementHandlers(entry) {
-  const editBtn = entry.querySelector('.btn-edit');
-  const deleteBtn = entry.querySelector('.btn-delete');
-  const commentsBtn = entry.querySelector('.btn-comments');
-  const announcementCard = entry.querySelector('.announcement-card');
-
-  if (editBtn) {
-    editBtn.addEventListener('click', () => editAnnouncement(announcementCard));
-  }
-
-  if (deleteBtn) {
-    deleteBtn.addEventListener('click', () => deleteAnnouncement(entry));
-  }
-
-  if (commentsBtn) {
-    commentsBtn.addEventListener('click', () => toggleComments(announcementCard, commentsBtn));
-  }
+  const card = entry.querySelector('.announcement-card');
+  entry.querySelector('.btn-edit').onclick = () => editAnnouncement(card);
+  entry.querySelector('.btn-delete').onclick = () => deleteAnnouncement(entry);
 }
 
 // ============================================
@@ -877,60 +621,24 @@ function attachAnnouncementHandlers(entry) {
 /**
  * Handle banner photo upload
  */
-function handleBannerUpload() {
-  const input = document.createElement('input');
-  input.type = 'file';
-  input.accept = 'image/*';
-  input.onchange = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        const bannerPhoto = document.querySelector('.banner-photo');
-        bannerPhoto.style.backgroundImage = `url(${event.target.result})`;
-        showNotification('Բանների նկարը թարմացվել է');
-      };
-      reader.readAsDataURL(file);
-    }
+function handleBannerUpload() { uploadPhoto('cover'); }
+function handleProfilePhotoUpload() { uploadPhoto('avatar'); }
+function uploadPhoto(kind) {
+  const input = document.createElement('input'); input.type = 'file'; input.accept = 'image/png,image/jpeg,image/webp,image/gif';
+  input.onchange = async () => {
+    const file = input.files[0]; if (!file) return;
+    const container = document.querySelector('.intro-card');
+    await pending(null, container, async () => {
+      const user = await profiles.upload(kind, file);
+      if (kind === 'cover') document.querySelector('.banner-photo').style.backgroundImage = `url("${safeUrl(user.cover, { image: true })}")`;
+      else document.querySelector('.profile-photo img').src = safeUrl(user.avatar, { image: true });
+      showNotification('Լուսանկարը թարմացվել է');
+    });
   };
   input.click();
 }
 
-/**
- * Handle profile photo upload
- */
-function handleProfilePhotoUpload() {
-  const input = document.createElement('input');
-  input.type = 'file';
-  input.accept = 'image/*';
-  input.onchange = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        const profilePhoto = document.querySelector('.profile-photo img');
-        if (profilePhoto) {
-          profilePhoto.src = event.target.result;
-          showNotification('Պրոֆիլի նկարը թարմացվել է');
-        }
-      };
-      reader.readAsDataURL(file);
-    }
-  };
-  input.click();
-}
-/* uncomment
-export {
-  showAddEducationModal,
-  addEducationEntry,
-  showAddLicenseModal,
-  addLicenseEntry,
-  showAddAnnouncementModal,
-  addAnnouncementEntry,
-  editAnnouncement,
-  deleteAnnouncement,
-  toggleComments,
-  attachAnnouncementHandlers,
-  handleBannerUpload,
-  handleProfilePhotoUpload,
-}*/
+export { showAddEducationModal, addEducationEntry, attachEducationHandlers,
+ showAddLicenseModal, addLicenseEntry, attachLicenseHandlers,
+ showAddAnnouncementModal, addAnnouncementEntry, attachAnnouncementHandlers,
+ handleBannerUpload, handleProfilePhotoUpload };

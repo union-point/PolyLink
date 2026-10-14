@@ -63,8 +63,8 @@
 
       <label for="photo" class="required">Ներբեռնել լուսանկար</label>
 
-      <div class="upload-box" onclick="document.getElementById('photo').click()">
-        <img src="./image/upload-icon.svg" class="upload-icon" alt="">
+      <div class="upload-box">
+        <span class="upload-icon" aria-hidden="true">↑</span>
         <p>Քաշեք և գցեք կամ <span>ընտրեք ֆայլ</span></p>
       </div>
 
@@ -74,12 +74,12 @@
       <textarea id="bio" rows="4" placeholder="Պատմեք Ձեր մասին..." required></textarea>
 
       <div class="bottom-t">
-        <button type="button" class="back-btn" onclick="goToRg()">Հետ</button>
-        <button type="button" class="forward-btn" onclick="goToNextPage()">Հաջորդը</button>
+        <button type="button" class="back-btn">Հետ</button>
+        <button type="button" class="forward-btn">Հաջորդը</button>
       </div>
     </form>
   </div>
-  <script src="./js/profile-info.js"></script>
+  <script type="module" src="./js/profile-info.js"></script>
 </body>
 
 

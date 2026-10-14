@@ -1,0 +1,167 @@
+# Frontend refactoring record
+
+The frontend remains a static multi-page vanilla-JavaScript site. The default target
+is a persistent mock demo with no API server. CDN dependencies still require internet.
+
+## Working conventions
+
+- Each independently reviewable change is checked and committed before starting the next.
+- Preserve existing layouts, Armenian copy, keyboard interaction and intended navigation.
+- Page controllers will use `js/services/index.js`; transport and mock storage stay behind it.
+- `js/config.js` selects `mock` or `http`. Missing backend contracts must fail explicitly.
+- Use manual browser verification, without introducing a Node build/test toolchain.
+
+## Incremental phases and completion gates
+
+| Phase | Independent scope | Gate before moving on | Status |
+| --- | --- | --- | --- |
+| 0 | Source/DB context and original screenshots | Evidence separated from README claims | Complete |
+| 1 | Configuration, DTO/error/validation contracts, mock store and HTTP adapters | One provider boundary; reset/session and unsupported operations explicit | Complete |
+| 2 | Announcement feed/comments | Filter/create/reload/failure-retained draft and shared records | Complete |
+| 3 | Login/register/onboarding and recovery/2FA | Validation, navigation, challenge expiry/replay and persistent session | Complete |
+| 4 | Owner/public profiles and media/education/certificates/posts | Durable CRUD, ownership, contact navigation and shared rendering | Complete |
+| 5 | Forum and people search | IDs, replies/likes/sort and combined filters persist | Complete |
+| 6 | Direct/group chat | Distinct histories, failed-send retry, attachment persistence and menu/incoming events | Complete |
+| 7 | Settings/account lifecycle/export | Durable preferences, rollback, isolated lifecycle invariants and own-data export | Complete |
+| 8 | Shared page behavior, legacy removal and current docs | Valid imports, explicit unsupported contracts and final audit | Complete; true mobile visual QA unconfirmed |
+
+Every independently reviewable change was committed before the next block. The initial
+uncommitted work was separated into baseline/context, contracts, persistent mock provider,
+and HTTP/service boundary commits. Later features/fixes have their own commits. Browser
+manual QA is the project convention; temporary adapter checks added no build/test dependency.
+
+## Baseline
+
+`baseline/profile-desktop.png` and `baseline/events-desktop.png` capture the original
+desktop pages before migration. The original profile contains duplicate certificate
+sections and repeated biography text; these are known defects, not extra domain records.
+
+| Pages | Controls to preserve and make testable |
+| --- | --- |
+| Login, registration, onboarding | Visibility toggles, validation, role selection, years, biography and image preview; register/onboard/login navigation |
+| Recovery and 2FA | Six digits, paste/backspace, resend timer, verification, password strength/matching |
+| Owner/public profiles | Intro editing, save/cancel, education/certificates CRUD, credential link, photos, announcements/comments, contact action |
+| Announcements | Editor formatting, creation/cancel, category/sphere filters, comments |
+| Forum/list/topic/create | Classification, durable topic selection, replies, helpful likes, sorting and publication |
+| Search | Text, specialization/institute/year filters, profile and contact actions |
+| Messaging | Contact selection/search, separate histories, text/images, emoji/copy, menu actions |
+| Settings | Theme, language preference, account/security/privacy/notification settings, export, deactivate/delete |
+| Help, tutorials, policies | FAQ, category filters, navigation; honest feedback for missing tutorial videos |
+
+## Acceptance checklist for each migrated feature
+
+1. Open with only a local static server. Compare desktop/mobile layout and light/dark theme.
+2. Exercise every control, cancel, keyboard action and navigation destination.
+3. Create/edit/delete, navigate away and reload; verify durable IDs and coherent records.
+4. Inject latency and a one-time operation failure; verify pending state, preserved input,
+   retry and no false success. Invalid input must remain on the form.
+5. Check console errors and browser requests. Mock mode must make no API requests.
+6. Check cross-feature references and reset. Reset must affect only mock-owned data.
+7. Inspect the Git diff, record evidence here, and make one focused commit.
+
+## Progress (chronological evidence; later entries supersede earlier pending notes)
+
+- Baseline/context documentation captured.
+- Baseline initialization fixes verified: forum filters leave one matching card; registration
+  initializes without errors; duplicate classic/module auth script tags removed.
+- Provider infrastructure and a developer-only `dev-tools.html` are introduced.
+  Browser-verified: seeded session initializes, sign-out survives reload, reset restores
+  the session, and the developer page emits no console errors. Product pages were migrated in the subsequent blocks below.
+- Initial service/mock/HTTP scaffolding was subsequently wired and verified per feature.
+- Announcements migrated and browser-verified: both filters, empty state, invalid-save
+  feedback, unique IDs (`post-101` after reload), persistent plain-text comments,
+  a delayed failed save that retains the modal/draft, and a successful retry.
+  Desktop editor/cancel checked against baseline; no console errors. The available
+  browser viewport override did not change its measured width, so mobile visual QA
+  remains pending rather than being reported as passed.
+- Login/registration/onboarding migrated. Browser-verified: bad credentials stay on
+  login, seeded login navigates to profile, mismatched registration passwords fail,
+  new registration navigates to onboarding, lecturer controls hide study years,
+  reversed years fail, and a valid graduate onboarding persists a new demo session.
+  Owner profile migration followed in its own commit.
+- Recovery/2FA migrated. Browser-verified: wrong codes stay on verification, six-digit
+  clipboard paste works, mismatched reset passwords fail, reset returns to login,
+  old credentials fail and new demo credentials succeed. 2FA preference creates a
+  separate login challenge; incorrect codes fail, its resend timer survives reload,
+  correct verification succeeds, and revisiting the consumed flow cannot sign in.
+- Owner profile core migrated: reads, intro editing, education and photos now use
+  services and explicit modules. Browser-verified intro cancel/save/reload, Ctrl+S,
+  education required/chronological checks, create/edit/reopen/reload, cancel/delete
+  confirmation and durable deletion. Avatar upload survives reload as an IndexedDB
+  blob (decoded image width 1024). Confirmation layering was corrected.
+  Certificates/posts/public profiles followed in a separate commit.
+- Certificates, owner announcements and public profiles migrated to shared service-backed
+  rendering. Browser-verified certificate validation/create/edit/reopen/reload/delete;
+  owner post create/edit/comment appears on the feed and public profile; owner deletion
+  removes the feed record. Public user 6 loads its own post and contact navigates to
+  `message.html?room=room-2`; missing IDs display a recoverable state. Duplicate
+  certificate sections and hardcoded owner records were removed.
+- Forum migrated with separate list/create/topic controllers. Browser-verified six
+  seeded topics, classification filtering, creation returning to the forum, ID-based
+  topic navigation, persistent replies/helpful likes, sorting and safe linked replies.
+  Link formatting uses an inline field because browser prompts are unavailable in
+  the in-app browser; its saved link survives reload.
+- Search migrated. Browser-verified six seeded people, text query, combined
+  specialization/institute/graduation-year filters, empty results, and correct
+  `user.html?id=6` navigation. Contact actions share conversation services.
+- Session/navigation lifecycle verified: ending the mock session in the developer
+  tab redirects an open protected page to login; Back cannot reopen it while signed
+  out. Session/reset signals and cached-page verification are centralized.
+- Messaging migrated. Browser-verified distinct histories, text/reload persistence,
+  actual clipboard copying, failed-send draft retention/retry, PNG attachment/reload
+  persistence, incoming-message subscription, mute/block/reload/unblock, delete
+  cancellation and per-user hiding, group history/send/reload and emoji insertion.
+  Mock incoming messages respect blocking; a deleted participant leaves a read-only
+  conversation. Confirmation overlays work without native prompts.
+- Settings migrated to durable preferences and asynchronous account services. Browser-verified
+  notification/visibility/language/theme reload persistence, failed preference rollback,
+  downloadable owner-only JSON export without credential/challenge data, incorrect-password
+  account feedback and deactivate/delete cancellation. Public profiles render email only
+  when the provider includes it. Exports preserve stable media references and image data.
+  Language is a saved preference; translation catalogs and actual notification delivery
+  remain backend/product requirements. Successful credential/email changes, privacy filtering, deactivate/reactivate and account
+  deletion were verified against the real provider using a disposable in-memory transaction
+  adapter, including old credential rejection, raw password whitespace, deletion graph,
+  surviving other-user data and read-only conversations. This does not replace browser
+  persistence checks, which were performed separately.
+- Shared behavior migrated: one theme/navigation/logout initializer, keyboard-accessible
+  FAQ and tutorial controls. Browser-verified FAQ Enter toggle, retained support draft
+  with explicit unavailable feedback, tutorial category filtering and unavailable-video
+  feedback. No support submission or playable video is falsely reported as successful.
+- Obsolete disconnected API/core wrappers, duplicate profile utilities/theme and public
+  render fixtures removed after verifying they have no live imports or script tags.
+  Profile identity now travels exclusively in the URL. HTTP adapter audited with the actual pinned Axios library and an injected response adapter
+  (temporary verification script, no project dependency/test toolchain). Verified shared
+  concurrent refresh, bounded retry/token clearing, network rejection, success envelopes,
+  numeric SQL-name IDs, login, upload URL/multipart, empty lists, unsupported operations
+  making no request, malformed profile rejection, encoded IDs, write allowlists and
+  recovery payloads. No live backend exists, so server compatibility remains unverified.
+
+## Run
+
+From the repository root: `python3 server.py`, then open `http://localhost:8000/login.html`.
+To avoid an occupied port: `python3 server.py --port 8001`. The development server
+uses `Cache-Control: no-store` so imported modules refresh during manual verification.
+ES modules must be served over HTTP rather than opened as `file://` URLs.
+
+## Final verification and boundaries
+
+- Initial page reads disable the existing shell until ready; failed initialization exposes
+  a retry control. Browser-verified injected profile-load failure and successful retry.
+- All live JavaScript modules pass syntax checks; local imports and HTML script sources
+  resolve. No product controller imports Axios or accesses the mock store.
+- Desktop flows were exercised incrementally above. The in-app browser viewport override
+  still measured 835 pixels after requesting 390, so a true mobile layout check could not
+  be confirmed. Existing responsive CSS is retained; mobile visual acceptance remains a
+  manual check in a browser that applies its device viewport.
+- HTTP adapter checks simulate responses, not a running backend. Chat, settings, second
+  factor and reply/like route contracts remain explicitly unsupported in HTTP mode.
+- Offline means no backend. Font/CDN dependencies can still require internet. Saved
+  language/notification preferences do not provide translation or email delivery.
+
+- Recovery audit additionally verified that resend removes prior verification and email
+  changes consume outstanding challenges; stale proof cannot reset the account afterward.
+- Current README/JavaScript/profile references and both standalone context files describe
+  the refactored architecture and distinguish mock behavior from backend requirements.
+
+Final desktop profile evidence: [profile screenshot](verification/profile-desktop.png).

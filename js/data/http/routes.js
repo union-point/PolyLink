@@ -1,0 +1,40 @@
+// Only routes evidenced in the repository are mapped. Missing capabilities stay
+// explicit until a backend contract is agreed; add them here, never in page scripts.
+export const routes = {
+  'auth.me': () => ({ method: 'get', url: '/auth/me' }),
+  'auth.login': data => ({ method: 'post', url: '/auth/login', data }),
+  'auth.register': data => ({ method: 'post', url: '/auth/register', data }),
+  'auth.logout': () => ({ method: 'post', url: '/auth/logout' }),
+  'auth.forgotPassword': email => ({ method: 'post', url: '/auth/forgot-password', data: { email } }),
+  'auth.verifyRecovery': ({ email, code }) => ({ method: 'post', url: '/auth/verify-code', data: { email, code } }),
+  'auth.resetPassword': ({ email, code, newPassword }) => ({ method: 'post', url: '/auth/reset-password', data: { email, code, newPassword } }),
+  'profiles.get': id => ({ method: 'get', url: id ? `/users/${encodeURIComponent(id)}` : '/auth/me' }),
+  'profiles.update': data => ({ method: 'put', url: '/users/me', data: pick(data, ["firstName", "lastName", "jobTitle", "description"]) }),
+  'profiles.onboard': data => ({ method: 'put', url: '/users/profile', data: form(pick(data, ["role", "institute", "department", "specialization", "description", "startYear", "endYear"])) }),
+  'profiles.upload': (kind, file) => ({ method: 'post', url: kind === 'avatar' ? '/users/me/photo' : '/users/me/banner', data: form({ [kind === 'avatar' ? 'photo' : 'banner']: file }) }),
+  'profiles.education.list': () => ({ method: 'get', url: '/users/me/education' }),
+  'profiles.education.create': data => ({ method: 'post', url: '/users/me/education', data: pick(data, ["institution", "degree", "institute", "specialization", "startDate", "endDate", "logo"]) }),
+  'profiles.education.update': (id, data) => ({ method: 'put', url: `/users/me/education/${encodeURIComponent(id)}`, data: pick(data, ["institution", "degree", "institute", "specialization", "startDate", "endDate", "logo"]) }),
+  'profiles.education.delete': id => ({ method: 'delete', url: `/users/me/education/${encodeURIComponent(id)}` }),
+  'profiles.certificates.list': () => ({ method: 'get', url: '/users/me/licenses' }),
+  'profiles.certificates.create': data => ({ method: 'post', url: '/users/me/licenses', data: pick(data, ["name", "organization", "issueDate", "credentialUrl", "logo"]) }),
+  'profiles.certificates.update': (id, data) => ({ method: 'put', url: `/users/me/licenses/${encodeURIComponent(id)}`, data: pick(data, ["name", "organization", "issueDate", "credentialUrl", "logo"]) }),
+  'profiles.certificates.delete': id => ({ method: 'delete', url: `/users/me/licenses/${encodeURIComponent(id)}` }),
+  'posts.list': (filters = {}) => ({ method: 'get', url: filters.userId ? `/users/${encodeURIComponent(filters.userId)}/posts` : '/posts' }),
+  'posts.create': data => ({ method: 'post', url: '/posts', data: pick(data, ["title", "content", "category", "sphere"]) }),
+  'posts.update': (id, data) => ({ method: 'put', url: `/posts/${encodeURIComponent(id)}`, data: pick(data, ["title", "content", "category", "sphere"]) }),
+  'posts.delete': id => ({ method: 'delete', url: `/posts/${encodeURIComponent(id)}` }),
+  'posts.comments.list': id => ({ method: 'get', url: `/posts/${encodeURIComponent(id)}/comments` }),
+  'posts.comments.create': (id, data) => ({ method: 'post', url: `/posts/${encodeURIComponent(id)}/comments`, data: pick(data, ["text"]) }),
+  'posts.comments.update': (postId, id, data) => ({ method: 'put', url: `/posts/${encodeURIComponent(postId)}/comments/${encodeURIComponent(id)}`, data: pick(data, ["text"]) }),
+  'posts.comments.delete': (postId, id) => ({ method: 'delete', url: `/posts/${encodeURIComponent(postId)}/comments/${encodeURIComponent(id)}` }),
+  'forum.list': () => ({ method: 'get', url: '/forum/topics' }),
+  'forum.get': id => ({ method: 'get', url: `/forum/topics/${encodeURIComponent(id)}` }),
+  'forum.create': data => ({ method: 'post', url: '/forum/topics', data: pick(data, ["title", "content", "major"]) }),
+  'forum.update': (id, data) => ({ method: 'put', url: `/forum/topics/${encodeURIComponent(id)}`, data: pick(data, ["title", "content", "major"]) }),
+  'forum.delete': id => ({ method: 'delete', url: `/forum/topics/${encodeURIComponent(id)}` }),
+  'search.people': (filters = {}) => ({ method: 'get', url: '/search', params: { q: filters.q || '' } }),
+};
+function form(data) { const value = new FormData(); for (const [key, item] of Object.entries(data)) if (item != null) value.append(key, item); return value; }
+
+function pick(data, keys) { return Object.fromEntries(keys.filter(key => key in data).map(key => [key, data[key]])); }

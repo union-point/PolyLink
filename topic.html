@@ -1,278 +1,120 @@
 <!DOCTYPE html>
+
 <html lang="hy">
-
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Frontend դեվելոփերների համար հնարավորություններ | PolyLink Ֆորում</title>
-    <link rel="stylesheet" href="./css/topic.css">
-    <link rel="stylesheet" href="./css/style.css">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Frontend դեվելոփերների համար հնարավորություններ | PolyLink Ֆորում</title>
+<link href="./css/topic.css" rel="stylesheet"/>
+<link href="./css/style.css" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
 </head>
-
 <body>
+<header class="header">
+<div class="header-container">
+<div class="logo-container">
+<img alt="Logo" class="logo-img" src="./image/logo.png"/>
+<h3 class="logo-text">PolyLink</h3>
+</div>
+<nav>
+<ul class="menu">
+<li><a href="profile.html">Անձնական էջ</a></li>
+<li><a href="events.html">Իրադարձություններ</a></li>
+<li><a class="active" href="forum.html">Ֆոռում</a></li>
+<li><a href="message.html">Նամակագրություն</a></li>
+<li><a href="search.html">Որոնում</a></li>
+</ul>
+<!-- Dropdown menu -->
+<div class="dropdown-container">
+<button class="dropdown-btn">☰</button>
+<ul class="dropdown-menu">
+<li><a href="help.html">Help</a></li>
+<li><a href="settings.html">Կարգավորումներ</a></li>
+<li><a href="login.html">Դուրս գալ</a></li>
+</ul>
+</div>
+</nav>
+</div>
+</header>
+<main class="container">
+<!-- Breadcrumb Navigation -->
+<nav class="breadcrumb">
+<a href="forum.html">← Վերադառնալ ֆորում</a>
+</nav>
+<!-- Topic Header -->
+<article class="topic-header">
+<div class="topic-badge"></div>
+<h1 class="topic-title"></h1>
+<div class="topic-author-info">
+<div class="author-avatar">
+<img alt="Արմեն Ղազարյան" src="./image/logo.png"/>
+</div>
+<div class="author-details">
+<div class="author-name"></div>
+<div class="author-meta">
+<span class="separator">•</span>
+<span class="post-date"></span>
+</div>
+</div>
+</div>
+</article>
+<!-- Original Post -->
+<section class="original-post">
+<div class="post-content"></div>
+</section>
+<!-- Replies Section -->
+<section class="replies-section">
+<div class="replies-header">
+<h2>Պատասխաններ <span class="reply-count">(0)</span></h2>
+<select class="sort-select">
+<option value="newest">Նորագույն</option>
+<option value="oldest">Հնագույն</option>
+<option value="popular">Ամենաօգտակար</option>
+</select>
+</div>
+<!-- Reply Item -->
 
-    <header class="header">
-        <div class="header-container">
-            <div class="logo-container">
-                <img class="logo-img" src="./image/logo.png" alt="Logo" class="logo-img">
-                <h3 class="logo-text">PolyLink</h3>
-            </div>
-            <nav>
-                <ul class="menu">
-                    <li><a href="profile.html">Անձնական էջ</a></li>
-                    <li><a href="events.html">Իրադարձություններ</a></li>
-                    <li><a href="forum.html" class="active">Ֆոռում</a></li>
-                    <li><a href="message.html">Նամակագրություն</a></li>
-                    <li><a href="search.html">Որոնում</a></li>
-                </ul>
-                <!-- Dropdown menu -->
-                <div class="dropdown-container">
-                    <button class="dropdown-btn">☰</button>
-                    <ul class="dropdown-menu">
-                        <li><a href="help.html">Help</a></li>
-                        <li><a href="settings.html">Կարգավորումներ</a></li>
-                        <li><a href="login.html">Դուրս գալ</a></li>
-                    </ul>
-                </div>
-            </nav>
-        </div>
-    </header>
+<!-- Reply Item -->
 
-    <main class="container">
-        <!-- Breadcrumb Navigation -->
-        <nav class="breadcrumb">
-            <a href="forum.html">← Վերադառնալ ֆորում</a>
-        </nav>
+<!-- Reply Item -->
 
-        <!-- Topic Header -->
-        <article class="topic-header">
-            <div class="topic-badge">Ինֆորմատիկա և ծրագրավորում</div>
-            <h1 class="topic-title">Frontend դեվելոփերների համար հնարավորություններ Երևանում</h1>
-            <div class="topic-author-info">
-                <div class="author-avatar">
-                    <img src="./image/logo.png" alt="Արմեն Ղազարյան">
-                </div>
-                <div class="author-details">
-                    <div class="author-name">Արմեն Ղազարյան</div>
-                    <div class="author-meta">
-                        <span class="separator">•</span>
-                        <span class="post-date">14 ապրիլ, 2025</span>
-                    </div>
-                </div>
-            </div>
-        </article>
+<!-- Reply Item -->
 
-        <!-- Original Post -->
-        <section class="original-post">
-            <div class="post-content">
-                <p>Բարև բոլորին,</p>
-                <p>Ուրախ եմ հայտարարել, որ մեր նոր սթարթափը ակտիվորեն փնտրում է փորձառու Frontend դեվելոփերներ։ Մենք
-                    զբաղվում ենք ֆինտեք լուծումներով և ունենք հետաքրքիր նախագծեր։</p>
-
-                <h3>Պահանջներ՝</h3>
-                <ul>
-                    <li>React.js և TypeScript փորձ (առնվազն 2 տարի)</li>
-                    <li>Responsive design և CSS frameworks (Tailwind, Material-UI)</li>
-                    <li>REST API և GraphQL ինտեգրացիա</li>
-                    <li>Git version control</li>
-                    <li>Անգլերենի լավ իմացություն</li>
-                </ul>
-
-                <h3>Առաջարկում ենք՝</h3>
-                <ul>
-                    <li>Մրցունակ աշխատավարձ</li>
-                    <li>Հիբրիդ աշխատանքային ռեժիմ</li>
-                    <li>Մասնագիտական զարգացման հնարավորություններ</li>
-                    <li>Երիտասարդ և դինամիկ թիմ</li>
-                </ul>
-
-                <p>Եթե հետաքրքրված եք, խնդրում եմ կապվել ինձ հետ անձնական նամակով կամ թողնել ձեր կոնտակտները
-                    մեկնաբանություններում։</p>
-            </div>
-
-
-        </section>
-
-        <!-- Replies Section -->
-        <section class="replies-section">
-            <div class="replies-header">
-                <h2>Պատասխաններ <span class="reply-count">(12)</span></h2>
-                <select class="sort-select">
-                    <option value="newest">Նորագույն</option>
-                    <option value="oldest">Հնագույն</option>
-                    <option value="popular">Ամենաօգտակար</option>
-                </select>
-            </div>
-
-            <!-- Reply Item -->
-            <div class="reply-item">
-                <div class="reply-avatar">
-                    <img src="./image/logo.png" alt="Նարե Սարգսյան">
-                </div>
-                <div class="reply-content">
-                    <div class="reply-header">
-                        <div class="reply-author">
-                            <span class="author-name">Նարե Սարգսյան</span>
-                        </div>
-                        <span class="reply-date">14 ապրիլ, 2025 - 15:30</span>
-                    </div>
-                    <div class="reply-text">
-                        <p>Շատ հետաքրքիր առաջարկ է։ Կարո՞ղ եք ավելի մանրամասն պատմել նախագծերի մասին։ Ինչ տեխնոլոգիաներ
-                            եք օգտագործում backend-ի համար։</p>
-                    </div>
-                    <div class="reply-actions">
-                        <button class="reply-action-btn">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                stroke-width="2">
-                                <path
-                                    d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3">
-                                </path>
-                            </svg>
-                            <span>8</span>
-                        </button>
-                        <button class="reply-action-btn">Պատասխանել</button>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Reply Item -->
-            <div class="reply-item highlighted">
-                <div class="reply-avatar">
-                    <img src="./image/logo.png" alt="Արմեն Ղազարյան">
-                </div>
-                <div class="reply-content">
-                    <div class="reply-header">
-                        <div class="reply-author">
-                            <span class="author-name">Արմեն Ղազարյան</span>
-                            <span class="author-badge">Հեղինակ</span>
-                        </div>
-                        <span class="reply-date">14 ապրիլ, 2025 - 16:45</span>
-                    </div>
-                    <div class="reply-text">
-                        <p>Շնորհակալություն հետաքրքրության համար։ Backend-ում օգտագործում ենք Node.js (Express) և
-                            PostgreSQL։ Նաև ունենք microservices architecture։ Եթե ունես փորձ այս տեխնոլոգիաների հետ, դա
-                            լրացուցիչ առավելություն կլինի։</p>
-                    </div>
-                    <div class="reply-actions">
-                        <button class="reply-action-btn">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                stroke-width="2">
-                                <path
-                                    d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3">
-                                </path>
-                            </svg>
-                            <span>12</span>
-                        </button>
-                        <button class="reply-action-btn">Պատասխանել</button>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Reply Item -->
-            <div class="reply-item">
-                <div class="reply-avatar">
-                    <img src="./image/logo.png" alt="Դավիթ Մարտիրոսյան">
-                </div>
-                <div class="reply-content">
-                    <div class="reply-header">
-                        <div class="reply-author">
-                            <span class="author-name">Դավիթ Մարտիրոսյան</span>
-                        </div>
-                        <span class="reply-date">15 ապրիլ, 2025 - 09:15</span>
-                    </div>
-                    <div class="reply-text">
-                        <p>Ես հետաքրքրված եմ։ Ունեմ 3 տարվա փորձ React-ի և TypeScript-ի հետ։ Ուղարկել եմ ձեզ անձնական
-                            նամակ։</p>
-                    </div>
-                    <div class="reply-actions">
-                        <button class="reply-action-btn">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                stroke-width="2">
-                                <path
-                                    d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3">
-                                </path>
-                            </svg>
-                            <span>5</span>
-                        </button>
-                        <button class="reply-action-btn">Պատասխանել</button>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Reply Item -->
-            <div class="reply-item">
-                <div class="reply-avatar">
-                    <img src="./image/logo.png" alt="Անի Հովհաննիսյան">
-                </div>
-                <div class="reply-content">
-                    <div class="reply-header">
-                        <div class="reply-author">
-                            <span class="author-name">Անի Հովհաննիսյան</span>
-                        </div>
-                        <span class="reply-date">15 ապրիլ, 2025 - 11:30</span>
-                    </div>
-                    <div class="reply-text">
-                        <p>Հիբրիդ ռեժիմը որքա՞ն օր գրասենյակում է ենթադրում։ Եվ արդյո՞ք կա հնարավորություն ամբողջությամբ
-                            հեռավար աշխատելու։</p>
-                    </div>
-                    <div class="reply-actions">
-                        <button class="reply-action-btn">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                stroke-width="2">
-                                <path
-                                    d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3">
-                                </path>
-                            </svg>
-                            <span>3</span>
-                        </button>
-                        <button class="reply-action-btn">Պատասխանել</button>
-                    </div>
-                </div>
-            </div>
-
-        </section>
-
-        <!-- Reply Form -->
-        <section class="reply-form-section">
-            <h3>Ավելացնել պատասխան</h3>
-            <form class="reply-form">
-                <div class="form-avatar">
-                    <img src="./image/logo.png" alt="Դուք">
-                </div>
-                <div class="form-content">
-                    <textarea class="reply-textarea" placeholder="Գրեք ձեր պատասխանը այստեղ..." rows="4"></textarea>
-                    <div class="form-actions">
-                        <div class="formatting-tools">
-                            <button type="button" class="format-btn" title="Թավ">
-                                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-                                    <path
-                                        d="M15.6 10.79c.97-.67 1.65-1.77 1.65-2.79 0-2.26-1.75-4-4-4H7v14h7.04c2.09 0 3.71-1.7 3.71-3.79 0-1.52-.86-2.82-2.15-3.42zM10 6.5h3c.83 0 1.5.67 1.5 1.5s-.67 1.5-1.5 1.5h-3v-3zm3.5 9H10v-3h3.5c.83 0 1.5.67 1.5 1.5s-.67 1.5-1.5 1.5z" />
-                                </svg>
-                            </button>
-                            <button type="button" class="format-btn" title="Շեղ">
-                                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-                                    <path d="M10 4v3h2.21l-3.42 8H6v3h8v-3h-2.21l3.42-8H18V4z" />
-                                </svg>
-                            </button>
-                            <button type="button" class="format-btn" title="Հղում">
-                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                    stroke-width="2">
-                                    <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path>
-                                    <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path>
-                                </svg>
-                            </button>
-                        </div>
-                        <button type="submit" class="submit-btn">Հրապարակել պատասխան</button>
-                    </div>
-                </div>
-            </form>
-        </section>
-
-    </main>
-
-    <script src="./js/forum.js"></script>
-
+</section>
+<!-- Reply Form -->
+<section class="reply-form-section">
+<h3>Ավելացնել պատասխան</h3>
+<form class="reply-form">
+<div class="form-avatar">
+<img alt="Դուք" src="./image/logo.png"/>
+</div>
+<div class="form-content">
+<textarea class="reply-textarea" placeholder="Գրեք ձեր պատասխանը այստեղ..." rows="4"></textarea>
+<div class="form-actions">
+<div class="formatting-tools">
+<button class="format-btn" title="Թավ" type="button">
+<svg fill="currentColor" height="16" viewbox="0 0 24 24" width="16">
+<path d="M15.6 10.79c.97-.67 1.65-1.77 1.65-2.79 0-2.26-1.75-4-4-4H7v14h7.04c2.09 0 3.71-1.7 3.71-3.79 0-1.52-.86-2.82-2.15-3.42zM10 6.5h3c.83 0 1.5.67 1.5 1.5s-.67 1.5-1.5 1.5h-3v-3zm3.5 9H10v-3h3.5c.83 0 1.5.67 1.5 1.5s-.67 1.5-1.5 1.5z"></path>
+</svg>
+</button>
+<button class="format-btn" title="Շեղ" type="button">
+<svg fill="currentColor" height="16" viewbox="0 0 24 24" width="16">
+<path d="M10 4v3h2.21l-3.42 8H6v3h8v-3h-2.21l3.42-8H18V4z"></path>
+</svg>
+</button>
+<button class="format-btn" title="Հղում" type="button">
+<svg fill="none" height="16" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24" width="16">
+<path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path>
+<path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path>
+</svg>
+</button>
+</div>
+<button class="submit-btn" type="submit">Հրապարակել պատասխան</button>
+</div>
+</div>
+</form>
+</section>
+</main>
+<script src="./js/forum.js" type="module"></script>
 </body>
-
 </html>

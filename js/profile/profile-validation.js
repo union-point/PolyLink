@@ -8,8 +8,8 @@
 const validationRules = {
     text: {
         minLength: 2,
-        maxLength: 200,
-        pattern: /^[a-zA-Zա-ևԱ-Ֆ\s\-'.]+$/
+        maxLength: 255,
+        pattern: /^[^\u0000-\u001f]*$/u
     },
     email: {
         pattern: /^[^\s@]+@[^\s@]+\.[^\s@]+$/
@@ -268,4 +268,4 @@ function initializeValidation(container = document) {
 }
 
 //uncomment
-//export { setupInputValidation, validateInput, validateContentEditable, setupContentEditableValidation, initializeValidation, validateForm };
+export { setupInputValidation, validateInput, validateContentEditable, setupContentEditableValidation, initializeValidation, validateForm };

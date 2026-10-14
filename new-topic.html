@@ -1,90 +1,77 @@
 <!DOCTYPE html>
+
 <html lang="hy">
-
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Կարիերայի Ֆորում | Պոլիտեխնիկի Շրջանավարտներ</title>
-    <link rel="stylesheet" href="./css/forum.css">
-    <link rel="stylesheet" href="./css/style.css">
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Կարիերայի Ֆորում | Պոլիտեխնիկի Շրջանավարտներ</title>
+<link href="./css/forum.css" rel="stylesheet"/>
+<link href="./css/style.css" rel="stylesheet"/>
 </head>
-
 <body>
-
-    <header class="header">
-        <div class="header-container">
-            <div class="logo-container">
-                <img class="logo-img" src="./image/logo.png" alt="Logo" class="logo-img">
-                <h3 class="logo-text">PolyLink</h3>
-            </div>
-            <nav>
-                <ul class="menu">
-                    <li><a href="profile.html">Անձնական էջ</a></li>
-                    <li><a href="events.html">Իրադարձություններ</a></li>
-                    <li><a href="forum.html" class="active">Ֆոռում</a></li>
-                    <li><a href="message.html">Նամակագրություն</a></li>
-                    <li><a href="search.html">Որոնում</a></li>
-                </ul>
-                <!-- Dropdown menu -->
-                <div class="dropdown-container">
-                    <button class="dropdown-btn">☰</button>
-                    <ul class="dropdown-menu">
-                        <li><a href="help.html">Help</a></li>
-                        <li><a href="settings.html">Կարգավորումներ</a></li>
-                        <li><a href="login.html">Դուրս գալ</a></li>
-                    </ul>
-                </div>
-            </nav>
-        </div>
-    </header>
-
-    <main class="container">
-        <section class="forum-intro">
-            <h2>Աշխատանքի և Կարիերայի Ֆորում</h2>
-            <p>Այստեղ քննարկվում են միայն աշխատանքի, կարիերայի, համագործակցության և մասնագիտական զարգացման հետ կապված
+<header class="header">
+<div class="header-container">
+<div class="logo-container">
+<img alt="Logo" class="logo-img" src="./image/logo.png"/>
+<h3 class="logo-text">PolyLink</h3>
+</div>
+<nav>
+<ul class="menu">
+<li><a href="profile.html">Անձնական էջ</a></li>
+<li><a href="events.html">Իրադարձություններ</a></li>
+<li><a class="active" href="forum.html">Ֆոռում</a></li>
+<li><a href="message.html">Նամակագրություն</a></li>
+<li><a href="search.html">Որոնում</a></li>
+</ul>
+<!-- Dropdown menu -->
+<div class="dropdown-container">
+<button class="dropdown-btn">☰</button>
+<ul class="dropdown-menu">
+<li><a href="help.html">Help</a></li>
+<li><a href="settings.html">Կարգավորումներ</a></li>
+<li><a href="login.html">Դուրս գալ</a></li>
+</ul>
+</div>
+</nav>
+</div>
+</header>
+<main class="container">
+<section class="forum-intro">
+<h2>Աշխատանքի և Կարիերայի Ֆորում</h2>
+<p>Այստեղ քննարկվում են միայն աշխատանքի, կարիերայի, համագործակցության և մասնագիտական զարգացման հետ կապված
                 թեմաները:
             </p>
-        </section>
-
-        <section class="new-topic-container">
-            <h2>Ստեղծել նոր թեմա</h2>
-            <form class="new-topic-form" action="forum.html">
-                <div class="form-group">
-                    <label for="topic-title">Թեմայի վերնագիր</label>
-                    <input type="text" id="topic-title" name="title" placeholder="Օրինակ՝ Frontend աշխատանք..."
-                        required>
-                </div>
-
-                <div class="form-group topic-select">
-                    <label for="topic-major">Մասնագիտություն</label>
-                    <select id="topic-major" name="major" required>
-                        <option value="" disabled selected>Ընտրեք մասնագիտությունը</option>
-                        <option value="informatics">Ինֆորմատիկա և ծրագրավորում</option>
-                        <option value="mechanics">Մեքենաշինություն և ռոբոտաշինություն</option>
-                        <option value="electronics">Էլեկտրոնիկա և հեռահաղորդակցություն</option>
-                        <option value="civil">Շինարարություն և ճարտարապետություն</option>
-                        <option value="energy">Էներգետիկա և կայուն զարգացում</option>
-                        <option value="management">Տեխնիկական կառավարում և տնտեսագիտություն</option>
-                    </select>
-                </div>
-
-                <div class="form-group">
-                    <label for="topic-content">Նկարագրություն</label>
-                    <textarea id="topic-content" name="content" rows="8" placeholder="Գրեք թեմայի մանրամասները..."
-                        required></textarea>
-                </div>
-
-                <div class="form-actions">
-                    <a href="forum.html" class="btn cancel-btn">Չեղարկել</a>
-                    <button type="submit" class="btn submit-btn">Հրապարակել</button>
-                </div>
-            </form>
-        </section>
-    </main>
-
-
-
-    <script src="./js/forum.js"></script>
+</section>
+<section class="new-topic-container">
+<h2>Ստեղծել նոր թեմա</h2>
+<form class="new-topic-form">
+<div class="form-group">
+<label for="topic-title">Թեմայի վերնագիր</label>
+<input id="topic-title" name="title" placeholder="Օրինակ՝ Frontend աշխատանք..." required="" type="text"/>
+</div>
+<div class="form-group topic-select">
+<label for="topic-major">Մասնագիտություն</label>
+<select id="topic-major" name="major" required="">
+<option disabled="" selected="" value="">Ընտրեք մասնագիտությունը</option>
+<option value="informatics">Ինֆորմատիկա և ծրագրավորում</option>
+<option value="mechanics">Մեքենաշինություն և ռոբոտաշինություն</option>
+<option value="electronics">Էլեկտրոնիկա և հեռահաղորդակցություն</option>
+<option value="civil">Շինարարություն և ճարտարապետություն</option>
+<option value="energy">Էներգետիկա և կայուն զարգացում</option>
+<option value="management">Տեխնիկական կառավարում և տնտեսագիտություն</option>
+</select>
+</div>
+<div class="form-group">
+<label for="topic-content">Նկարագրություն</label>
+<textarea id="topic-content" name="content" placeholder="Գրեք թեմայի մանրամասները..." required="" rows="8"></textarea>
+</div>
+<div class="form-actions">
+<a class="btn cancel-btn" href="forum.html">Չեղարկել</a>
+<button class="btn submit-btn" type="submit">Հրապարակել</button>
+</div>
+</form>
+</section>
+</main>
+<script src="./js/forum.js" type="module"></script>
 </body>
-
 </html>

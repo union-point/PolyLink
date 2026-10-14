@@ -1,509 +1,96 @@
-// Theme Selector
-// Theme handling with applyTheme function
-function applyTheme(theme) {
-    const root = document.documentElement;
-    // Remove existing theme classes
-    root.classList.remove('theme-light', 'theme-dark', 'theme-auto');
-    // Add the selected theme class
-    if (theme === 'light') {
-        root.classList.add('theme-light');
-    } else if (theme === 'dark') {
-        root.classList.add('theme-dark');
-    } else {
-        // Auto: follow system preference
-        root.classList.add('theme-auto');
-        if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
-            root.classList.add('theme-dark');
-        }
-    }
-    // Persist selection
-    localStorage.setItem('theme', theme);
-}
+import { settings } from './services/index.js';
+import { bootstrap, start, pending, notify, setTheme, dateTime } from './shared/ui.js';
+import { passwordsMatch } from './shared/auth-ui.js';
 
-document.addEventListener('DOMContentLoaded', () => {
-    const themeButtons = document.querySelectorAll('.theme-btn');
-    themeButtons.forEach(button => {
-        button.addEventListener('click', () => {
-            // Update active button UI
-            themeButtons.forEach(btn => btn.classList.remove('active'));
-            button.classList.add('active');
-            const theme = button.dataset.theme;
-            applyTheme(theme);
-            if (savedTheme === 'auto') {
-                window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', e => {
-                    if (localStorage.getItem('theme') === 'auto') {
-                        applyTheme('auto');
-                    }
-                });
-            }
-            console.log(`Թեման փոխվել է ${getThemeName(theme)}-ի`);
-        });
-    });
-    // Load saved theme or default to light
-    const savedTheme = localStorage.getItem('theme') || 'light';
-    themeButtons.forEach(btn => {
-        if (btn.dataset.theme === savedTheme) {
-            btn.classList.add('active');
-        } else {
-            btn.classList.remove('active');
-        }
-    });
-    applyTheme(savedTheme);
-
-    if (savedTheme) {
-        themeButtons.forEach(btn => {
-            if (btn.dataset.theme === savedTheme) {
-                btn.classList.add('active');
-            } else {
-                btn.classList.remove('active');
-            }
-        });
-    }
-
-    // Toggle switches
-    const toggleSwitches = document.querySelectorAll('.toggle-switch input');
-
-    toggleSwitches.forEach(toggle => {
-        toggle.addEventListener('change', (e) => {
-            const settingName = e.target.closest('.settings-item').querySelector('h3').textContent;
-            const isEnabled = e.target.checked;
-
-
-            // Show notification
-            console.log(`${settingName} ${isEnabled ? 'միացված է' : 'անջատված է'}`);
-        });
-    });
-
-    // 2FA Toggle Handler
-    const twoFaToggle = document.getElementById('2fa-toggle');
-    if (twoFaToggle) {
-        // Load saved state
-        const is2FAEnabled = localStorage.getItem('is2FAEnabled') === 'true';
-        twoFaToggle.checked = is2FAEnabled;
-
-        twoFaToggle.addEventListener('change', (e) => {
-            const isEnabled = e.target.checked;
-            localStorage.setItem('is2FAEnabled', isEnabled);
-        });
-    }
-    // Select dropdowns
-    const selects = document.querySelectorAll('.settings-select');
-
-    selects.forEach(select => {
-        select.addEventListener('change', (e) => {
-            const settingName = e.target.closest('.settings-item').querySelector('h3').textContent;
-            const selectedValue = e.target.options[e.target.selectedIndex].text;
-
-
-            // Show notification
-            console.log(`${settingName} փոխվել է ${selectedValue}-ի`);
-        });
-    });
-
-    // Secondary buttons (Edit buttons) - excluding email and password
-    const secondaryButtons = document.querySelectorAll('.btn-secondary');
-
-    secondaryButtons.forEach(button => {
-        // Skip email and password edit buttons as they have their own handlers
-        if (button.id === 'edit-email-btn' || button.id === 'edit-password-btn') {
-            return;
-        }
-
-        button.addEventListener('click', (e) => {
-            const settingName = e.target.closest('.settings-item').querySelector('h3').textContent;
-
-            // Check if it's a download or clear button
-            if (settingName.includes('Ներբեռնել')) {
-                handleDownloadData();
-            } else if (settingName.includes('Մաքրել')) {
-                handleClearCache();
-            } else {
-                handleEditSetting(settingName);
-            }
-        });
-    });
-
-    // =========================================
-    // CHANGE EMAIL & PASSWORD SECTION
-    // =========================================
-    // --- Utility helpers ---
-    function show(el) { el.style.display = 'block'; }
-    function showFlex(el) { el.style.display = 'flex'; }
-    function hide(el) { el.style.display = 'none'; }
-
-    function clearInputs(inputs) {
-        inputs.forEach(i => {
-            i.value = '';
-            i.classList.remove('error');
-        });
-    }
-
-    function addLiveValidation(inputs) {
-        inputs.forEach(i => {
-            i.addEventListener('input', () => i.classList.remove('error'));
-        });
-    }
-
-    // EMAIL SECTION
-
-    const emailSetting = document.getElementById('email-setting');
-    const emailEditForm = document.getElementById('email-edit-form');
-
-    const editEmailBtn = document.getElementById('edit-email-btn');
-    const cancelEmailBtn = document.getElementById('cancel-email-btn');
-    const saveEmailBtn = document.getElementById('save-email-btn');
-
-    const newEmail = document.getElementById('new-email');
-    const oldEmailPassword = document.getElementById('email-old-password');
-
-    addLiveValidation([newEmail, oldEmailPassword]);
-
-    editEmailBtn?.addEventListener('click', () => {
-        hide(emailSetting);
-        show(emailEditForm);
-    });
-
-    cancelEmailBtn?.addEventListener('click', () => {
-        hide(emailEditForm);
-        showFlex(emailSetting);
-        clearInputs([newEmail, oldEmailPassword]);
-    });
-
-    saveEmailBtn?.addEventListener('click', () => {
-        const emailValue = newEmail.value.trim();
-        const passValue = oldEmailPassword.value.trim();
-
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
-        if (!emailValue || !emailRegex.test(emailValue)) {
-            newEmail.classList.add('error');
-            return;
-        }
-        if (!passValue) {
-            oldEmailPassword.classList.add('error');
-            return;
-        }
-
-        console.log('Email updated');
-        document.getElementById('current-email').textContent = emailValue;
-
-        hide(emailEditForm);
-        showFlex(emailSetting);
-        clearInputs([newEmail, oldEmailPassword]);
-    });
-
-
-
-    // PASSWORD SECTION
-    const passwordSetting = document.getElementById('password-setting');
-    const passwordEditForm = document.getElementById('password-edit-form');
-
-    const editPasswordBtn = document.getElementById('edit-password-btn');
-    const cancelPasswordBtn = document.getElementById('cancel-password-btn');
-    const savePasswordBtn = document.getElementById('save-password-btn');
-
-    const oldPass = document.getElementById('old-password');
-    const newPass = document.getElementById('new-password');
-    const confirmPass = document.getElementById('confirm-password');
-
-    addLiveValidation([oldPass, newPass, confirmPass]);
-
-    editPasswordBtn?.addEventListener('click', () => {
-        hide(passwordSetting);
-        show(passwordEditForm);
-    });
-
-    cancelPasswordBtn?.addEventListener('click', () => {
-        hide(passwordEditForm);
-        showFlex(passwordSetting);
-        clearInputs([oldPass, newPass, confirmPass]);
-    });
-
-    savePasswordBtn?.addEventListener('click', () => {
-        const oldV = oldPass.value.trim();
-        const newV = newPass.value.trim();
-        const confV = confirmPass.value.trim();
-
-        if (!oldV) return oldPass.classList.add('error');
-        if (!newV) return newPass.classList.add('error');
-        if (!confV) return confirmPass.classList.add('error');
-
-        if (newV.length < 8) {
-            newPass.classList.add('error');
-            // return;
-        }
-        if (newV !== confV) {
-            newPass.classList.add('error');
-            confirmPass.classList.add('error');
-            //return;
-        }
-
-        console.log('Password updated');
-
-        hide(passwordEditForm);
-        showFlex(passwordSetting);
-        clearInputs([oldPass, newPass, confirmPass]);
-    });
-
-
-    // Danger buttons
-    const deactivateBtn = document.querySelector('.btn-danger-outline');
-    const deleteBtn = document.querySelector('.btn-danger');
-
-    if (deactivateBtn) {
-        deactivateBtn.addEventListener('click', () => {
-
-            handleDeactivateAccount();
-        });
-    }
-
-    if (deleteBtn) {
-        deleteBtn.addEventListener('click', () => {
-            handleDeleteAccount();
-        });
-    }
-});
-
-// Helper Functions
-
-function getThemeName(theme) {
-    const themeNames = {
-        'light': 'Լուսավոր',
-        'dark': 'Մուգ',
-        'auto': 'Ավտո'
+start(async () => {
+  const user = await bootstrap(); if (!user) return;
+  let preferences = await settings.get();
+  const controls = [...document.querySelectorAll('[data-setting]')];
+  function applyControl(element, value) {
+    if (element.type === 'checkbox') element.checked = value;
+    else element.value = element.dataset.setting === 'isProfilePublic' ? value ? 'open' : 'closed' : value;
+  }
+  controls.forEach(element => {
+    const key = element.dataset.setting; applyControl(element, preferences[key]);
+    element.onchange = async () => {
+      const previous = preferences[key], value = element.type === 'checkbox' ? element.checked : key === 'isProfilePublic' ? element.value === 'open' : element.value;
+      element.disabled = true;
+      const saved = await pending(null, element.closest('.settings-item'), async () => { const updated = await settings.update({ [key]: value }); preferences = { ...preferences, [key]: updated[key] }; });
+      element.disabled = false; applyControl(element, saved ? preferences[key] : previous);
+      if (saved) notify('Կարգավորումը պահպանվել է');
     };
-    return themeNames[theme] || theme;
-}
-
-function showNotification(message) {
-    // Create notification element
-    const notification = document.createElement('div');
-    notification.className = 'notification';
-    notification.textContent = message;
-
-    // Add styles
-    notification.style.cssText = `
-        position: fixed;
-        top: 100px;
-        right: 20px;
-        background: linear-gradient(135deg, rgb(25, 49, 172), #1e3a8a);
-        color: white;
-        padding: 15px 25px;
-        border-radius: 12px;
-        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
-        z-index: 1000;
-        animation: slideIn 0.3s ease-out;
-        font-weight: 500;
-    `;
-
-    // Add animation
-    const style = document.createElement('style');
-    style.textContent = `
-        @keyframes slideIn {
-            from {
-                transform: translateX(400px);
-                opacity: 0;
-            }
-            to {
-                transform: translateX(0);
-                opacity: 1;
-            }
-        }
-        @keyframes slideOut {
-            from {
-                transform: translateX(0);
-                opacity: 1;
-            }
-            to {
-                transform: translateX(400px);
-                opacity: 0;
-            }
-        }
-    `;
-    document.head.appendChild(style);
-
-    // Add to page
-    document.body.appendChild(notification);
-
-    // Remove after 3 seconds
-    setTimeout(() => {
-        notification.style.animation = 'slideOut 0.3s ease-out';
-        setTimeout(() => {
-            document.body.removeChild(notification);
-        }, 300);
-    }, 3000);
-}
-
-function handleEditSetting(settingName) {
-    console.log(`Editing: ${settingName}`);
-
-    // Create a simple modal or prompt
-    const newValue = prompt(`Մուտքագրեք նոր արժեքը ${settingName}-ի համար:`);
-
-    if (newValue !== null && newValue.trim() !== '') {
-        console.log(`${settingName} հաջողությամբ թարմացվել է`);
-
-        // Update the display value
-        const settingItem = Array.from(document.querySelectorAll('.settings-item')).find(
-            item => item.querySelector('h3').textContent === settingName
-        );
-
-        if (settingItem) {
-            const description = settingItem.querySelector('.settings-item-description');
-            if (description && !description.textContent.includes('առաջ')) {
-                description.textContent = newValue;
-            }
-        }
-    }
-}
-
-function handleDownloadData() {
-    console.log('Տվյալների ներբեռնումը սկսվել է...');
-
-    // Simulate download
-    setTimeout(() => {
-        console.log('Տվյալները հաջողությամբ ներբեռնվել են');
-    }, 2000);
-}
-
-function handleClearCache() {
-    if (confirm('Վստա՞հ եք, որ ցանկանում եք մաքրել քեշը:')) {
-        console.log('Քեշը մաքրվում է...');
-
-        // Simulate cache clearing
-        setTimeout(() => {
-            console.log('Քեշը հաջողությամբ մաքրվել է');
-        }, 1500);
-    }
-}
-
-function handleDeactivateAccount() {
-    const backdrop = document.getElementById("custom-confirm-backdrop");
-    const passInput = document.getElementById("confirm-password-delete");
-    const err = document.getElementById("confirm-error");
-    const cancelBtn = document.getElementById("confirm-cancel-btn");
-    const deleteBtn = document.getElementById("confirm-delete-btn");
-
-    const title = document.getElementById("confirm-title");
-    title.textContent = "";
-    const text = document.getElementById("confirm-text");
-    text.innerHTML = `Վստա՞հ եք, որ ցանկանում եք ապաակտիվացնել ձեր հաշիվը: <br>
-          Դուք կկարողանաք վերականգնել այն ցանկացած ժամանակ:`;
-    deleteBtn.textContent = "Ապաակտիվացնել"
-    // show window
-    backdrop.classList.remove("hidden");
-    passInput.value = "";
-    err.textContent = "";
-
-    // Cancel
-    cancelBtn.onclick = () => {
-        backdrop.classList.add("hidden");
-    };
-    // Confirm deactivation
-    deleteBtn.onclick = () => {
-        const password = passInput.value.trim();
-
-        if (!password) {
-            err.textContent = "Մուտքագրեք գաղտնաբառը";
-            passInput.classList.remove("shake");
-            void passInput.offsetWidth;
-            passInput.classList.add("shake");
-            return;
-        }
-
-        const isCorrect = true; // Simulate password check
-
-        if (!isCorrect) {
-            err.textContent = "Սխալ գաղտնաբառ";
-            passInput.classList.remove("shake");
-            void passInput.offsetWidth;
-            passInput.classList.add("shake");
-            return;
-        }
-
-        // correct - ok
-        backdrop.classList.add("hidden");
-        showNotification("Հաշիվը ապաակտիվացվում է...");
-
-        setTimeout(() => {
-            showNotification("Հաշիվը հաջողությամբ ապաակտիվացվել է'");
-            setTimeout(() => {
-                window.location.href = "login.html";
-            }, 1000);
-        }, 1000);
-    };
-}
-
-function handleDeleteAccount() {
-
-    const backdrop = document.getElementById("custom-confirm-backdrop");
-    const passInput = document.getElementById("confirm-password-delete");
-    const err = document.getElementById("confirm-error");
-    const cancelBtn = document.getElementById("confirm-cancel-btn");
-    const deleteBtn = document.getElementById("confirm-delete-btn");
-    deleteBtn.textContent = "ՋՆՋԵԼ"
-
-    const title = document.getElementById("confirm-title");
-    title.textContent = "ԶԳՈՒՇԱՑՈՒՄ";
-    const text = document.getElementById("confirm-text");
-    text.innerHTML = `Վստա՞հ եք, որ ցանկանում եք մշտապես ջնջել ձեր հաշիվը:<br>
-                Գործողությունը <strong>ԱՆԴԱՌՆԱԼԻ</strong> է։`;
-    // show window
-    backdrop.classList.remove("hidden");
-    passInput.value = "";
-    err.textContent = "";
-
-    // Cancel
-    cancelBtn.onclick = () => {
-        backdrop.classList.add("hidden");
-    };
-
-    // Confirm deletion
-    deleteBtn.onclick = () => {
-        const password = passInput.value.trim();
-
-        if (!password) {
-            err.textContent = "Մուտքագրեք գաղտնաբառը";
-            passInput.classList.remove("shake");
-            void passInput.offsetWidth;
-            passInput.classList.add("shake");
-            return;
-        }
-
-        const isCorrect = true; // Simulate password check
-
-        if (!isCorrect) {
-            err.textContent = "Սխալ գաղտնաբառ";
-            passInput.classList.remove("shake");
-            void passInput.offsetWidth;
-            passInput.classList.add("shake");
-            return;
-        }
-
-        // correct - ok
-        backdrop.classList.add("hidden");
-        showNotification("Հաշիվը ջնջվում է...");
-
-        setTimeout(() => {
-            showNotification("Հաշիվը հաջողությամբ ջնջվել է");
-            setTimeout(() => {
-                window.location.href = "login.html";
-            }, 1000);
-        }, 1000);
-    };
-}
-
-
-// Add smooth scroll behavior
-document.querySelectorAll('a[href^="#"]').forEach(anchor => {
-    anchor.addEventListener('click', function (e) {
-        e.preventDefault();
-        const target = document.querySelector(this.getAttribute('href'));
-        if (target) {
-            target.scrollIntoView({
-                behavior: 'smooth',
-                block: 'start'
-            });
-        }
+  });
+  const themeButtons = [...document.querySelectorAll('.theme-btn')];
+  function updateThemes() {
+    const classes = document.documentElement.classList;
+    const theme = classes.contains('theme-auto') ? 'auto' : classes.contains('theme-dark') ? 'dark' : 'light';
+    themeButtons.forEach(button => { button.classList.toggle('active', button.dataset.theme === theme); button.setAttribute('aria-pressed', String(button.dataset.theme === theme)); });
+  }
+  themeButtons.forEach(button => { button.onclick = () => { setTheme(button.dataset.theme); updateThemes(); }; }); updateThemes();
+  document.getElementById('current-email').textContent = user.email;
+  const passwordDescription = document.querySelector('#password-setting .settings-item-description');
+  passwordDescription.textContent = user.passwordChangedAt ? `Վերջին փոփոխությունը՝ ${dateTime(user.passwordChangedAt)}` : 'Գաղտնաբառի փոփոխություն դեռ չի կատարվել';
+  function editor(kind) {
+    const row = document.getElementById(`${kind}-setting`), form = document.getElementById(`${kind}-edit-form`);
+    const inputs = [...form.querySelectorAll('input')];
+    const close = () => { if (form.querySelector('[aria-busy="true"]')) return; form.style.display = 'none'; row.style.display = 'flex'; inputs.forEach(input => { input.value = ''; input.classList.remove('error'); input.removeAttribute('aria-invalid'); }); form.querySelector('[data-status]')?.remove(); };
+    document.getElementById(`edit-${kind}-btn`).onclick = () => { row.style.display = 'none'; form.style.display = 'block'; inputs[0].focus(); };
+    document.getElementById(`cancel-${kind}-btn`).onclick = close;
+    return { form, close };
+  }
+  const emailEdit = editor('email'), passwordEdit = editor('password');
+  document.getElementById('new-email').name = 'email'; document.getElementById('email-old-password').name = 'password';
+  document.getElementById('new-password').name = 'password'; document.getElementById('confirm-password').name = 'confirmPassword';
+  document.getElementById('save-email-btn').onclick = async event => {
+    const saved = await pending(event.currentTarget, emailEdit.form, async () => {
+      const updated = await settings.changeEmail({ email: document.getElementById('new-email').value, password: document.getElementById('email-old-password').value });
+      document.getElementById('current-email').textContent = updated.email;
     });
+    if (saved) { emailEdit.close(); notify('Էլ․ փոստը թարմացվել է'); }
+  };
+  document.getElementById('save-password-btn').onclick = async event => {
+    const saved = await pending(event.currentTarget, passwordEdit.form, async () => {
+      const newPassword = document.getElementById('new-password').value;
+      passwordsMatch(newPassword, document.getElementById('confirm-password').value);
+      await settings.changePassword({ oldPassword: document.getElementById('old-password').value, newPassword });
+      passwordDescription.textContent = 'Գաղտնաբառը թարմացվել է';
+    });
+    if (saved) { passwordEdit.close(); notify('Գաղտնաբառը թարմացվել է'); }
+  };
+  document.getElementById('download-data-btn').onclick = event => pending(event.currentTarget, event.currentTarget.closest('.settings-item'), async () => {
+    const data = await settings.export();
+    const url = URL.createObjectURL(new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' }));
+    const link = document.createElement('a'); link.href = url; link.download = 'polylink-data.json'; document.body.appendChild(link); link.click(); link.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 10000);
+    notify('Տվյալների պատճենը պատրաստ է');
+  });
+  const backdrop = document.getElementById('custom-confirm-backdrop'), confirmation = document.getElementById('confirm-delete-btn'), cancellation = document.getElementById('confirm-cancel-btn');
+  let lifecycle;
+  let submitting = false;
+  let previousFocus;
+  function closeConfirmation() { if (submitting) return; backdrop.classList.add('hidden'); previousFocus?.focus(); }
+  function openConfirmation(kind, button) {
+    lifecycle = kind; previousFocus = button;
+    document.getElementById('confirm-title').textContent = kind === 'deleteAccount' ? 'Ջնջել հաշիվը' : 'Ապաակտիվացնել հաշիվը';
+    document.getElementById('confirm-text').textContent = kind === 'deleteAccount' ? 'Հաստատեք հաշվի և ձեր տվյալների մշտական ջնջումը։' : 'Հաշիվը ժամանակավորապես ապաակտիվացվելու է։ Կարող եք վերականգնել այն հաջորդ մուտքի ժամանակ։';
+    document.getElementById('confirm-password-delete').value = ''; document.getElementById('confirm-error').textContent = ''; backdrop.querySelector('[data-status]')?.remove();
+    confirmation.textContent = kind === 'deleteAccount' ? 'ՋՆՋԵԼ' : 'Ապաակտիվացնել';
+    backdrop.classList.remove('hidden'); backdrop.style.zIndex = '2000'; backdrop.setAttribute('role', 'dialog'); backdrop.setAttribute('aria-modal', 'true'); backdrop.setAttribute('aria-label', 'Հաստատել հաշվի գործողությունը');
+    document.getElementById('confirm-password-delete').focus();
+  }
+  document.querySelector('.btn-danger-outline').onclick = event => openConfirmation('deactivate', event.currentTarget);
+  document.querySelector('.btn-danger').onclick = event => openConfirmation('deleteAccount', event.currentTarget);
+  cancellation.onclick = closeConfirmation;
+  backdrop.onkeydown = event => {
+    if (event.key === 'Escape') closeConfirmation();
+    if (event.key === 'Enter' && event.target.matches('input')) { event.preventDefault(); confirmation.click(); }
+    if (event.key === 'Tab') { const focusable = [...backdrop.querySelectorAll('button,input')].filter(element => !element.disabled); if (event.shiftKey && document.activeElement === focusable[0]) { event.preventDefault(); focusable.at(-1).focus(); } else if (!event.shiftKey && document.activeElement === focusable.at(-1)) { event.preventDefault(); focusable[0].focus(); } }
+  };
+  confirmation.onclick = async () => {
+    if (submitting) return;
+    submitting = true; cancellation.disabled = true;
+    const saved = await pending(confirmation, backdrop.querySelector('.custom-confirm'), () => settings[lifecycle]({ password: document.getElementById('confirm-password-delete').value }));
+    submitting = false; cancellation.disabled = false;
+    if (saved) { closeConfirmation(); location.href = 'login.html'; }
+  };
 });
