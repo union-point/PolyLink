@@ -159,8 +159,8 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    nameInput.addEventListener('input', () => {
-        if (nameInput.value) {
+    firstNameInput.addEventListener('input', () => {
+        if (firstNameInput.value) {
             nameInput.classList.remove('error');
         }
     });

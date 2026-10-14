@@ -70,7 +70,7 @@ document.querySelectorAll('.format-btn').forEach(btn => {
   });
 });
 // Form submission
-document.querySelector('.reply-form').addEventListener('submit', function (e) {
+document.querySelector('.reply-form')?.addEventListener('submit', function (e) {
   e.preventDefault();
   const textarea = this.querySelector('.reply-textarea');
   if (textarea.value.trim()) {

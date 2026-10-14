@@ -43,6 +43,8 @@ sections and repeated biography text; these are known defects, not extra domain 
 ## Progress
 
 - Baseline/context documentation captured.
+- Baseline initialization fixes verified: forum filters leave one matching card; registration
+  initializes without errors; duplicate classic/module auth script tags removed.
 - Provider infrastructure is being introduced; the existing pages are not yet migrated.
 - Service/mock/HTTP contracts are scaffolding until browser verification and feature wiring.
 - Pending migrations: announcements, authentication, profiles, forum/search, messaging,
