@@ -1,6 +1,6 @@
 # JavaScript documentation
 
-The previous global/API-wrapper documentation described a disconnected prototype and is superseded by [frontend_context.md](frontend_context.md).
+The previous global/API-wrapper documentation described a disconnected prototype and is superseded by [docs/frontend_context.md](docs/frontend_context.md).
 
 Live integration points:
 

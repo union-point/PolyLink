@@ -24,8 +24,8 @@ Implemented mock flows include registration/onboarding/login/recovery/2FA, owner
 
 ## Documentation
 
-- [Frontend architecture, flows and API contracts](frontend_context.md)
-- [Backend/domain/MS SQL Server design requirements](backend_design_context.md)
+- [Frontend architecture, flows and API contracts](docs/frontend_context.md)
+- [Backend/domain/MS SQL Server design requirements](docs/backend_design_context.md)
 - [Incremental refactoring phases and verification evidence](docs/REFACTOR.md)
 - [Profile module guide](js/profile/README.md)
 
