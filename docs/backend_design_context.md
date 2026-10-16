@@ -192,6 +192,8 @@ Graduation-year filtering must derive from an identified education/registry grad
 
 ### Direct and group messaging
 
+**Decision update, 17 October 2026:** see the [messenger specification](messenger_spec.md) for the agreed product and E2EE/key-recovery rules. It supersedes the open-decision descriptions below where a decision has since been made. This historical schema/domain analysis does not describe an implemented encryption protocol.
+
 Both direct and group communication are evidenced by the report and ChatRooms.IsGroup, with durable mock direct/group histories and shared contact navigation. Persist rooms, participants and messages. Each read/send/list operation must authorize membership; access to one room must not reveal another room's history.
 
 Derived/open invariants:
