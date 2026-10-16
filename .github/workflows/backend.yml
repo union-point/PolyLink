@@ -1,0 +1,41 @@
+name: Backend
+
+on:
+  pull_request:
+    paths: ["backend/**", ".github/workflows/backend.yml"]
+  push:
+    paths: ["backend/**", ".github/workflows/backend.yml"]
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: backend
+    env:
+      # Disposable CI container credentials; never used outside this job.
+      MSSQL_SA_PASSWORD: CIOnly_PolyLink_7f925!
+      DB_PASSWORD: CIOnly_PolyLink_7f925!
+      DB_NAME: polylink_ci
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: "25"
+          cache: maven
+          cache-dependency-path: backend/pom.xml
+      - name: Start SQL Server
+        run: docker compose up -d --wait --wait-timeout 180 sqlserver
+      - name: Create isolated test database
+        run: |
+          docker compose exec -T sqlserver sh -c 'SQLCMDPASSWORD="$MSSQL_SA_PASSWORD" exec /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -C -b -Q "CREATE DATABASE [polylink_ci]"'
+      - name: Verify formatting, HTTP security, and SQL Server connectivity
+        run: ./mvnw -B -Pdatabase-tests verify
+      - name: Stop SQL Server
+        if: always()
+        run: docker compose down

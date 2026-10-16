@@ -1,0 +1,4 @@
+# Copy to application-local.properties and use the password from ../.env.
+spring.datasource.password=replace-with-your-local-password
+# Change this too if DB_PORT in .env differs from 1433.
+# DB_PORT=1433

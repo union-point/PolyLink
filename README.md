@@ -1,6 +1,6 @@
 # PolyLink
 
-A university alumni/lecturer networking course project using static HTML/CSS and vanilla JavaScript ES modules. The frontend works with persistent mock data without an API server. A Microsoft SQL Server backend remains to be designed and implemented.
+A university alumni/lecturer networking course project using static HTML/CSS and vanilla JavaScript ES modules. The frontend works with persistent mock data without an API server. The initial Java/Spring Boot backend scaffold and persistent local SQL Server Docker setup are in [backend/](backend/README.md); feature APIs remain to be implemented.
 
 ## Run the demo
 
@@ -24,9 +24,11 @@ Implemented mock flows include registration/onboarding/login/recovery/2FA, owner
 
 ## Documentation
 
+- [Backend setup, database restore, persistence, and tests](backend/README.md)
+- [Java/Spring backend foundation plan and cross-platform team workflow](docs/backend_plan.md)
 - [Frontend architecture, flows and API contracts](docs/frontend_context.md)
 - [Backend/domain/MS SQL Server design requirements](docs/backend_design_context.md)
 - [Incremental refactoring phases and verification evidence](docs/REFACTOR.md)
 - [Profile module guide](js/profile/README.md)
 
-Database design assets were analyzed from the original checkout but `DB/` is Git-ignored and may be absent from a clone. The backend context distinguishes declared SQL from missing requirements. Desktop flows and failures were manually checked; true mobile visual acceptance remains unconfirmed because the available browser viewport override did not apply the requested width. No project build/test toolchain was added.
+Database design assets were analyzed from the original checkout but `DB/` is Git-ignored and may be absent from a clone. The backend context distinguishes declared SQL from missing requirements. Desktop flows and failures were manually checked; true mobile visual acceptance remains unconfirmed because the available browser viewport override did not apply the requested width. The backend now has its own Maven build/test toolchain; the frontend still has no build step.
