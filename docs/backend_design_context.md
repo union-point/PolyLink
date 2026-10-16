@@ -2,22 +2,22 @@
 
 ## Purpose, evidence and limits
 
-Technical specification context for a backend that does not yet exist. Reviewed 14 October 2026. The target datastore is **Microsoft SQL Server**, using T-SQL and relational integrity. No backend language, framework, ORM, deployment environment, queue or real-time transport has been selected by this repository.
+Technical specification context originally reviewed 14 October 2026. The target datastore is **Microsoft SQL Server**, using T-SQL and relational integrity. A Java/Spring scaffold was added later; see [backend setup](../backend/README.md). The domain requirements below remain subject to reconciliation with the restored schema.
 
 This file is standalone: it summarizes domain requirements, storage, existing HTTP expectations and unresolved decisions. It contains no implementation sequence or backend code.
 
 Evidence:
 
 - Root HTML and `js/`: current feature services, DTOs, HTTP adapter and persistent mock domain behavior. These are frontend contracts and examples, not a production backend.
-- `DB/polylink_table_creation.sql`: original tables, constraints, defaults and later registry additions.
-- `DB/migrate_to_references.sql`: intended normalized education, lecturer, post, role and language design.
-- `DB/diagram_new.png`: normalized ER diagram, with a certificate URL-length discrepancy.
-- `DB/Сևակ_ՏԲ.pdf`: Armenian database report; pages 4–5 state access, communication and search requirements; pages 24–25 describe eligibility registries.
-- `DB/import_alumni.py`: operational alumni import expectations, not an HTTP backend.
-- `DB/fill-syntetic-data.sql`, `fill_posts.sql`, `fill_forum.sql`: sample data and relationship examples; fake hashes and fixed IDs are not production requirements.
-- `DB/queries.sql`: intended joins/aggregates; contains exploratory queries and a trailing incomplete SELECT.
+- `db/scripts/legacy/polylink_table_creation.sql`: original tables, constraints, defaults and later registry additions.
+- `db/scripts/legacy/migrate_to_references.sql`: intended normalized education, lecturer, post, role and language design.
+- `db/reference/diagram_new.png`: normalized ER diagram, with a certificate URL-length discrepancy.
+- `db/reference/Սևակ_ՏԲ.pdf`: Armenian database report; pages 4–5 state access, communication and search requirements; pages 24–25 describe eligibility registries.
+- `db/scripts/legacy/import_alumni.py`: operational alumni import expectations, not an HTTP backend.
+- `db/scripts/legacy/fill-syntetic-data.sql`, `db/scripts/legacy/fill_posts.sql`, `db/scripts/legacy/fill_forum.sql`: sample data and relationship examples; fake hashes and fixed IDs are not production requirements.
+- `db/scripts/legacy/queries.sql`: intended joins/aggregates; contains exploratory queries and a trailing incomplete SELECT.
 
-`DB/` is excluded by `.gitignore`; a fresh repository clone may not contain these assets. The `.bak` file was inventoried but not restored or inspected as a live database. Neither the diagram nor the report proves the actual backup schema. Pre-refactor READMEs were secondary and overstated implemented capabilities; current documentation separates durable mocks from live backend support.
+These legacy/reference assets remain Git-ignored; a fresh clone may not contain them. At the original review, the backup had only been inventoried. The May backup was later restored locally; see [local database instructions](../db/README.md). Backups now live under the ignored `db/backups/` directory. Neither the diagram nor the report proves the actual backup schema. Pre-refactor READMEs were secondary and overstated implemented capabilities; current documentation separates durable mocks from live backend support.
 
 **Labels:** *evidenced* = directly in source or report; *derived constraint* = needed to make an evidenced feature consistent/safe; *open decision* = insufficient or conflicting evidence. Proposed missing data is clearly distinguished from existing columns.
 

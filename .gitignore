@@ -68,7 +68,6 @@ env.bak/
 venv.bak/
 
 # Project Specific Directories (Data & Models)
-DB/
 docs/baseline/
 docs/verification/
 

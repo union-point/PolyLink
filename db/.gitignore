@@ -1,0 +1,6 @@
+.env
+/backups/*
+!/backups/.gitkeep
+# Preserve the previous ignore policy for local design/import/seed assets.
+/scripts/legacy/
+/reference/

@@ -19,27 +19,25 @@ class SqlServerIT {
                 local.load(reader);
             }
         }
-        var password = System.getenv("DB_PASSWORD");
-        if (password == null || password.isBlank()) {
-            password = local.getProperty("spring.datasource.password");
-        }
+        var password =
+                setting(local, "DB_PASSWORD", local.getProperty("spring.datasource.password"));
         assertThat(password)
                 .as("Set DB_PASSWORD or configure config/application-local.properties")
                 .isNotBlank();
 
-        var database = env("DB_NAME", "polylink");
+        var database = setting(local, "DB_NAME", "polylink");
         var url =
                 "jdbc:sqlserver://"
-                        + env("DB_HOST", "localhost")
+                        + setting(local, "DB_HOST", "localhost")
                         + ":"
-                        + env("DB_PORT", local.getProperty("DB_PORT", "1433"));
+                        + setting(local, "DB_PORT", "1433");
         var properties = new Properties();
         properties.setProperty("databaseName", database);
-        properties.setProperty("user", env("DB_USERNAME", "sa"));
+        properties.setProperty("user", setting(local, "DB_USERNAME", "sa"));
         properties.setProperty("password", password);
         properties.setProperty("encrypt", "true");
         properties.setProperty(
-                "trustServerCertificate", env("DB_TRUST_SERVER_CERTIFICATE", "true"));
+                "trustServerCertificate", setting(local, "DB_TRUST_SERVER_CERTIFICATE", "true"));
         properties.setProperty("loginTimeout", "10");
 
         try (var connection = DriverManager.getConnection(url, properties);
@@ -69,7 +67,7 @@ class SqlServerIT {
         }
     }
 
-    private static String env(String name, String fallback) {
-        return System.getenv().getOrDefault(name, fallback);
+    private static String setting(Properties local, String name, String fallback) {
+        return System.getenv().getOrDefault(name, local.getProperty(name, fallback));
     }
 }

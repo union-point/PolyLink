@@ -2,7 +2,7 @@ USE [master];
 GO
 
 -- Refuse to overwrite an existing database. This script restores backup set 1
--- from DB/polylink-2026523-16-23-23.bak, whose logical files were inspected.
+-- from db/backups/polylink-2026523-16-23-23.bak, whose logical files were inspected.
 IF DB_ID(N'polylink') IS NOT NULL
     THROW 50001, 'Database polylink already exists. Restore stopped without overwriting it.', 1;
 

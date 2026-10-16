@@ -1,6 +1,6 @@
 # PolyLink
 
-A university alumni/lecturer networking course project using static HTML/CSS and vanilla JavaScript ES modules. The frontend works with persistent mock data without an API server. The initial Java/Spring Boot backend scaffold and persistent local SQL Server Docker setup are in [backend/](backend/README.md); feature APIs remain to be implemented.
+A university alumni/lecturer networking course project using static HTML/CSS and vanilla JavaScript ES modules. The frontend works with persistent mock data without an API server. The initial Java/Spring Boot scaffold is in [backend/](backend/README.md); optional local Linux SQL Server tooling is in [db/](db/README.md). Feature APIs remain to be implemented.
 
 ## Run the demo
 
@@ -24,11 +24,12 @@ Implemented mock flows include registration/onboarding/login/recovery/2FA, owner
 
 ## Documentation
 
-- [Backend setup, database restore, persistence, and tests](backend/README.md)
+- [Backend setup and tests on Linux and macOS](backend/README.md)
+- [Local Linux database, backups, restoration, and persistence](db/README.md)
 - [Java/Spring backend foundation plan and cross-platform team workflow](docs/backend_plan.md)
 - [Frontend architecture, flows and API contracts](docs/frontend_context.md)
 - [Backend/domain/MS SQL Server design requirements](docs/backend_design_context.md)
 - [Incremental refactoring phases and verification evidence](docs/REFACTOR.md)
 - [Profile module guide](js/profile/README.md)
 
-Database design assets were analyzed from the original checkout but `DB/` is Git-ignored and may be absent from a clone. The backend context distinguishes declared SQL from missing requirements. Desktop flows and failures were manually checked; true mobile visual acceptance remains unconfirmed because the available browser viewport override did not apply the requested width. The backend now has its own Maven build/test toolchain; the frontend still has no build step.
+Local backups, legacy SQL/import files, and design assets are under `db/backups/`, `db/scripts/legacy/`, and `db/reference/`; these remain Git-ignored and may be absent from a clone. Compose and the restore tooling are tracked separately. The backend context distinguishes declared SQL from missing requirements. Desktop flows and failures were manually checked; true mobile visual acceptance remains unconfirmed because the available browser viewport override did not apply the requested width. The backend has its own Maven build/test toolchain; the frontend has no build step.

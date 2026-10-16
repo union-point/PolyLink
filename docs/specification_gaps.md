@@ -8,7 +8,7 @@ Settled facts that this list does not reopen: member pages require a session and
 
 ## Evidence and criticality
 
-Checked against [frontend context](frontend_context.md), [backend design context](backend_design_context.md), and the current [mock provider](../js/data/mock/provider.js), [validators](../js/data/validation.js), [HTTP routes](../js/data/http/routes.js), [normalizers](../js/data/http/normalize.js), [transport](../js/data/http/transport.js), and page controllers. The `DB/` SQL, report, diagram and import script are absent from this checkout: database claims below are attributed to the backend context and have not been independently reverified against those original assets. Recover and verify those assets before implementing migrations.
+Checked against [frontend context](frontend_context.md), [backend design context](backend_design_context.md), and the current [mock provider](../js/data/mock/provider.js), [validators](../js/data/validation.js), [HTTP routes](../js/data/http/routes.js), [normalizers](../js/data/http/normalize.js), [transport](../js/data/http/transport.js), and page controllers. At the original review, the local SQL, report, diagram and import script were unavailable: database claims below were attributed to the backend context. Those assets now live under the ignored `db/scripts/legacy/` and `db/reference/` directories; backups are under `db/backups/`. The May backup has been restored, but a full reconciliation of these specification claims with its schema remains required before implementing migrations.
 
 Criticality describes the consequence of leaving a decision unresolved for a production release that includes the affected feature; it does not claim that a production vulnerability has been observed.
 

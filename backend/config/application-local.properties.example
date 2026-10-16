@@ -1,4 +1,8 @@
-# Copy to application-local.properties and use the password from ../.env.
-spring.datasource.password=replace-with-your-local-password
-# Change this too if DB_PORT in .env differs from 1433.
-# DB_PORT=1433
+# Copy to application-local.properties and match your existing SQL Server.
+# Linux and macOS use the same settings; no repository-managed container is required.
+DB_HOST=localhost
+DB_PORT=1433
+DB_NAME=polylink
+DB_USERNAME=sa
+DB_PASSWORD=replace-with-your-local-password
+DB_TRUST_SERVER_CERTIFICATE=true

@@ -2,9 +2,9 @@ name: Backend
 
 on:
   pull_request:
-    paths: ["backend/**", ".github/workflows/backend.yml"]
+    paths: ["backend/**", "db/**", ".github/workflows/backend.yml"]
   push:
-    paths: ["backend/**", ".github/workflows/backend.yml"]
+    paths: ["backend/**", "db/**", ".github/workflows/backend.yml"]
 
 permissions:
   contents: read
@@ -30,12 +30,15 @@ jobs:
           cache: maven
           cache-dependency-path: backend/pom.xml
       - name: Start SQL Server
+        working-directory: db
         run: docker compose up -d --wait --wait-timeout 180 sqlserver
       - name: Create isolated test database
+        working-directory: db
         run: |
           docker compose exec -T sqlserver sh -c 'SQLCMDPASSWORD="$MSSQL_SA_PASSWORD" exec /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -C -b -Q "CREATE DATABASE [polylink_ci]"'
       - name: Verify formatting, HTTP security, and SQL Server connectivity
         run: ./mvnw -B -Pdatabase-tests verify
       - name: Stop SQL Server
+        working-directory: db
         if: always()
         run: docker compose down

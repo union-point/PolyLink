@@ -2,7 +2,7 @@
 
 Planning baseline: 17 October 2026. Java, Spring, Microsoft SQL Server running locally through Docker on every developer's machine, and equal development access from two Apple Silicon Macs and one Fedora workstation are confirmed constraints. The team already uses local SQL Server containers on all three machines; this plan takes that setup as given. Everything else below is a proposal. This document plans the foundation; it does not implement a backend or approve product behavior.
 
-Scaffold status, 17 October 2026: the initial application, Maven Wrapper, persistent SQL Server Compose service, formatter, HTTP/security tests, opt-in JDBC integration test, and CI workflow are now in `backend/` and `.github/workflows/backend.yml`. The supplied backup was restored on the Linux PC. See [backend setup and restore instructions](../backend/README.md) for the implemented configuration. Domain mappings and a reviewed Flyway baseline remain future work.
+Scaffold status, 17 October 2026: the application, Maven Wrapper, formatter, and tests are in `backend/`; optional Linux Compose/restore tooling is in `db/`, and the CI workflow is in `.github/workflows/backend.yml`. The populated May backup was restored on the Linux PC. See [backend setup for Linux and macOS](../backend/README.md) and [local Linux database instructions](../db/README.md). Domain mappings and a reviewed Flyway baseline remain future work.
 
 ## Architecture
 
@@ -19,7 +19,7 @@ Keep the backend in a proposed `backend/` directory in this repository so fronte
 | Java | Eclipse Temurin JDK 25 LTS | Native builds for Apple Silicon and Linux; one shared Java target. |
 | Framework | Spring Boot 4.1, stable patch pinned when bootstrapping | Supported Java baseline and coordinated Spring dependencies. |
 | Build | Maven 3.9, exact release pinned through Maven Wrapper | Same build commands locally and in CI; no global Maven requirement. |
-| Local database runtime | Docker with a shared Compose configuration | Each developer runs an independent local SQL Server instance. |
+| Local database runtime | Existing SQL Server container; optional Linux Compose setup in `db/` | Each developer keeps an independent local database and connection settings. |
 | HTTP | Spring MVC, Bean Validation | Conventional request handling and server validation. |
 | Persistence | Spring Data JPA, Boot-managed Hibernate, Microsoft JDBC driver supporting JDK 25 | Conventional relational persistence with explicit SQL available where useful. |
 | Schema | Flyway with SQL Server support | Reviewed, versioned T-SQL migrations; Hibernate validates schema instead of changing it. |
@@ -35,29 +35,28 @@ Use Spring Boot dependency management where available. Explicitly pin remaining 
 
 ## Local SQL Server through Docker
 
-Every developer runs SQL Server locally through Docker, including on the Macs. Commit one shared Compose configuration with the team's working SQL Server image and runtime settings. Pin the image version and keep the development and test engine versions aligned with the eventual deployment target.
+Every developer runs SQL Server locally through Docker, including on the Macs. Developers with working containers keep them and configure the backend connection independently. The Compose file in `db/` is the optional setup for the Linux laptop and disposable CI runners. Its image is pinned; align database compatibility with the eventual deployment target.
 
 Run the Spring Boot application on the host JVM and connect through JDBC to the locally published SQL Server port. Docker Desktop on macOS and Docker Engine with Compose on Fedora are the reference installations; project commands and configuration should stay consistent across them.
 
 - Use a named Docker volume for each developer's database persistence. Document startup, shutdown, readiness checks, and an explicit reset procedure that identifies when local data will be deleted.
 - Bind the development database port to localhost and keep credentials outside Git. Document the local JDBC encryption/certificate settings separately from deployment settings. Do not require Windows integrated authentication or native authentication libraries.
 - Give automated tests isolated databases or disposable containers per run, with reliable cleanup. Keep test data synthetic and separate from persistent development data.
-- Keep schema migrations and reproducible development fixtures in Git. Recover and inspect the original SQL assets before creating the baseline: `DB/` is ignored and may be absent from a fresh clone, and the context document is not a runnable schema.
+- Keep reviewed schema migrations and reproducible development fixtures in Git. Original local SQL/import files, backups, and reference assets remain ignored under `db/scripts/legacy/`, `db/backups/`, and `db/reference/`; obtain and inspect them before creating a baseline. The context document is not a runnable schema.
 - Use the same migration path for all developers and CI. Applied migrations are immutable; resolve branch numbering/order conflicts before merge. Run migrations against a fresh database in CI and coordinate changes to long-lived databases.
 
 ## Reproducible local workflow
 
-The required local installations should be Git, the agreed native JDK, Docker with Compose, and an editor. Commit Maven Wrapper, the shared Compose configuration, shared build configuration, configuration examples, and onboarding instructions. Use environment variables or an explicitly documented ignored local Spring configuration file for credentials. A Compose `.env` file may supply container settings, but do not assume Spring automatically reads it; document how the application receives matching connection settings.
+Backend development requires Git, the agreed native JDK, an editor, and access to the developer's existing SQL Server for database-backed work. Container management is separate. Commit Maven Wrapper, build configuration, connection examples, and onboarding instructions. Use environment variables or the ignored local Spring configuration file for connections. `db/.env` configures only the optional Compose service; Spring does not read it.
 
 Document these commands from `backend/` once the scaffold exists:
 
 ```sh
-docker compose up -d sqlserver
 ./mvnw verify
-./mvnw spring-boot:run
+./mvnw spring-boot:run -Dspring-boot.run.profiles=local
 ```
 
-The proposed Compose service is named `sqlserver`. Document how to confirm that SQL Server is ready before running database-dependent commands; a started container alone is not a readiness check. Use the same startup and verification steps on all three machines.
+The optional Compose service is named `sqlserver` and is managed from `db/`. Its health check confirms SQL readiness. The backend startup and verification commands are the same on all three machines and do not depend on how the container was created.
 
 The normal verification lifecycle should run formatting checks and unit tests everywhere. Add database integration tests to that lifecycle when isolated local test database provisioning is ready; do not report a database check as passing when it was skipped. Provide an explicit unit-test-only command for working without the database running.
 
@@ -73,7 +72,7 @@ Require one peer review and passing CI before merge. Prefer small changes and sh
 
 ## Foundation milestones and acceptance
 
-1. **Local environment check.** From each Mac and Fedora, start SQL Server using the shared Compose configuration, run the pinned JDK/Maven build, and connect through the chosen JDBC driver. Verify Unicode text, migrations, persistence across container restarts, and cleanup on disposable test databases.
+1. **Local environment check.** From each Mac and Fedora, run the pinned JDK/Maven build and connect through JDBC to the developer's existing SQL Server. The optional Linux container is managed from `db/`. Verify Unicode text, migrations, persistence across container restarts, and cleanup on disposable test databases.
 2. **Shared scaffold.** Add the backend build, basic health diagnostics, configuration templates, formatter, tests, and CI. Both platform setups must succeed from a clean clone using the documented commands.
 3. **Database workflow.** Recover and reconcile the original SQL, establish a reviewed baseline, initialize each local development database, and demonstrate fresh-schema migrations and isolated database tests. Keep migration credentials separate from ordinary application credentials.
 4. **First agreed vertical slice.** Select one small feature after its requirements are resolved. Define its HTTP contract, permissions, validation, errors, and transaction boundaries; implement it with its frontend adapter and tests. Use it to validate the foundation before expanding scope.
