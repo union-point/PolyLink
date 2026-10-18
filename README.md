@@ -89,7 +89,7 @@ Use **`localhost` consistently**, rather than mixing it with `127.0.0.1`. Keep t
 5. Reload or restart the browser: a valid session and working secure browser storage restore access without another password. Bob can also close his browser and read Alice's later message when he returns.
 6. Try **Settings → Password**. The new password should preserve history and revoke other device sessions. A clean browser profile can open the same history with that password.
 
-Use **Messages → Create group** and **Group members** for owner/member management. Settings provides own-message/image export and account deactivation/deletion; see [M6](docs/messenger/m6.md) before lifecycle or legacy-import operations. Some unrelated profile/forum/settings actions remain unavailable and fail explicitly; HTTP mode never falls back to demo data. See [LIVE_TESTING.md](LIVE_TESTING.md) for detailed checks and troubleshooting.
+Use **Messages → «Ստեղծել խումբ»** to create a group. Click the group name or avatar in the chat header to view members and manage the group as its owner. Members can leave through the three-dot menu. Settings provides own-message/image export and account deactivation/deletion; see [M6](docs/messenger/m6.md) before lifecycle or legacy-import operations. Some unrelated profile/forum/settings actions remain unavailable and fail explicitly; HTTP mode never falls back to demo data. See [LIVE_TESTING.md](LIVE_TESTING.md) for detailed checks and troubleshooting.
 
 ## Test automatically
 
@@ -124,6 +124,15 @@ Stop app servers with Ctrl+C; retain the database, OpenBao volumes and private l
 To explore the independent mock UI without a backend, set `dataMode: 'mock'` in `js/config.js`, then run `python3 server.py --port 8001` and open [Profile](http://localhost:8001/profile.html). After demo logout, use `demo.alumni@polytechnic.am` or `demo.lecturer@polytechnic.am` with `DemoPass123!`; the fictional verification code is `123456`.
 
 [Developer controls](http://localhost:8001/dev-tools.html) reset the mock dataset and inject demo events. Mock accounts/codes do not authenticate against the real backend. Restore `dataMode: 'http'` before following the real-app instructions.
+
+To check the messenger UI with the static server running, use:
+
+```sh
+npm ci --prefix tools/m1
+M1_FRONTEND=http://localhost:8001 node tools/m1/messenger-ui.mjs
+```
+
+The browser check uses isolated mock data without editing `js/config.js`. It covers group controls, sending, drafts, search, emoji, attachments, themes, sender contrast and mobile layouts. Install Chromium with `npx --prefix tools/m1 playwright install chromium` if needed. Set `M1_ARTIFACT_DIR` to save screenshots.
 
 ## Further documentation
 
