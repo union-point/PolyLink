@@ -207,6 +207,19 @@ export function createIdentityClient(api){
         }finally{changing=!!pending?.passwordChange;if(!changing)transitionUser=null;derived?.login.fill(0);derived?.wrapping.fill(0);old?.login.fill(0);old?.wrapping.fill(0);}
       });
     },
+    async lifecycle(action,{password}){
+      if(!['deactivate','deleteAccount'].includes(action))throw new DataError('VALIDATION','Invalid account action.');
+      return transition(async()=>{
+        await client.me();if(!session)throw new DataError('UNAUTHORIZED','Sign in first.');
+        const previous=session,settings=await post('/auth/parameters',{email:session.user.email}),derived=await derive(password,settings),s=await sodium();
+        try{
+          await post(action==='deactivate'?'/account/deactivate':'/account/delete',{expectedCredential:session.versions.credential,loginSecret:s.to_base64(derived.login,s.base64_variants.URLSAFE_NO_PADDING)});
+          api.markLoggedOut?.();forget();forgetPending();session=null;api.setToken(null);
+          await clearDevice(previous.user.id).catch(()=>{});await outboxStore.clear(previous.user.id).catch(()=>{});
+          channel?.postMessage({operation:'auth.logout'});emit('auth.logout');
+        }finally{derived.login.fill(0);derived.wrapping.fill(0);}
+      });
+    },
     async logout(){
       api.markLoggedOut?.();
       if(!api.markLoggedOut){try{localStorage.setItem('polylink.http.loggedOut','true');}catch{}}

@@ -27,6 +27,8 @@ export const forum = {
 };
 export const search = { people: operation('search.people') };
 export const chat = {
+  saveDraft:operation('chat.saveDraft'),loadDraft:operation('chat.loadDraft'),
+  createGroup:operation('chat.createGroup'), participants:operation('chat.participants'), addParticipant:operation('chat.addParticipant'), removeParticipant:operation('chat.removeParticipant'), leaveGroup:operation('chat.leaveGroup'), renameGroup:operation('chat.renameGroup'), transferOwner:operation('chat.transferOwner'),
   page: operation('chat.page'), release: operation('chat.release'), list: operation('chat.list'), openDirect: operation('chat.openDirect'), messages: operation('chat.messages'), send: operation('chat.send'),
   read: operation('chat.read'), mute: operation('chat.mute'), hide: operation('chat.hide'), block: operation('chat.block'), subscribe,
 };

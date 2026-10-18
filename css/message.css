@@ -436,3 +436,11 @@ body {
 .messages { min-height: 0; overflow-anchor: none; }
 .message { flex-shrink: 0; }
 [data-poll-status]:empty { display: none; }
+
+.group-dialog { width:min(560px,90vw);max-height:80vh;overflow:auto;padding:24px;border:1px solid var(--border-color);border-radius:12px;background:var(--card-background);color:var(--font-color-primary); }
+.group-dialog::backdrop { background:#0008; }
+.group-dialog form { display:grid;gap:12px; }
+.group-dialog input { padding:10px;background:var(--card-background);color:inherit;border:1px solid var(--border-color); }
+.group-dialog form > div > div { display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:6px 0; }
+.group-dialog span { flex:1; }
+.group-dialog button,.create-group { padding:7px 12px;margin:3px;border:1px solid var(--border-color);border-radius:6px;cursor:pointer; }

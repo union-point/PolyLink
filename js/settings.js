@@ -80,7 +80,7 @@ start(async () => {
   function openConfirmation(kind, button) {
     lifecycle = kind; previousFocus = button;
     document.getElementById('confirm-title').textContent = kind === 'deleteAccount' ? 'Ջնջել հաշիվը' : 'Ապաակտիվացնել հաշիվը';
-    document.getElementById('confirm-text').textContent = kind === 'deleteAccount' ? 'Հաստատեք հաշվի և ձեր տվյալների մշտական ջնջումը։' : 'Հաշիվը ժամանակավորապես ապաակտիվացվելու է։ Կարող եք վերականգնել այն հաջորդ մուտքի ժամանակ։';
+    document.getElementById('confirm-text').textContent = kind === 'deleteAccount' ? 'Հաստատեք հաշվի և ձեր տվյալների մշտական ջնջումը։' : 'Հաշվի հասանելիությունը կասեցվելու է։ Վերաակտիվացման համար դիմեք ադմինիստրատորին։';
     document.getElementById('confirm-password-delete').value = ''; document.getElementById('confirm-error').textContent = ''; backdrop.querySelector('[data-status]')?.remove();
     confirmation.textContent = kind === 'deleteAccount' ? 'ՋՆՋԵԼ' : 'Ապաակտիվացնել';
     backdrop.classList.remove('hidden'); backdrop.style.zIndex = '2000'; backdrop.setAttribute('role', 'dialog'); backdrop.setAttribute('aria-modal', 'true'); backdrop.setAttribute('aria-label', 'Հաստատել հաշվի գործողությունը');

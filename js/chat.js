@@ -1,3 +1,4 @@
+import { groupControls } from './chat/groups.js';
 import { chat } from './services/index.js';
 import { bootstrap, start, pending, stateMessage, showError, confirmAction } from './shared/ui.js';
 import { validateImage } from './data/validation.js';
@@ -11,6 +12,8 @@ start(async()=>{
   const send=document.querySelector('.send-icon'),attach=document.querySelector('.attachment-btn'),emoji=document.querySelector('.emoji-btn'),menuButton=document.querySelector('.menu-btn'),searchButton=document.querySelector('.chat-actions .action-icon:not(.menu-btn)');
   let rooms=[],selected=null,state=null,generation=0,saving=false,polling=false,pollAgain=false,timer,failures=0,stopped=false,ackTimer;
   const drafts=new Map(),attachments=new Map();
+  const groups=groupControls({user,onChange:room=>{if(room){if(selected)drafts.set(selected.id,input.value);cancel();generation++;selected=null;window.history.replaceState(null,'',`message.html?room=${encodeURIComponent(room)}`);}schedule(0);}});
+  const createGroup=document.createElement('button');createGroup.type='button';createGroup.className='create-group';createGroup.textContent='Create group';createGroup.onclick=()=>groups.create();document.querySelector('.sidebar-header').append(createGroup);
   function button(element,label){element.type='button';element.setAttribute('aria-label',label);element.style.border='0';element.style.background='transparent';}
   button(send,'Ուղարկել հաղորդագրությունը');button(attach,'Կցել պատկեր');button(emoji,'Ընտրել էմոջի');button(menuButton,'Նամակագրության գործողություններ');button(searchButton,'Search loaded history');
   input.maxLength=5000;input.setAttribute('aria-label','Հաղորդագրություն');contactSearch.setAttribute('aria-label','Փնտրել զրուցակից');
@@ -42,7 +45,7 @@ start(async()=>{
   function updateFile(){fileStatus.replaceChildren();const file=selected&&attachments.get(selected.id);if(!file)return;const label=document.createElement('span');label.textContent=`📎 ${file.name}`;const remove=document.createElement('button');remove.type='button';remove.textContent='Հեռացնել';remove.onclick=()=>{attachments.delete(selected.id);updateFile();};fileStatus.append(label,remove);}
   function header(){
     document.querySelector('.contact-name').textContent=selected?.name||'Ընտրեք նամակագրություն';document.querySelector('.contact-info .avatar').textContent=selected?selected.isGroup?'👥':selected.name.slice(0,1):'';
-    document.querySelector('.contact-status').textContent=!selected?'':selected.closed?'Նամակագրությունն ավարտված է':selected.blocked?'Արգելափակված է':selected.canSend===false?'Sending is unavailable':selected.isGroup?'Խմբային նամակագրություն':'Անձնական նամակագրություն';
+    document.querySelector('.contact-status').textContent=!selected?'':selected.closed?'Նամակագրությունն ավարտված է':selected.blocked?'Արգելափակված է':selected.canSend===false?'Sending is unavailable':selected.keySnapshot?.keyState!=='ready'&&selected.keySnapshot?'Updating conversation keys…':selected.isGroup?'Խմբային նամակագրություն':'Անձնական նամակագրություն';
     input.disabled=!selected||selected.canSend===false||selected.closed||saving;send.disabled=input.disabled;attach.disabled=input.disabled;emoji.disabled=input.disabled;menuButton.disabled=!selected;renderMenu();
   }
   function cancel(){if(state){state.abort.abort();chat.release(state.id).catch(()=>{});}state=null;clearTimeout(ackTimer);incoming.hidden=true;}
@@ -53,19 +56,19 @@ start(async()=>{
   }
   function merge(s,page,{initial=false,older=false}={}){
     if(!valid(s))return;
-    const previous=s.records.length,previousLast=s.records.at(-1)?.sequence,atBottom=bottom();
+    const previousRecords=s.records,previous=s.records.length,previousLast=s.records.at(-1)?.sequence,atBottom=bottom();
     s.records=mergeMessages(s.records,page.items);
     if(initial||older){s.before=page.nextBefore;s.hasMore=page.hasMore;}
     if(!older&&page.nextAfter!=null)s.after=page.nextAfter;
     // An unchanged poll does not rebuild the DOM or disturb selection/scroll.
-    if(initial||s.records.length!==previous)renderHistory(s,{initial});
+    if(initial||s.records.length!==previous||s.records.some((record,index)=>record!==previousRecords[index]))renderHistory(s,{initial});
     if(!initial&&!older&&s.records.at(-1)?.sequence!==previousLast&&!atBottom)incoming.hidden=false;
   }
   async function selectRoom(room){
     if(selected)drafts.set(selected.id,input.value);cancel();const current=++generation;selected=room;
     const s=state={id:room.id,generation:current,records:[],after:'0',before:null,hasMore:false,loading:0,chain:Promise.resolve(),abort:new AbortController(),ack:BigInt(room.lastReadSequence||'0')};
     input.value=drafts.get(room.id)||'';search.value='';window.history.replaceState(null,'',`message.html?room=${encodeURIComponent(room.id)}`);header();updateFile();renderList();stateMessage(history,'Բեռնվում է...');earlier.hidden=true;
-    try{const page=await getPage(s,{});merge(s,page,{initial:true});}
+    try{if(!drafts.has(room.id)){const draft=await chat.loadDraft(room.id);if(valid(s)&&!drafts.has(room.id)){drafts.set(room.id,draft);input.value=draft;}}const page=await getPage(s,{});merge(s,page,{initial:true});}
     catch(error){if(valid(s))stateMessage(history,error.message,{retry:()=>selectRoom(room)});}
   }
   async function loadEarlier(){const s=state;if(!s||!s.hasMore||s.loading)return;try{merge(s,await getPage(s,{before:s.before}),{older:true});}catch(error){if(valid(s))showError(area,error);}}
@@ -96,7 +99,12 @@ start(async()=>{
       if(!target){if(selected)drafts.set(selected.id,input.value);cancel();selected=null;header();updateFile();stateMessage(history,id?'Նամակագրությունը հասանելի չէ։':'Ընտրեք նամակագրություն');earlier.hidden=true;return;}
       if(!selected||selected.id!==target.id||BigInt(target.historyCutoff||'0')>BigInt(selected.historyCutoff||'0'))await selectRoom(target);
       else{
+        const membershipChanged=selected.keySnapshot?.versions.membership!==target.keySnapshot?.versions.membership||selected.closed!==target.closed;
         selected=target;header();const s=state;if(s&&!s.loading){
+          if(membershipChanged){
+            await chat.release(s.id);let after=s.records.length?(BigInt(s.records[0].sequence)-1n).toString():'0';
+            do{const page=await getPage(s,{after,limit:100});if(!valid(s))return;merge(s,page);if(!page.hasMore)break;if(BigInt(page.nextAfter)<=BigInt(after))throw new Error('History cursor did not advance.');after=page.nextAfter;}while(valid(s));
+          }
           do{const after=s.after,page=await getPage(s,{after});if(!valid(s))return;merge(s,page);if(!page.hasMore)break;if(BigInt(s.after)<=BigInt(after))throw new Error('History cursor did not advance.');}while(valid(s));
         }
       }
@@ -109,10 +117,10 @@ start(async()=>{
   send.onclick=async()=>{
     if(!selected||saving||selected.canSend===false)return;const id=selected.id,text=input.value,file=attachments.get(id);saving=true;input.disabled=true;attach.disabled=true;
     const saved=await pending(send,area,()=>chat.send(id,{text,file}));saving=false;
-    if(saved){drafts.delete(id);attachments.delete(id);if(selected?.id===id)input.value='';}
+    if(saved){drafts.delete(id);attachments.delete(id);await chat.saveDraft(id,'').catch(()=>{});if(selected?.id===id)input.value='';}
     header();updateFile();schedule(0);
   };
-  input.oninput=()=>{if(selected)drafts.set(selected.id,input.value);};input.onkeydown=event=>{if(event.key==='Enter'){event.preventDefault();send.click();}};
+  input.oninput=()=>{if(selected){const id=selected.id,text=input.value;drafts.set(id,text);chat.saveDraft(id,text).catch(error=>{if(selected?.id===id)pollStatus.textContent='Draft is kept on this page. '+error.message;});}};input.onkeydown=event=>{if(event.key==='Enter'){event.preventDefault();send.click();}};
   const fileInput=document.createElement('input');fileInput.type='file';fileInput.accept='image/png,image/jpeg,image/gif,image/webp';fileInput.hidden=true;document.body.append(fileInput);attach.onclick=()=>fileInput.click();fileInput.onchange=()=>{if(!selected||!fileInput.files[0])return;try{validateImage(fileInput.files[0]);attachments.set(selected.id,fileInput.files[0]);updateFile();}catch(error){showError(area,error);}fileInput.value='';};
   const picker=document.createElement('div');picker.hidden=true;picker.style.cssText='padding:8px;background:var(--card-background)';row.before(picker);for(const value of ['😀','😂','😍','🥺','😎','😭','👍','🎉','❤️','🔥']){const b=document.createElement('button');b.type='button';b.textContent=value;b.onclick=()=>{if(!input.disabled&&input.value.length+value.length<=5000){input.value+=value;input.dispatchEvent(new Event('input'));input.focus();}};picker.append(b);}emoji.onclick=()=>{picker.hidden=!picker.hidden;};
   const dropdown=document.createElement('div');dropdown.className='chat-dropdown';dropdown.hidden=true;dropdown.style.cssText='position:absolute;top:110%;right:0;background:var(--card-background);border:1px solid var(--border-color);z-index:100;min-width:180px';document.querySelector('.chat-actions').style.position='relative';document.querySelector('.chat-actions').append(dropdown);
@@ -120,6 +128,7 @@ start(async()=>{
   function renderMenu(){
     dropdown.replaceChildren();if(!selected)return;const room=selected,peer=room.participants.find(p=>p.id!==user.id);
     const actions=[
+      ...(room.isGroup?[['👥','Group members',()=>groups.manage(room.id)]]:[]),
       ['🗑️','Ջնջել նամակագրությունը',async()=>{if(!await confirmAction('Հեռացնե՞լ ձեր տեսանելի նամակագրությունը։'))return;await chat.hide(room.id);drafts.delete(room.id);attachments.delete(room.id);cancel();generation++;selected=null;input.value='';window.history.replaceState(null,'','message.html');header();updateFile();stateMessage(history,'Ընտրեք նամակագրություն');schedule(0);}],
       ['🚫',room.blocked?'Ապաարգելափակել':'Արգելափակել',async()=>{await chat.block(peer.id,!room.blocked);schedule(0);},room.isGroup||!peer],
       ['👤','Դիտել էջը',()=>{location.href=`user.html?id=${encodeURIComponent(peer.id)}`;},room.isGroup||!peer],

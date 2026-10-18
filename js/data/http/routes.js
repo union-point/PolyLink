@@ -1,6 +1,16 @@
 // Only routes evidenced in the repository are mapped. Missing capabilities stay
 // explicit until a backend contract is agreed; add them here, never in page scripts.
 export const routes = {
+  'chat.prepareGroup': data=>({method:'post',url:'/chat/groups/prepare',data}),
+  'chat.createGroup': data=>({method:'post',url:'/chat/groups',data}),
+  'chat.participants': room=>({method:'get',url:`/chat/rooms/${encodeURIComponent(room)}/participants`}),
+  'chat.prepareAddition': (room,data)=>({method:'post',url:`/chat/rooms/${encodeURIComponent(room)}/participants/prepare`,data}),
+  'chat.addParticipant': (room,data)=>({method:'post',url:`/chat/rooms/${encodeURIComponent(room)}/participants`,data}),
+  'chat.removeParticipant': (room,user,data)=>({method:'delete',url:`/chat/rooms/${encodeURIComponent(room)}/participants/${encodeURIComponent(user)}`,data}),
+  'chat.leaveGroup': (room,data)=>({method:'post',url:`/chat/rooms/${encodeURIComponent(room)}/leave`,data}),
+  'chat.renameGroup': (room,data)=>({method:'patch',url:`/chat/rooms/${encodeURIComponent(room)}`,data}),
+  'chat.transferOwner': (room,data)=>({method:'put',url:`/chat/rooms/${encodeURIComponent(room)}/owner`,data}),
+  'chat.exportOwn': (params={})=>({method:'get',url:'/chat/export',params}),
   'chat.read': (roomId,throughSequence) => ({method:'put',url:`/chat/rooms/${encodeURIComponent(roomId)}/read`,data:{throughSequence}}),
   'chat.mute': (roomId,enabled) => ({method:'put',url:`/chat/rooms/${encodeURIComponent(roomId)}/mute`,data:{enabled}}),
   'chat.hide': roomId => ({method:'post',url:`/chat/rooms/${encodeURIComponent(roomId)}/hide`,data:{}}),

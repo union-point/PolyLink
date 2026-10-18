@@ -6,7 +6,7 @@ import { email, password, required, validateEducation, validateCertificate, vali
 
 const now = () => new Date().toISOString();
 const defaults = () => ({ isProfilePublic: true, showEmail: false, twoFactorEnabled: false, language: 'hy', emailEnabled: true, newListingNotifications: true, forumReplyNotifications: true, directMessageNotifications: true });
-const readOperations = new Set(['auth.me', 'profiles.get', 'profiles.education.list', 'profiles.certificates.list', 'posts.list', 'posts.comments.list', 'forum.list', 'forum.get', 'forum.replies.list', 'search.people', 'chat.list', 'chat.messages', 'chat.page', 'settings.get', 'settings.export']);
+const readOperations = new Set(['auth.me', 'profiles.get', 'profiles.education.list', 'profiles.certificates.list', 'posts.list', 'posts.comments.list', 'forum.list', 'forum.get', 'forum.replies.list', 'search.people', 'chat.list', 'chat.messages', 'chat.page', 'chat.participants', 'chat.loadDraft', 'settings.get', 'settings.export']);
 const publicOperations = new Set(['auth.me', 'auth.login', 'auth.register', 'auth.verifySecondFactor', 'auth.resendChallenge', 'auth.forgotPassword', 'auth.verifyRecovery', 'auth.resetPassword', 'auth.logout']);
 
 function find(records, id) {
@@ -51,7 +51,7 @@ function roomForUser(state, id) {
   return room;
 }
 function messageView(state, message) {
-  return { ...message, sender: author(state, message.senderId) };
+  return { ...message, sender: message.deleted?{id:'',name:''}:author(state, message.senderId) };
 }
 function roomView(state, room) {
   const userId = me(state).id;
@@ -59,7 +59,7 @@ function roomView(state, room) {
   const messages = visibleMessages(state,room,userId);
   const participants = room.participants.map(id => author(state, id));
   const other = room.participants.find(id => id !== userId);
-  return { id: room.id, isGroup: room.isGroup, closed: room.participants.length < 2, name: room.name || participants.filter(person => person.id !== userId).map(person => person.name).join(', ') || 'Ջնջված օգտատեր', participants,
+  return { id: room.id, isGroup: room.isGroup, closed: !!room.closed||(!room.isGroup&&room.participants.length<2), ownerId:room.ownerId, metadataVersion:room.metadataVersion||'1',canManage:room.isGroup&&room.ownerId===userId&&!room.closed,keySnapshot:{versions:{membership:room.membershipVersion||'1'},keyState:'ready'}, name: room.name || participants.filter(person => person.id !== userId).map(person => person.name).join(', ') || 'Ջնջված օգտատեր', participants,
     muted: pref.muted, blocked: !room.isGroup&&isBlocked(state,userId,other), canSend:canSend(state,room), historyCutoff:pref.historyCutoff,lastReadSequence:pref.lastReadSequence,lastSequence:room.lastSequence||'0',unreadCount:messages.filter(message=>message.senderId!==userId&&BigInt(message.sequence)>BigInt(pref.lastReadSequence)).length,
     lastMessage: messages.length ? messageView(state, messages.at(-1)) : null };
 }
@@ -82,7 +82,23 @@ async function digest(address, secret) {
   const bytes = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(`${address}:${secret}`));
   return [...new Uint8Array(bytes)].map(byte => byte.toString(16).padStart(2, '0')).join('');
 }
+function groupOwner(state,id){const room=roomForUser(state,id);if(!room.isGroup||room.closed||room.ownerId!==me(state).id)throw new DataError('FORBIDDEN','Only the group owner can do this.');return room;}
+function memberChange(room){room.membershipVersion=(BigInt(room.membershipVersion||'1')+1n).toString();}
+function leaveMember(room,id){room.participants=room.participants.filter(person=>person!==id);memberChange(room);if(!room.participants.length)room.closed=true;}
 const operations = {
+  'chat.saveDraft':(state,id,text)=>{preference(roomForUser(state,id),me(state).id).draft=text;},
+  'chat.loadDraft':(state,id)=>preference(roomForUser(state,id),me(state).id).draft||'',
+  'chat.createGroup':(state,{name,userIds})=>{
+    name=String(name||'').trim();const ids=[...new Set([me(state).id,...userIds.map(String)])];
+    if(!name||name.length>100||ids.length<2||ids.length>100||ids.some(id=>find(state.users,id).status!=='active'))throw new DataError('VALIDATION','Choose a name and 2–100 active participants.');
+    const room={id:nextId(state,'room'),isGroup:true,name,ownerId:me(state).id,metadataVersion:'1',membershipVersion:'1',participants:ids,preferences:{},lastSequence:'0'};state.rooms.push(room);return {roomId:room.id};
+  },
+  'chat.participants':(state,id)=>roomView(state,roomForUser(state,id)),
+  'chat.renameGroup':(state,id,name)=>{const room=groupOwner(state,id);name=String(name||'').trim();if(!name||name.length>100)throw new DataError('VALIDATION','Enter a group name.');room.name=name;room.metadataVersion=(BigInt(room.metadataVersion||'1')+1n).toString();return {roomId:id};},
+  'chat.transferOwner':(state,id,target)=>{const room=groupOwner(state,id);if(!room.participants.includes(String(target))||find(state.users,target).status!=='active')throw new DataError('VALIDATION','Choose a current active member.');room.ownerId=String(target);room.metadataVersion=(BigInt(room.metadataVersion||'1')+1n).toString();return {roomId:id};},
+  'chat.addParticipant':(state,id,target)=>{const room=groupOwner(state,id);target=String(target);if(room.participants.includes(target)||room.participants.length>=100||find(state.users,target).status!=='active')throw new DataError('VALIDATION','This person cannot be added.');room.participants.push(target);const pref=preference(room,target);pref.hidden=false;pref.muted=false;pref.historyCutoff=room.lastSequence||'0';pref.lastReadSequence=pref.historyCutoff;memberChange(room);return {roomId:id};},
+  'chat.removeParticipant':(state,id,target)=>{const room=groupOwner(state,id);target=String(target);if(!room.participants.includes(target)||target===me(state).id)throw new DataError('VALIDATION','Choose another member.');leaveMember(room,target);return {roomId:id};},
+  'chat.leaveGroup':(state,id)=>{const room=roomForUser(state,id),own=me(state).id;if(!room.isGroup)throw new DataError('VALIDATION','This is not a group.');if(room.ownerId===own&&room.participants.length>1)throw new DataError('OWNER_TRANSFER_REQUIRED','Transfer ownership before leaving.');leaveMember(room,own);return {roomId:id};},
   'auth.me': state => state.sessionUserId ? profile(state, me(state)) : null,
   'auth.logout': state => { state.sessionUserId = null; return null; },
   'auth.register': (state, data) => {
@@ -218,7 +234,7 @@ const operations = {
   'chat.page': (state,id,params)=>{const page=messagePage(visibleMessages(state,roomForUser(state,id),me(state).id),params);return {...page,items:page.items.map(message=>messageView(state,message))};},
   'chat.send': (state, roomId, data) => {
     upgradeChatState(state);const room = roomForUser(state, roomId), own = me(state).id;
-    if (room.participants.length < 2) throw new DataError('FORBIDDEN', 'Նամակագրությունն ավարտված է։');
+    if (!room.isGroup&&room.participants.length < 2) throw new DataError('FORBIDDEN', 'Նամակագրությունն ավարտված է։');
     if (!canSend(state,room)) throw new DataError('FORBIDDEN', 'Հաղորդագրությունը չի կարող ուղարկվել։ Օգտատերը արգելափակված է։');
     const text = String(data.text || '').trim();
     if (!text && !data.file) throw new DataError('VALIDATION', 'Մուտքագրեք հաղորդագրություն։');
@@ -260,8 +276,8 @@ const operations = {
     state.comments = state.comments.filter(item => item.userId !== id && !postIds.includes(item.postId));
     state.replies = state.replies.filter(item => item.userId !== id && !topicIds.includes(item.topicId));
     state.replies.forEach(item => { item.likes = item.likes.filter(userId => userId !== id); });
-    state.messages = state.messages.filter(item => item.senderId !== id);
-    state.rooms.forEach(room => { room.participants = room.participants.filter(userId => userId !== id); delete room.preferences[id]; });
+    state.messages.forEach(item=>{if(item.senderId===id){item.senderId=null;item.text='Message deleted';item.attachment=null;item.deleted=true;}});
+    state.rooms.forEach(room=>{if(!room.participants.includes(id))return;if(room.isGroup){leaveMember(room,id);if(room.ownerId===id){room.ownerId=room.participants.filter(person=>state.users.find(u=>u.id===person)?.status==='active').sort((a,b)=>BigInt(a)<BigInt(b)?-1:1)[0]||null;if(!room.ownerId)room.closed=true;}}else room.closed=true;delete room.preferences[id];});
     state.rooms = state.rooms.filter(room => room.participants.length);
     state.blocks = state.blocks.filter(item => item.userId !== id && item.targetId !== id);
     state.challenges = state.challenges.filter(item => item.userId !== id);
@@ -270,7 +286,7 @@ const operations = {
   },
   'settings.export': state => {
     const user = me(state), id = user.id;
-    return { exportedAt: now(), user: profile(state, user), settings: state.settings[id], posts: state.posts.filter(item => item.userId === id), comments: state.comments.filter(item => item.userId === id), topics: state.topics.filter(item => item.userId === id), replies: state.replies.filter(item => item.userId === id).map(({ likes, ...item }) => item), messages: state.messages.filter(item => item.senderId === id) };
+    return { exportedAt: now(), user: profile(state, user), settings: state.settings[id], posts: state.posts.filter(item => item.userId === id), comments: state.comments.filter(item => item.userId === id), topics: state.topics.filter(item => item.userId === id), replies: state.replies.filter(item => item.userId === id).map(({ likes, ...item }) => item), messages: state.messages.filter(item => item.senderId === id&&state.rooms.some(room=>room.id===item.roomId&&room.participants.includes(id)&&visibleMessages(state,room,id).some(m=>m.id===item.id))) };
   },
 };
 
@@ -330,13 +346,14 @@ export function createMockProvider() {
     if(operation==='chat.send'&&args[1]?.file){const file=validateImage(args[1].file);await validateImageBytes(new Uint8Array(await file.arrayBuffer()),file.type);}
     const write = !readOperations.has(operation);
     const result = await transaction(state => {
+      for(const room of state.rooms)if(room.isGroup&&!room.ownerId&&!room.closed){room.ownerId=[...room.participants].sort((a,b)=>BigInt(a)<BigInt(b)?-1:1)[0];room.membershipVersion||='1';room.metadataVersion||='1';}
       if (!publicOperations.has(operation)) me(state);
       return operations[operation](state, ...args);
     }, { write });
     if (result instanceof DataError) throw result;
     if (write) { const event = { operation, at: now() }; notify(event); channel?.postMessage(event); }
     if (operation === 'settings.export') {
-      const media = await transaction(state => state.media.filter(item => item.userId === me(state).id));
+      const media = await transaction(state => state.media.filter(item => item.userId === me(state).id&&result.messages.some(message=>message.attachment?.url===`media:${item.id}`)));
       const assets = await Promise.all(media.map(item => new Promise((resolve, reject) => {
         const reader = new FileReader(); reader.onload = () => resolve({ id: item.id, type: item.blob.type, dataUrl: reader.result }); reader.onerror = () => reject(new DataError('STORAGE', 'Չհաջողվեց արտահանել պատկերները։')); reader.readAsDataURL(item.blob);
       })));

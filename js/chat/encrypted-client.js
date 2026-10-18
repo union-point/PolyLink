@@ -9,7 +9,7 @@ const versionList=snapshot=>snapshot.recipients.map(({userId,identityVersion})=>
 export function createEncryptedChat(api,identity,store=outboxStore){
   const call=(name,...args)=>api.request(routes[`chat.${name}`](...args));
   const roomLocks=new Map(),rotating=new Map(),images=new Map();let imageScope,imageGeneration=0;
-  const release=room=>{if(!room)imageGeneration++;for(const [id,entry]of images)if(!room||entry.room===room){URL.revokeObjectURL(entry.url);images.delete(id);}};
+  const release=room=>{imageGeneration++;for(const [id,entry]of images)if(!room||entry.room===room){URL.revokeObjectURL(entry.url);images.delete(id);}};
   identity.subscribe?.(event=>{if(['auth.logout','auth.revoked','auth.login','auth.version'].includes(event.operation))release();});
   globalThis.addEventListener?.('pagehide',()=>release());
   function scope(context){const value=JSON.stringify([context.session.user.id,context.session.familyId,context.session.versions]);if(value!==imageScope){release();imageScope=value;}}
@@ -48,18 +48,19 @@ export function createEncryptedChat(api,identity,store=outboxStore){
       const key=from(tuple[7]);if(key.length!==32)throw new Error('Invalid room key.');return key;
     }finally{privateKey.fill(0);plain?.fill(0);}
   }
+  async function epoch(snapshot){
+    const s=await sodium(),key=s.randombytes_buf(32),b64=bytes=>s.to_base64(bytes,s.base64_variants.URLSAFE_NO_PADDING);
+    const version=(BigInt(snapshot.versions.roomKey)+1n).toString();
+    try{return {expected:snapshot,newKeyVersion:version,envelopes:snapshot.recipients.map(recipient=>({userId:recipient.userId,identityVersion:recipient.identityVersion,sealedPacket:b64(s.crypto_box_seal(encoder.encode(JSON.stringify(['PLK1','room-key',snapshot.roomId,recipient.userId,recipient.identityVersion,snapshot.versions.membership,version,b64(key)])),s.from_base64(recipient.publicKey,s.base64_variants.URLSAFE_NO_PADDING)))}))};}
+    finally{key.fill(0);}
+  }
   async function ready(room,context){
     for(let attempt=0;attempt<3;attempt++){
       const bundle=await call('keys',room),snapshot=bundle.snapshot;
       if(snapshot.keyState==='ready')return bundle;
       if(snapshot.keyState==='recipient_unconfigured')throw new DataError('ROOM_KEY_PENDING','A participant has not completed encrypted account setup.');
-      const s=await sodium(),key=s.randombytes_buf(32),b64=bytes=>s.to_base64(bytes,s.base64_variants.URLSAFE_NO_PADDING);
-      const version=(BigInt(snapshot.versions.roomKey)+1n).toString();
-      try{
-        const envelopes=snapshot.recipients.map(recipient=>({userId:recipient.userId,identityVersion:recipient.identityVersion,sealedPacket:b64(s.crypto_box_seal(encoder.encode(JSON.stringify(['PLK1','room-key',room,recipient.userId,recipient.identityVersion,snapshot.versions.membership,version,b64(key)])),s.from_base64(recipient.publicKey,s.base64_variants.URLSAFE_NO_PADDING)))}));
-        await call('activate',room,{expected:snapshot,newKeyVersion:version,envelopes});
-      }catch(error){if(error.code!=='REVISION_CONFLICT')throw error;}
-      finally{key.fill(0);}
+      try{await call('activate',room,await epoch(snapshot));}
+      catch(error){if(error.code!=='REVISION_CONFLICT')throw error;}
     }
     throw new DataError('REVISION_CONFLICT','Conversation keys changed. Please retry.');
   }
@@ -115,8 +116,8 @@ export function createEncryptedChat(api,identity,store=outboxStore){
       await persist(context,room,operation);return saved;
     }catch(error){
       // An upload/send timeout or 5xx remains ambiguous. Preserve the exact original bytes.
-      if(['KEY_STALE_NOT_SAVED','ROOM_KEY_PENDING','FORBIDDEN','VALIDATION','ATTACHMENT_UNAVAILABLE_NOT_SAVED'].includes(error.code)){
-        if(operation.upload&&error.code!=='ATTACHMENT_UNAVAILABLE_NOT_SAVED'){operation.rejected=true;await persist(context,room,operation);}
+      if(['KEY_STALE_NOT_SAVED','ROOM_KEY_PENDING','FORBIDDEN','VALIDATION','ATTACHMENT_UNAVAILABLE_NOT_SAVED','NOT_FOUND'].includes(error.code)){
+        if(operation.upload&&!['ATTACHMENT_UNAVAILABLE_NOT_SAVED','NOT_FOUND'].includes(error.code)){operation.rejected=true;await persist(context,room,operation);}
         else await store.remove(outboxId(context,room));
       }
       throw error;
@@ -124,7 +125,7 @@ export function createEncryptedChat(api,identity,store=outboxStore){
   }
   async function page(room,params={}){priorityRoom=room;return locked(room,()=>identity.withKeys(async context=>{
     let operation;try{operation=await pending(context,room);}catch(error){if(error.code!=='STORAGE_UNAVAILABLE')throw error;}
-    if(operation&&!operation.rejected)await flush(context,room,operation);
+    if(operation&&!operation.rejected)try{await flush(context,room,operation);}catch(error){if(error.code!=='NOT_FOUND')throw error;}
     const bundle=await call('keys',room);
     if(bundle.snapshot.keyState!=='ready')rotate(room,context).catch(()=>{});
     const {signal,...query}=params;
@@ -133,6 +134,41 @@ export function createEncryptedChat(api,identity,store=outboxStore){
     const items=[];for(const message of response.items){if(signal?.aborted)throw new DOMException('Selection changed','AbortError');items.push(await decrypt(message,bundle,context,true,signal));}
     return {...response,items};
   }));}
+  async function groupMutation(action,room,details={}){
+    const slot=action==='create'?'group-create':`group:${room}`,signature=JSON.stringify([action,room,details]);
+    return locked(slot,()=>identity.withKeys(async context=>{
+      async function deliver(operation){
+        if(!operation.result){operation.result=await call(operation.route,...operation.args);await persist(context,slot,operation);}
+        const result=operation.result;await store.remove(outboxId(context,slot));release(room);rotateLater([result.roomId]);return result;
+      }
+      const prior=await pending(context,slot);
+      if(prior){
+        try{const result=await deliver(prior);if(prior.signature!==signature)throw new DataError('OUTBOX_RESOLVED','Your previous group action completed. Review the group and try this action again.');return result;}
+        catch(error){if(['REVISION_CONFLICT','RECIPIENT_UNCONFIGURED','VALIDATION','FORBIDDEN','NOT_FOUND','OWNER_TRANSFER_REQUIRED'].includes(error.code))await store.remove(outboxId(context,slot));if(error.code!=='REVISION_CONFLICT')throw error;}
+      }
+      for(let attempt=0;attempt<3;attempt++){
+        const operationId=crypto.randomUUID();let args,route;
+        if(action==='create'){
+          const roomId=crypto.randomUUID(),snapshot=await call('prepareGroup',{roomId,userIds:details.userIds});
+          route='createGroup';args=[{operationId,roomId,name:details.name.trim(),activation:await epoch(snapshot)}];
+        }else{
+          const current=await call('participants',room);
+          const data={operationId,expectedMembership:current.keySnapshot.versions.membership,expectedMetadata:current.metadataVersion,...details};
+          if(action==='add'){
+            const snapshot=await call('prepareAddition',room,{roomId:room,userIds:[details.userId]});data.activation=await epoch(snapshot);
+          }
+          route={add:'addParticipant',remove:'removeParticipant',leave:'leaveGroup',rename:'renameGroup',owner:'transferOwner'}[action];
+          args=action==='remove'?[room,details.userId,{...data,userId:undefined}]:[room,data];
+        }
+        const operation={signature,route,args,request:{operationId}};await persist(context,slot,operation);
+        try{return await deliver(operation);}
+        catch(error){
+          if(['REVISION_CONFLICT','RECIPIENT_UNCONFIGURED','VALIDATION','FORBIDDEN','NOT_FOUND','OWNER_TRANSFER_REQUIRED'].includes(error.code))await store.remove(outboxId(context,slot));
+          if(error.code!=='REVISION_CONFLICT'||attempt===2)throw error;
+        }
+      }
+    }));
+  }
   return {
     async resumeRotation(){return identity.withKeys(async()=>{
       let cursor=null;const rooms=[];
@@ -148,6 +184,24 @@ export function createEncryptedChat(api,identity,store=outboxStore){
       }
       rotateLater(rooms.filter(room=>room.canSend&&room.keySnapshot?.keyState!=='ready').map(room=>room.id));
       return rooms;
+    });},
+    saveDraft:(room,text)=>locked(`draft:${room}`,()=>identity.withKeys(async context=>{if(text){await persist(context,`draft:${room}`,{text,request:{operationId:crypto.randomUUID()}});}else await store.remove(outboxId(context,`draft:${room}`));})),
+    loadDraft:room=>identity.withKeys(async context=>(await pending(context,`draft:${room}`))?.text||''),
+    createGroup:({name,userIds})=>groupMutation('create',null,{name,userIds}),
+    participants:room=>identity.withKeys(()=>call('participants',room)),
+    addParticipant:(room,userId)=>groupMutation('add',room,{userId:String(userId)}),
+    removeParticipant:(room,userId)=>groupMutation('remove',room,{userId:String(userId)}),
+    leaveGroup:room=>groupMutation('leave',room),
+    renameGroup:(room,name)=>groupMutation('rename',room,{name:name.trim()}),
+    transferOwner:(room,userId)=>groupMutation('owner',room,{userId:String(userId)}),
+    async exportOwn(){return identity.withKeys(async context=>{
+      const messages=[];let cursor=null;
+      do{
+        const response=await call('exportOwn',{...(cursor?{cursor}:{}),limit:50});
+        for(const item of response.items){const bundle=await call('keys',item.roomId),message=await decrypt(item,bundle,context);if(message.attachment?.url){const blob=await(await fetch(message.attachment.url)).blob();const bytes=new Uint8Array(await blob.arrayBuffer());const s=await sodium();message.attachment={id:message.attachment.id,name:message.attachment.name,type:message.attachment.type,size:message.attachment.size,data:s.to_base64(bytes,s.base64_variants.ORIGINAL)};}messages.push({id:message.id,roomId:message.roomId,sequence:message.sequence,createdAt:message.createdAt,text:message.text,attachment:message.attachment,deleted:message.deleted});}
+        cursor=response.nextCursor;
+      }while(cursor);
+      return {exportedAt:new Date().toISOString(),user:context.session.user,messages};
     });},
     openDirect:target=>identity.withKeys(()=>call('openDirect',typeof target==='object'?target.id:target)),
     page,
