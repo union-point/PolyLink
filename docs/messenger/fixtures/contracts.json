@@ -151,5 +151,45 @@
       "operationId": "00000000-0000-4000-8000-000000000001",
       "recoveryToken": "not-a-DTO-field"
     }
+  },
+  {
+    "name": "group change",
+    "schema": "GroupChange",
+    "value": {
+      "operationId": "dcfbb740-36dd-4e92-a51d-e974a25f41c9",
+      "expectedMembership": "1",
+      "expectedMetadata": "1"
+    },
+    "valid": true
+  },
+  {
+    "name": "stale numeric revision",
+    "schema": "GroupChange",
+    "value": {
+      "operationId": "dcfbb740-36dd-4e92-a51d-e974a25f41c9",
+      "expectedMembership": 1,
+      "expectedMetadata": "1"
+    },
+    "valid": false
+  },
+  {
+    "name": "missing metadata revision",
+    "schema": "GroupChange",
+    "value": {
+      "operationId": "dcfbb740-36dd-4e92-a51d-e974a25f41c9",
+      "expectedMembership": "1"
+    },
+    "valid": false
+  },
+  {
+    "name": "unknown permission flag",
+    "schema": "GroupChange",
+    "value": {
+      "operationId": "dcfbb740-36dd-4e92-a51d-e974a25f41c9",
+      "expectedMembership": "1",
+      "expectedMetadata": "1",
+      "owner": true
+    },
+    "valid": false
   }
 ]

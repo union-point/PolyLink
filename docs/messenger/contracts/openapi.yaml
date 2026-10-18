@@ -1,7 +1,7 @@
 openapi: 3.1.1
 info:
   title: PolyLink messenger
-  version: 0.4.0
+  version: 0.5.0
   description: M0 wire formats with M1 invitation enrollment, real sessions and backed-up
     key setup. M1–M5 identity, recovery, encrypted messaging/images and personal state are implemented; later features retain
     their milestone scope. Original passwords never enter HTTP DTOs.
@@ -11,6 +11,330 @@ servers:
 security:
 - bearer: []
 paths:
+  /chat/groups/prepare:
+    post:
+      operationId: prepareGroup
+      description: M6 durable operation; see m6.md for permissions, snapshots and interval
+        boundaries.
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RoomSnapshot'
+        '400':
+          $ref: '#/components/responses/Error'
+        '401':
+          $ref: '#/components/responses/Error'
+        '403':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+        '429':
+          $ref: '#/components/responses/Error'
+        '503':
+          $ref: '#/components/responses/Error'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GroupPrepare'
+  /chat/groups:
+    post:
+      operationId: createGroup
+      description: M6 durable operation; see m6.md for permissions, snapshots and interval
+        boundaries.
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GroupResult'
+        '400':
+          $ref: '#/components/responses/Error'
+        '401':
+          $ref: '#/components/responses/Error'
+        '403':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+        '429':
+          $ref: '#/components/responses/Error'
+        '503':
+          $ref: '#/components/responses/Error'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GroupCreate'
+  /chat/rooms/{roomId}/participants:
+    get:
+      operationId: groupParticipants
+      description: M6 durable operation; see m6.md for permissions, snapshots and interval
+        boundaries.
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Room'
+        '400':
+          $ref: '#/components/responses/Error'
+        '401':
+          $ref: '#/components/responses/Error'
+        '403':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+        '429':
+          $ref: '#/components/responses/Error'
+        '503':
+          $ref: '#/components/responses/Error'
+      parameters:
+      - name: roomId
+        in: path
+        required: true
+        schema: &m6path001
+          type: string
+          format: uuid
+    post:
+      operationId: addGroupParticipant
+      description: M6 durable operation; see m6.md for permissions, snapshots and interval
+        boundaries.
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GroupResult'
+        '400':
+          $ref: '#/components/responses/Error'
+        '401':
+          $ref: '#/components/responses/Error'
+        '403':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+        '429':
+          $ref: '#/components/responses/Error'
+        '503':
+          $ref: '#/components/responses/Error'
+      parameters:
+      - name: roomId
+        in: path
+        required: true
+        schema: *m6path001
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GroupChange'
+  /chat/rooms/{roomId}/participants/prepare:
+    post:
+      operationId: prepareGroupAddition
+      description: M6 durable operation; see m6.md for permissions, snapshots and interval
+        boundaries.
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RoomSnapshot'
+        '400':
+          $ref: '#/components/responses/Error'
+        '401':
+          $ref: '#/components/responses/Error'
+        '403':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+        '429':
+          $ref: '#/components/responses/Error'
+        '503':
+          $ref: '#/components/responses/Error'
+      parameters:
+      - name: roomId
+        in: path
+        required: true
+        schema: *m6path001
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GroupPrepare'
+  /chat/rooms/{roomId}/participants/{userId}:
+    delete:
+      operationId: removeGroupParticipant
+      description: M6 durable operation; see m6.md for permissions, snapshots and interval
+        boundaries.
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GroupResult'
+        '400':
+          $ref: '#/components/responses/Error'
+        '401':
+          $ref: '#/components/responses/Error'
+        '403':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+        '429':
+          $ref: '#/components/responses/Error'
+        '503':
+          $ref: '#/components/responses/Error'
+      parameters:
+      - name: roomId
+        in: path
+        required: true
+        schema: *m6path001
+      - name: userId
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: ^[1-9][0-9]{0,18}$
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GroupChange'
+  /chat/rooms/{roomId}/leave:
+    post:
+      operationId: leaveGroup
+      description: M6 durable operation; see m6.md for permissions, snapshots and interval
+        boundaries.
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GroupResult'
+        '400':
+          $ref: '#/components/responses/Error'
+        '401':
+          $ref: '#/components/responses/Error'
+        '403':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+        '429':
+          $ref: '#/components/responses/Error'
+        '503':
+          $ref: '#/components/responses/Error'
+      parameters:
+      - name: roomId
+        in: path
+        required: true
+        schema: *m6path001
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GroupChange'
+  /chat/rooms/{roomId}:
+    patch:
+      operationId: renameGroup
+      description: M6 durable operation; see m6.md for permissions, snapshots and interval
+        boundaries.
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GroupResult'
+        '400':
+          $ref: '#/components/responses/Error'
+        '401':
+          $ref: '#/components/responses/Error'
+        '403':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+        '429':
+          $ref: '#/components/responses/Error'
+        '503':
+          $ref: '#/components/responses/Error'
+      parameters:
+      - name: roomId
+        in: path
+        required: true
+        schema: *m6path001
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GroupChange'
+  /chat/rooms/{roomId}/owner:
+    put:
+      operationId: transferGroupOwner
+      description: M6 durable operation; see m6.md for permissions, snapshots and interval
+        boundaries.
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GroupResult'
+        '400':
+          $ref: '#/components/responses/Error'
+        '401':
+          $ref: '#/components/responses/Error'
+        '403':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+        '429':
+          $ref: '#/components/responses/Error'
+        '503':
+          $ref: '#/components/responses/Error'
+      parameters:
+      - name: roomId
+        in: path
+        required: true
+        schema: *m6path001
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GroupChange'
   /auth/parameters:
     post:
       operationId: parameters
@@ -2403,3 +2727,70 @@ components:
       - licenses
       description: M1 owner-only minimal identity/profile header. Other profile sections
         are outside this milestone.
+    GroupPrepare:
+      type: object
+      additionalProperties: false
+      properties:
+        roomId: &m6schema001
+          type: string
+          format: uuid
+        userIds:
+          type: array
+          items: &m6schema002
+            type: string
+            pattern: ^[1-9][0-9]{0,18}$
+          minItems: 1
+          maxItems: 100
+          uniqueItems: true
+      required:
+      - roomId
+      - userIds
+    GroupCreate:
+      type: object
+      additionalProperties: false
+      properties:
+        operationId: *m6schema001
+        roomId: *m6schema001
+        name:
+          type: string
+          minLength: 1
+          maxLength: 100
+        activation:
+          $ref: '#/components/schemas/ActivateRoomKey'
+      required:
+      - operationId
+      - roomId
+      - name
+      - activation
+    GroupChange:
+      type: object
+      additionalProperties: false
+      properties:
+        operationId: *m6schema001
+        expectedMembership: *m6schema002
+        expectedMetadata: *m6schema002
+        userId: *m6schema002
+        name:
+          type: string
+          minLength: 1
+          maxLength: 100
+        activation:
+          $ref: '#/components/schemas/ActivateRoomKey'
+      required:
+      - operationId
+      - expectedMembership
+      - expectedMetadata
+    GroupResult:
+      type: object
+      additionalProperties: false
+      properties:
+        roomId: *m6schema001
+        membershipVersion: *m6schema002
+        metadataVersion: *m6schema002
+        closed:
+          type: boolean
+      required:
+      - roomId
+      - membershipVersion
+      - metadataVersion
+      - closed
