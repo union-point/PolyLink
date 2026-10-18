@@ -2,7 +2,7 @@ import os,pathlib,socket,subprocess,time,urllib.request
 
 def free_port():
     with socket.socket() as sock:sock.bind(('127.0.0.1',0));return sock.getsockname()[1]
-def run(root,env,admin_sql,bao_request,root_token,messenger=False,continuity=False):
+def run(root,env,admin_sql,bao_request,root_token,messenger=False,continuity=False,recovery=False):
     api_port=free_port();frontend_port=free_port();child=env.copy()
     child.update(MESSENGER_ENABLED='true' if messenger else 'false',IDENTITY_ENABLED='true',DB_USERNAME=env['MIGRATION_DB_USERNAME'],DB_PASSWORD=env['MIGRATION_DB_PASSWORD'],SERVER_PORT=str(api_port),FRONTEND_ORIGINS=f'http://localhost:{frontend_port}',M1_API=f'http://localhost:{api_port}',M1_FRONTEND=f'http://localhost:{frontend_port}',M1_ARTIFACT_DIR=str(pathlib.Path(env['OPENBAO_TOKEN_FILE']).parent))
     email='browser-'+env['M1_DB_NAME'].removeprefix('polylink_m1_')+'@example.invalid';child['M1_BROWSER_EMAIL']=email
@@ -29,6 +29,8 @@ def run(root,env,admin_sql,bao_request,root_token,messenger=False,continuity=Fal
                     time.sleep(.1)
             if messenger:
                 subprocess.run(['node',str(root/'tools/m2/browser.mjs')],cwd=root,env=child,check=True)
+            if recovery:
+                admin_sql(f"USE [{env['M1_DB_NAME']}]; DECLARE @room uniqueidentifier=NEWID(); INSERT messaging.Rooms(RoomId,IsGroup,Closed,MembershipVersion,LastSequence,CreatedAt) VALUES (@room,1,0,1,0,SYSDATETIMEOFFSET()); INSERT messaging.Participants(RoomId,UserId,JoinedSequence,HistoryCutoff,LastReadSequence,Hidden,Muted) SELECT @room,UserId,1,0,0,0,0 FROM dbo.Users WHERE Email IN (N'{email.replace('browser-','m2-1-')}',N'{email.replace('browser-','m2-2-')}',N'{email.replace('browser-','m2-3-')}');")
             subprocess.run(['node',str(root/'tools/m1/browser.mjs'),'setup'],cwd=root,env=child,check=True)
             admin_sql(f"USE [{env['M1_DB_NAME']}]; UPDATE auth.AccountSecurity SET EmailFactorEnabled=1 WHERE UserId=(SELECT UserId FROM dbo.Users WHERE Email=N'{email}');")
             admin=__import__('json').loads(pathlib.Path(env['M1_BAO_ADMIN_FILE']).read_text())
@@ -42,7 +44,10 @@ def run(root,env,admin_sql,bao_request,root_token,messenger=False,continuity=Fal
                     m3email=email.replace('browser-','m2-1-')
                     admin_sql(f"USE [{env['M1_DB_NAME']}]; UPDATE auth.AccountSecurity SET EmailFactorEnabled=1 WHERE UserId=(SELECT UserId FROM dbo.Users WHERE Email=N'{m3email}');")
                     subprocess.run(['node',str(root/'tools/m3/browser.mjs'),'password'],cwd=root,env=child,check=True)
+                if recovery:subprocess.run(['node',str(root/'tools/m4/browser.mjs'),'local'],cwd=root,env=child,check=True)
             finally:bao_request('sys/unseal',{'key':admin['keys_base64'][0]})
+            if recovery:
+                for phase in ['service','peer']:subprocess.run(['node',str(root/'tools/m4/browser.mjs'),phase],cwd=root,env=child,check=True)
         finally:
             backend.terminate();static.terminate()
             try:backend.wait(timeout=15)
