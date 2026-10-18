@@ -126,6 +126,22 @@ class LocalSetupTests(unittest.TestCase):
             with self.assertRaises(setup.SetupError):
                 setup.env_text({"DB_PASSWORD": "a\nb"})
 
+    def test_missing_or_stale_truststore_reports_the_setup_and_source_commands(self):
+        for value in ("", "/nonexistent/polylink/truststore"):
+            with self.subTest(value=value), patch.dict(os.environ, {"POLYLINK_TRUSTSTORE": value}):
+                with self.assertRaisesRegex(setup.SetupError, "setup.sh.*source tools/local/env.sh"):
+                    setup.java_options()
+        with tempfile.TemporaryDirectory() as directory:
+            trust = Path(directory) / "trust store"
+            trust.touch()
+            with patch.dict(os.environ, {"POLYLINK_TRUSTSTORE": str(trust), "JAVA_TOOL_OPTIONS": "-Xmx512m -Djavax.net.ssl.trustStore=/old -Djavax.net.ssl.trustStorePassword=old"}):
+                options = setup.java_options()
+                import shlex
+                values = shlex.split(options)
+                self.assertIn("-Xmx512m", values)
+                self.assertIn("-Djavax.net.ssl.trustStore=" + str(trust), values)
+                self.assertNotIn("-Djavax.net.ssl.trustStore=/old", values)
+
     def test_macos_java_home_is_a_supported_discovery_path(self):
         with patch.object(setup.sys, "platform", "darwin"), patch.object(setup.Path, "exists", return_value=True), patch.object(setup.subprocess, "run", return_value=subprocess.CompletedProcess([], 0, "/fixture/mac-jdk\n", "")), patch.object(setup, "valid_jdk", side_effect=lambda p: p == "/fixture/mac-jdk"), patch.object(setup.shutil, "which", return_value=None), patch.object(setup.glob, "glob", return_value=[]):
             self.assertEqual(setup.find_jdk(), "/fixture/mac-jdk")

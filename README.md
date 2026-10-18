@@ -1,6 +1,6 @@
 # PolyLink
 
-A university alumni/lecturer networking project with a Java 25/Spring Boot backend and a vanilla JavaScript frontend. The real application currently supports invitation registration, email verification, encrypted direct text messaging, persistent sessions and ordinary password changes. Encryption-key setup is automatic; users never save or enter a recovery key.
+A university alumni/lecturer networking project with a Java 25/Spring Boot backend and a vanilla JavaScript frontend. The real application currently supports invitation registration, email verification, encrypted direct text messaging, persistent sessions, ordinary password changes and email-based account/history recovery. Encryption-key setup is automatic; users never save or enter a recovery key.
 
 ## Requirements — Linux and macOS
 
@@ -48,7 +48,7 @@ export MIGRATION_DB_PASSWORD="$DB_PASSWORD"
 ./backend/mvnw -f backend/pom.xml compile exec:java -Dexec.mainClass=am.polylink.database.SchemaCommand -Dexec.args=upgrade
 ```
 
-Use separate migration credentials if your runtime SQL user lacks permission. For an already-created **empty** database, use `-Dexec.args=fresh` instead. An existing database must pass the baseline guard; do not force it or delete tables. This applies/validates migrations through V4. Application startup never migrates a database. See [schema details](docs/messenger/schema-and-migrations.md).
+Use separate migration credentials if your runtime SQL user lacks permission. For an already-created **empty** database, use `-Dexec.args=fresh` instead. An existing database must pass the baseline guard; do not force it or delete tables. This applies/validates migrations through V5. Application startup never migrates a database. See [schema details](docs/messenger/schema-and-migrations.md).
 
 ### 4. Invite two test users
 
@@ -76,6 +76,8 @@ python3 server.py --port 8001
 
 Check [backend health](http://localhost:3004/actuator/health), then open [registration](http://localhost:8001/register.html). `js/config.js` already selects `http` and `http://localhost:3004`. No frontend install/build is needed for manual use; Axios/fonts/styles can still require internet access.
 
+If recovery returns `SERVICE_UNAVAILABLE` from `/auth/recovery/unlock`, check that OpenBao is unsealed and its application token is valid. A backend started without the local JVM truststore cannot reach its HTTPS endpoint. Stop the backend, rerun `bash tools/local/setup.sh`, then `source tools/local/env.sh` **in the same terminal** and start it again. Sourcing `local.env` directly does not configure Java TLS. These steps preserve existing Transit keys and account data; see [local troubleshooting](tools/local/README.md).
+
 Use **`localhost` consistently**, rather than mixing it with `127.0.0.1`. Keep the default ports unless you also update the allowed frontend origin and API URL. Stop older app servers occupying ports 3004/8001 so you test this checkout.
 
 ### 6. Try it
@@ -87,7 +89,7 @@ Use **`localhost` consistently**, rather than mixing it with `127.0.0.1`. Keep t
 5. Reload or restart the browser: a valid session and working secure browser storage restore access without another password. Bob can also close his browser and read Alice's later message when he returns.
 6. Try **Settings → Password**. The new password should preserve history and revoke other device sessions. A clean browser profile can open the same history with that password.
 
-Images, forgotten-password recovery, legacy/group migration and some unrelated profile/forum/settings actions remain later milestones. An unavailable action fails explicitly; HTTP mode never falls back to demo data. See [LIVE_TESTING.md](LIVE_TESTING.md) for detailed checks and troubleshooting.
+Images, legacy/group migration and some unrelated profile/forum/settings actions remain later milestones. An unavailable action fails explicitly; HTTP mode never falls back to demo data. See [LIVE_TESTING.md](LIVE_TESTING.md) for detailed checks and troubleshooting.
 
 ## Test automatically
 

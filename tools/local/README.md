@@ -8,7 +8,7 @@ Start with the [root quickstart](../../README.md). Scripts locate their own chec
 | `source tools/local/env.sh` | Load private configuration into the current shell, resolve JDK 25 again, set PATH and replace only the local truststore JVM options while retaining other options. No provisioning. |
 | `bash tools/local/provision-openbao.sh` | Provision a running loopback HTTPS OpenBao for local development, with guarded initialization/unseal, existing Transit-key validation and narrow token creation/renewal. No Docker or SQL start. |
 | `bash tools/local/test.sh` | Install pinned test dependencies; run setup, client/crypto, OpenAPI and backend checks. |
-| `bash tools/local/test.sh --full` | Include the existing isolated M1–M3 SQL/SMTP/TLS/browser acceptance runner. |
+| `bash tools/local/test.sh --full` | Include the existing isolated M1–M4 SQL/SMTP/TLS/browser acceptance runner. |
 
 Simple starts remain explicit in the README: Maven for the backend, Python for the frontend, and Docker Compose for mail/OpenBao. Migrations and invitations also remain explicit commands.
 
@@ -62,3 +62,9 @@ python3 tools/local/test_infrastructure.py
 ```
 
 Its cleanup removes only that uniquely named disposable project. It does not provision or stop the developer's running OpenBao.
+
+## Recovery reports service unavailable
+
+`POST /auth/recovery/unlock` needs the real OpenBao Transit service. SQL migrations alone do not configure Java TLS. If OpenBao is unsealed and its narrow token is valid but recovery still fails, inspect the backend terminal for TLS/truststore failures. Stop the backend, run `bash tools/local/setup.sh`, then `source tools/local/env.sh` and restart from that same terminal. An environment loaded before local setup, or one loaded directly from `local.env`, can lack `JAVA_TOOL_OPTIONS` and leave Java unable to trust the local certificate. Environment changes do not update an already-running Java process.
+
+Setup reuses the existing certificate/key and copies the narrow token into the stable private state directory. It does not reinitialize OpenBao, replace Transit keys or modify account data. If the token has expired, use the existing provisioning command and operator state as described above.

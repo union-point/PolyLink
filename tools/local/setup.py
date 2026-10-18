@@ -272,9 +272,12 @@ def setup(state, java=None, discovery=True):
 
 
 def java_options():
+    truststore = os.environ.get("POLYLINK_TRUSTSTORE")
+    if not truststore or not Path(truststore).is_file():
+        raise SetupError("Local OpenBao truststore is missing. Run bash tools/local/setup.sh, then source tools/local/env.sh in the backend terminal before starting Java.")
     options = shlex.split(os.environ.get("JAVA_TOOL_OPTIONS", ""))
     options = [o for o in options if not o.startswith(("-Djavax.net.ssl.trustStore=", "-Djavax.net.ssl.trustStorePassword="))]
-    options += ["-Djavax.net.ssl.trustStore=" + os.environ["POLYLINK_TRUSTSTORE"], "-Djavax.net.ssl.trustStorePassword=changeit"]
+    options += ["-Djavax.net.ssl.trustStore=" + truststore, "-Djavax.net.ssl.trustStorePassword=changeit"]
     return shlex.join(options)
 
 
