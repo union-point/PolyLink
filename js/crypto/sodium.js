@@ -30,10 +30,10 @@ export async function seal(plaintext,key,binding){
   const s=await sodium(),nonce=s.randombytes_buf(24);
   return {scheme:'PLK1',nonce:s.to_base64(nonce,s.base64_variants.URLSAFE_NO_PADDING),ciphertext:s.to_base64(s.crypto_aead_xchacha20poly1305_ietf_encrypt(plaintext,binding,null,nonce,key),s.base64_variants.URLSAFE_NO_PADDING)};
 }
-export async function open(packet,key,binding){
+export async function open(packet,key,binding,maxBytes=1048592){
   const s=await sodium();
   if(packet?.scheme!=='PLK1')throw new Error('Unsupported encrypted data format.');
   const nonce=s.from_base64(packet.nonce,s.base64_variants.URLSAFE_NO_PADDING),cipher=s.from_base64(packet.ciphertext,s.base64_variants.URLSAFE_NO_PADDING);
-  if(nonce.length!==24||cipher.length<16||cipher.length>1048592)throw new Error('Invalid encrypted packet.');
+  if(nonce.length!==24||cipher.length<16||cipher.length>maxBytes)throw new Error('Invalid encrypted packet.');
   return s.crypto_aead_xchacha20poly1305_ietf_decrypt(null,cipher,binding,nonce,key);
 }

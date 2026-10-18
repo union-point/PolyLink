@@ -1,6 +1,12 @@
 // Only routes evidenced in the repository are mapped. Missing capabilities stay
 // explicit until a backend contract is agreed; add them here, never in page scripts.
 export const routes = {
+  'chat.read': (roomId,throughSequence) => ({method:'put',url:`/chat/rooms/${encodeURIComponent(roomId)}/read`,data:{throughSequence}}),
+  'chat.mute': (roomId,enabled) => ({method:'put',url:`/chat/rooms/${encodeURIComponent(roomId)}/mute`,data:{enabled}}),
+  'chat.hide': roomId => ({method:'post',url:`/chat/rooms/${encodeURIComponent(roomId)}/hide`,data:{}}),
+  'chat.block': (userId,enabled) => ({method:'put',url:`/chat/blocks/${encodeURIComponent(userId)}`,data:{enabled}}),
+  'chat.upload': (roomId,id,bytes) => ({method:'post',url:`/chat/rooms/${encodeURIComponent(roomId)}/attachments`,headers:{'Content-Type':'application/octet-stream','X-Attachment-Id':id},data:bytes,timeout:30000}),
+  'chat.download': id => ({method:'get',url:`/chat/attachments/${encodeURIComponent(id)}`,responseType:'arraybuffer',maxContentLength:5242896}),
   'chat.list': (params={}) => ({method:'get',url:'/chat/rooms',params}),
   'chat.openDirect': userId => ({method:'post',url:'/chat/direct',data:{userId:String(userId)}}),
   'chat.messages': (roomId,params={}) => ({method:'get',url:`/chat/rooms/${encodeURIComponent(roomId)}/messages`,params}),

@@ -27,7 +27,7 @@ export const forum = {
 };
 export const search = { people: operation('search.people') };
 export const chat = {
-  list: operation('chat.list'), openDirect: operation('chat.openDirect'), messages: operation('chat.messages'), send: operation('chat.send'),
+  page: operation('chat.page'), release: operation('chat.release'), list: operation('chat.list'), openDirect: operation('chat.openDirect'), messages: operation('chat.messages'), send: operation('chat.send'),
   read: operation('chat.read'), mute: operation('chat.mute'), hide: operation('chat.hide'), block: operation('chat.block'), subscribe,
 };
 export const settings = {

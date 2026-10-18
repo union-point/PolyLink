@@ -1,10 +1,12 @@
+import { upgradeChatState, preference, blocked as isBlocked, canSend, visibleMessages, markRead, hideRoom, appendMessage, messagePage } from './chat-state.js';
+import { validateImageBytes } from '../../crypto/images.js';
 import { transaction, nextId } from './store.js';
 import { DataError } from '../errors.js';
 import { email, password, required, validateEducation, validateCertificate, validatePost, validateTopic, validateImage, richContent } from '../validation.js';
 
 const now = () => new Date().toISOString();
 const defaults = () => ({ isProfilePublic: true, showEmail: false, twoFactorEnabled: false, language: 'hy', emailEnabled: true, newListingNotifications: true, forumReplyNotifications: true, directMessageNotifications: true });
-const readOperations = new Set(['auth.me', 'profiles.get', 'profiles.education.list', 'profiles.certificates.list', 'posts.list', 'posts.comments.list', 'forum.list', 'forum.get', 'forum.replies.list', 'search.people', 'chat.list', 'chat.messages', 'settings.get', 'settings.export']);
+const readOperations = new Set(['auth.me', 'profiles.get', 'profiles.education.list', 'profiles.certificates.list', 'posts.list', 'posts.comments.list', 'forum.list', 'forum.get', 'forum.replies.list', 'search.people', 'chat.list', 'chat.messages', 'chat.page', 'settings.get', 'settings.export']);
 const publicOperations = new Set(['auth.me', 'auth.login', 'auth.register', 'auth.verifySecondFactor', 'auth.resendChallenge', 'auth.forgotPassword', 'auth.verifyRecovery', 'auth.resetPassword', 'auth.logout']);
 
 function find(records, id) {
@@ -43,27 +45,22 @@ function replyView(state, record) {
   const { likes, ...reply } = record;
   return { ...reply, author: author(state, record.userId), likeCount: likes.length, liked: likes.includes(state.sessionUserId) };
 }
-function preference(room, id) {
-  room.preferences[id] ||= { muted: false, hidden: false, deletedAt: null, readAt: null };
-  return room.preferences[id];
-}
 function roomForUser(state, id) {
   const room = find(state.rooms, id);
   if (!room.participants.includes(me(state).id)) throw new DataError('FORBIDDEN', 'Նամակագրությունը հասանելի չէ։');
   return room;
 }
-function isBlocked(state, first, second) { return state.blocks.some(block => block.userId === first && block.targetId === second); }
 function messageView(state, message) {
   return { ...message, sender: author(state, message.senderId) };
 }
 function roomView(state, room) {
   const userId = me(state).id;
   const pref = preference(room, userId);
-  const messages = state.messages.filter(message => message.roomId === room.id && (!pref.deletedAt || message.createdAt > pref.deletedAt));
+  const messages = visibleMessages(state,room,userId);
   const participants = room.participants.map(id => author(state, id));
   const other = room.participants.find(id => id !== userId);
   return { id: room.id, isGroup: room.isGroup, closed: room.participants.length < 2, name: room.name || participants.filter(person => person.id !== userId).map(person => person.name).join(', ') || 'Ջնջված օգտատեր', participants,
-    muted: pref.muted, blocked: isBlocked(state, userId, other), unreadCount: messages.filter(message => message.senderId !== userId && (!pref.readAt || message.createdAt > pref.readAt)).length,
+    muted: pref.muted, blocked: !room.isGroup&&isBlocked(state,userId,other), canSend:canSend(state,room), historyCutoff:pref.historyCutoff,lastReadSequence:pref.lastReadSequence,lastSequence:room.lastSequence||'0',unreadCount:messages.filter(message=>message.senderId!==userId&&BigInt(message.sequence)>BigInt(pref.lastReadSequence)).length,
     lastMessage: messages.length ? messageView(state, messages.at(-1)) : null };
 }
 function challenge(state, id, purpose) {
@@ -217,24 +214,24 @@ const operations = {
     preference(room, own).hidden = false;
     return roomView(state, room);
   },
-  'chat.messages': (state, id) => { const room = roomForUser(state, id); const pref = preference(room, me(state).id); return state.messages.filter(message => message.roomId === String(id) && (!pref.deletedAt || message.createdAt > pref.deletedAt)).map(message => messageView(state, message)); },
+  'chat.messages': (state,id)=>visibleMessages(state,roomForUser(state,id),me(state).id).map(message=>messageView(state,message)),
+  'chat.page': (state,id,params)=>{const page=messagePage(visibleMessages(state,roomForUser(state,id),me(state).id),params);return {...page,items:page.items.map(message=>messageView(state,message))};},
   'chat.send': (state, roomId, data) => {
-    const room = roomForUser(state, roomId), own = me(state).id;
+    upgradeChatState(state);const room = roomForUser(state, roomId), own = me(state).id;
     if (room.participants.length < 2) throw new DataError('FORBIDDEN', 'Նամակագրությունն ավարտված է։');
-    if (room.participants.some(id => id !== own && (isBlocked(state, own, id) || isBlocked(state, id, own)))) throw new DataError('FORBIDDEN', 'Հաղորդագրությունը չի կարող ուղարկվել։ Օգտատերը արգելափակված է։');
+    if (!canSend(state,room)) throw new DataError('FORBIDDEN', 'Հաղորդագրությունը չի կարող ուղարկվել։ Օգտատերը արգելափակված է։');
     const text = String(data.text || '').trim();
     if (!text && !data.file) throw new DataError('VALIDATION', 'Մուտքագրեք հաղորդագրություն։');
     if (text.length > 5000) throw new DataError('VALIDATION', 'Հաղորդագրությունը չափազանց երկար է։');
     let attachment = null;
     if (data.file) { const id = nextId(state, 'media'); state.media.push({ id, userId: own, blob: validateImage(data.file) }); attachment = { url: `media:${id}`, name: data.file.name, type: data.file.type }; }
-    const message = { id: nextId(state, 'message'), roomId: room.id, senderId: own, text, attachment, createdAt: now() }; state.messages.push(message);
-    room.participants.forEach(id => { preference(room, id).hidden = false; });
+    const message = { id: nextId(state, 'message'), roomId: room.id, senderId: own, text, attachment, createdAt: now() }; appendMessage(state,room,message);
     return messageView(state, message);
   },
-  'chat.read': (state, id) => { preference(roomForUser(state, id), me(state).id).readAt = now(); return null; },
+  'chat.read': (state,id,through)=>{const room=roomForUser(state,id);markRead(state,room,me(state).id,String(through));return roomView(state,room);},
   'chat.mute': (state, id, value) => { const room = roomForUser(state, id); preference(room, me(state).id).muted = Boolean(value); return roomView(state, room); },
-  'chat.hide': (state, id) => { const pref = preference(roomForUser(state, id), me(state).id); pref.hidden = true; pref.deletedAt = now(); return null; },
-  'chat.block': (state, userId, value) => { const own = me(state).id; find(state.users, userId); state.blocks = state.blocks.filter(block => block.userId !== own || block.targetId !== String(userId)); if (value) state.blocks.push({ userId: own, targetId: String(userId) }); return null; },
+  'chat.hide': (state,id)=>hideRoom(roomForUser(state,id),me(state).id),
+  'chat.block': (state, userId, value) => { const own = me(state).id; find(state.users, userId);if(own===String(userId))throw new DataError('VALIDATION','Choose another user.'); state.blocks = state.blocks.filter(block => block.userId !== own || block.targetId !== String(userId)); if (value) state.blocks.push({ userId: own, targetId: String(userId) }); return null; },
   'settings.get': state => state.settings[me(state).id] || defaults(),
   'settings.update': (state, data) => {
     const settings = state.settings[me(state).id] ||= defaults();
@@ -300,8 +297,11 @@ export function createMockProvider() {
     return walk(result);
   }
   async function call(operation, ...args) {
+    if(operation==='chat.release'){for(const url of urls.values())URL.revokeObjectURL(url);urls.clear();return null;}
+    if(['auth.logout','chat.hide'].includes(operation)){for(const url of urls.values())URL.revokeObjectURL(url);urls.clear();}
     if (!operations[operation]) throw new DataError('UNSUPPORTED', 'Այս գործողությունը հասանելի չէ։');
     const scenario = await transaction(state => {
+      upgradeChatState(state);
       const failure = state.scenario.failures[operation];
       delete state.scenario.failures[operation];
       return { latency: state.scenario.latency, failure };
@@ -327,6 +327,7 @@ export function createMockProvider() {
       } else if (operation === 'settings.changePassword') args = [{ oldDigest: await digest(user.email, data.oldPassword), newDigest: await digest(user.email, password(data.newPassword)) }];
       else args = [{ digest: await digest(user.email, data.password) }];
     }
+    if(operation==='chat.send'&&args[1]?.file){const file=validateImage(args[1].file);await validateImageBytes(new Uint8Array(await file.arrayBuffer()),file.type);}
     const write = !readOperations.has(operation);
     const result = await transaction(state => {
       if (!publicOperations.has(operation)) me(state);
@@ -353,12 +354,12 @@ export function createMockProvider() {
       async clearScenarios() { await transaction(state => { state.scenario = { latency: 0, failures: {} }; }, { write: true }); },
       async incoming(roomId, text) {
         const result = await transaction(state => {
-          const room = roomForUser(state, roomId), own = me(state).id;
+          upgradeChatState(state);const room = roomForUser(state, roomId), own = me(state).id;
           const senderId = room.participants.find(id => id !== own);
           if (!senderId) throw new DataError('VALIDATION', 'No other participant');
-          if (isBlocked(state, own, senderId) || isBlocked(state, senderId, own)) throw new DataError('FORBIDDEN', 'Օգտատերը արգելափակված է։');
+          if (!room.isGroup&&(isBlocked(state, own, senderId) || isBlocked(state, senderId, own))) throw new DataError('FORBIDDEN', 'Օգտատերը արգելափակված է։');
           const message = { id: nextId(state, 'message'), roomId: room.id, senderId, text: required(text, 'text', 5000), createdAt: now(), attachment: null };
-          state.messages.push(message); preference(room, own).hidden = false; return messageView(state, message);
+          appendMessage(state,room,message);return messageView(state,message);
         }, { write: true });
         notify({ operation: 'chat.incoming' }); channel?.postMessage({ operation: 'chat.incoming' }); return result;
       },

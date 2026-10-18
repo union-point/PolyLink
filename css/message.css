@@ -432,3 +432,7 @@ body {
         transform: translateY(0);
     }
 }
+/* History owns its scroll anchor while pages merge. */
+.messages { min-height: 0; overflow-anchor: none; }
+.message { flex-shrink: 0; }
+[data-poll-status]:empty { display: none; }
