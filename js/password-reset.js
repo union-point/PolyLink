@@ -24,4 +24,5 @@ start(async () => {
       else location.href='login.html';
     });
   };
+  form.querySelector('[type="submit"]').disabled=false;
 });
