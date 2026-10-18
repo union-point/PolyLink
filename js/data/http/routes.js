@@ -1,6 +1,12 @@
 // Only routes evidenced in the repository are mapped. Missing capabilities stay
 // explicit until a backend contract is agreed; add them here, never in page scripts.
 export const routes = {
+  'chat.list': (params={}) => ({method:'get',url:'/chat/rooms',params}),
+  'chat.openDirect': userId => ({method:'post',url:'/chat/direct',data:{userId:String(userId)}}),
+  'chat.messages': (roomId,params={}) => ({method:'get',url:`/chat/rooms/${encodeURIComponent(roomId)}/messages`,params}),
+  'chat.send': (roomId,data) => ({method:'post',url:`/chat/rooms/${encodeURIComponent(roomId)}/messages`,data}),
+  'chat.keys': roomId => ({method:'get',url:`/chat/rooms/${encodeURIComponent(roomId)}/keys`}),
+  'chat.activate': (roomId,data) => ({method:'post',url:`/chat/rooms/${encodeURIComponent(roomId)}/keys/activate`,data}),
   'auth.me': () => ({ method: 'get', url: '/auth/me' }),
   'auth.login': ({email, loginSecret, scheme}) => ({ method: 'post', url: '/auth/login', data: {email, loginSecret, scheme} }),
   'auth.register': ({email, firstName, lastName, role, loginSecret, derivation}) => ({ method: 'post', url: '/auth/register', data: {email, firstName, lastName, role, loginSecret, derivation} }),

@@ -1,5 +1,6 @@
 import { sodium, derive, seal, open, aad } from '../crypto/sodium.js';
 import { saveDevice, openDevice, clearDevice } from '../crypto/device-store.js';
+import { outboxStore } from '../crypto/outbox-store.js';
 import { DataError } from '../data/errors.js';
 
 export function createIdentityClient(api){
@@ -9,7 +10,7 @@ export function createIdentityClient(api){
   const post=(url,data)=>api.request({method:'post',url,data});
   const emit=operation=>{for(const listener of listeners)listener({operation});};
   function forget(){vaultKey?.fill(0);vaultKey=null;vault=null;}
-  async function clear(){forget();api.setToken(null);await clearDevice(session?.user.id).catch(()=>{});session=null;}
+  async function clear(){await outboxStore.clear(session?.user.id).catch(()=>{});forget();api.setToken(null);await clearDevice(session?.user.id).catch(()=>{});session=null;}
   channel?.addEventListener('message',async event=>{
     if(event.data?.operation==='auth.logout'){await clear();emit('auth.logout');}
     if(event.data?.operation==='auth.login'){forget();api.setToken(null);emit('auth.login');}
@@ -102,12 +103,17 @@ export function createIdentityClient(api){
     },
     async logout(){
       localStorage.setItem('polylink.http.loggedOut','true');const account=session?.user.id;forget();pending?.derived.login.fill(0);pending?.derived.wrapping.fill(0);pending=null;
-      await clearDevice(account).catch(()=>{});channel?.postMessage({operation:'auth.logout'});emit('auth.logout');
+      await clearDevice(account).catch(()=>{});await outboxStore.clear(account).catch(()=>{});channel?.postMessage({operation:'auth.logout'});emit('auth.logout');
       try{await post('/auth/logout',{});}catch(error){throw new DataError('NETWORK','You are signed out on this browser. Server session revocation could not be confirmed. Try signing out again when connected.',{},true);}
       finally{api.setToken(null);session=null;}
     },
     subscribe(listener){listeners.add(listener);return()=>listeners.delete(listener);},
     isUnlocked(){return !!vaultKey;},
+    async withKeys(work){
+      await client.me();
+      if(!session||!vaultKey||!vault)throw new DataError('KEY_LOCKED','Sign in with your password to open encrypted messages.');
+      return work({session,vault,vaultKey});
+    },
     close(){forget();channel?.close();}
   };
   globalThis.addEventListener?.('pagehide', event=>{forget();pending?.derived.login.fill(0);pending?.derived.wrapping.fill(0);pending=null;api.setToken(null);if(!event.persisted)channel?.close();});

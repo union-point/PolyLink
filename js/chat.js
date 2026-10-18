@@ -10,7 +10,7 @@ start(async () => {
   const send = document.querySelector('.send-icon'), attach = document.querySelector('.attachment-btn'), emoji = document.querySelector('.emoji-btn');
   const menuButton = document.querySelector('.menu-btn'), searchButton = document.querySelector('.chat-actions .action-icon:not(.menu-btn)');
   const inputRow = document.querySelector('.message-input');
-  let rooms = [], selected = null, records = [], selectionGeneration = 0, refreshGeneration = 0, saving = false;
+  let rooms = [], selected = null, records = [], selectionGeneration = 0, refreshGeneration = 0, saving = false, refreshing = false;
   const drafts = new Map(), attachments = new Map();
   function iconButton(element, label) { element.setAttribute('aria-label', label); element.style.border = '0'; element.style.background = 'transparent'; element.style.padding = '0'; element.type = 'button'; }
   iconButton(send, 'Ուղարկել հաղորդագրությունը'); iconButton(attach, 'Կցել պատկեր'); iconButton(emoji, 'Ընտրել էմոջի'); iconButton(menuButton, 'Նամակագրության գործողություններ'); iconButton(searchButton, 'Որոնել նամակագրության մեջ');
@@ -43,7 +43,7 @@ start(async () => {
     document.querySelector('.contact-name').textContent = selected?.name || 'Ընտրեք նամակագրություն';
     document.querySelector('.contact-info .avatar').textContent = selected ? selected.isGroup ? '👥' : selected.name.slice(0, 1) : '';
     document.querySelector('.contact-status').textContent = selected ? selected.closed ? 'Նամակագրությունն ավարտված է' : selected.blocked ? 'Արգելափակված է' : selected.isGroup ? 'Խմբային նամակագրություն' : 'Անձնական նամակագրություն' : '';
-    input.disabled = !selected || selected.blocked || selected.closed || saving; send.disabled = !selected || selected.blocked || selected.closed || saving; attach.disabled = !selected || selected.blocked || selected.closed || saving; menuButton.disabled = !selected;
+    input.disabled = !selected || selected.canSend===false || selected.blocked || selected.closed || saving; send.disabled = input.disabled; attach.disabled = input.disabled; menuButton.disabled = !selected;
     renderMenu();
   }
   async function selectRoom(room) {
@@ -54,10 +54,11 @@ start(async () => {
     try {
       const messages = await chat.messages(room.id); if (current !== selectionGeneration) return;
       records = messages; renderHistory();
-      await chat.read(room.id); room.unreadCount = 0; renderList();
+      await chat.read(room.id); renderList();
     } catch (error) { if (current === selectionGeneration) stateMessage(history, error.message, { retry: () => selectRoom(room) }); }
   }
   async function refresh() {
+    if(refreshing)return;refreshing=true;
     const current = ++refreshGeneration;
     try {
       const latest = await chat.list(); if (current !== refreshGeneration) return;
@@ -71,9 +72,10 @@ start(async () => {
         const messages = await chat.messages(target.id);
         if (previousGeneration !== selectionGeneration || current !== refreshGeneration) return;
         selected = target; records = messages; renderHistory(); setHeader();
-        if (document.visibilityState !== 'hidden') { await chat.read(target.id); target.unreadCount = 0; renderList(); }
+        if (document.visibilityState !== 'hidden') { await chat.read(target.id); renderList(); }
       }
-    } catch (error) { stateMessage(list, error.message, { retry: refresh }); }
+    } catch (error) { if(!rooms.length)stateMessage(list, error.message, { retry: refresh });else showError(area,error); }
+    finally{refreshing=false;}
   }
   list.onclick = event => { const item = event.target.closest('.chat-item'); if (item) selectRoom(rooms.find(room => room.id === item.dataset.roomId)); };
   list.onkeydown = event => { if (event.key === 'Enter' || event.key === ' ') { const item = event.target.closest('.chat-item'); if (item) { event.preventDefault(); item.click(); } } };

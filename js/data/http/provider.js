@@ -1,3 +1,4 @@
+import { createEncryptedChat } from '../../chat/encrypted-client.js';
 import { createIdentityClient } from '../../auth/identity-client.js';
 import { loadTransport } from './transport.js';
 import { routes } from './routes.js';
@@ -7,10 +8,12 @@ import { unwrap, list, normalizeUser, normalizePost, normalizeComment, normalize
 export function createHttpProvider(transportPromise = loadTransport()) {
   // Prevent an unhandled rejection when a CDN fails before the first operation.
   const transport = Promise.resolve(transportPromise); transport.catch(() => {});
-  let identityPromise;
+  let identityPromise,chatPromise;
+  const chatClient=()=>chatPromise ||= Promise.all([transport,identityClient()]).then(([api,identity])=>createEncryptedChat(api,identity));
   const identityClient = () => identityPromise ||= transport.then(api => createIdentityClient(api));
   return {
     async call(operation, ...args) {
+      if(operation.startsWith('chat.')){const client=await chatClient();const method=operation.slice(5);if(typeof client[method]!=='function')throw new DataError('UNSUPPORTED','This chat operation is unavailable.');return client[method](...args);}
       if (operation.startsWith('auth.')) {
         const client = await identityClient(), method = operation.slice(5);
         if (typeof client[method] !== 'function') throw new DataError('UNSUPPORTED', 'This authentication operation is not available yet.');
@@ -43,6 +46,6 @@ export function createHttpProvider(transportPromise = loadTransport()) {
       if (operation === 'search.people') return list(body, normalizeUser).filter(user => (!args[0]?.institute || user.institute === args[0].institute) && (!args[0]?.specialization || user.specialization === args[0].specialization) && (!args[0]?.year || user.graduationYear === String(args[0].year)));
       return body;
     },
-    async subscribe(listener) { return (await identityClient()).subscribe(listener); },
+    async subscribe(listener) { const a=(await identityClient()).subscribe(listener),b=(await chatClient()).subscribe(listener);return()=>{a();b();}; },
   };
 }
