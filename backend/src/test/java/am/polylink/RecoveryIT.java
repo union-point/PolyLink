@@ -208,6 +208,67 @@ class RecoveryIT {
         assertThat(second.get("/auth/recovery/status").statusCode()).isEqualTo(401);
     }
 
+    void sealed(boolean seal) throws Exception {
+        var admin =
+                mapper.readTree(
+                        java.nio.file.Files.readString(
+                                java.nio.file.Path.of(IdentityIT.required("M1_BAO_ADMIN_FILE"))));
+        var request =
+                java.net.http.HttpRequest.newBuilder(
+                                java.net.URI.create(
+                                        IdentityIT.required("OPENBAO_URL")
+                                                + "/v1/sys/"
+                                                + (seal ? "seal" : "unseal")))
+                        .header("X-Vault-Token", admin.path("root_token").asText())
+                        .header("Content-Type", "application/json")
+                        .POST(
+                                java.net.http.HttpRequest.BodyPublishers.ofString(
+                                        seal
+                                                ? "{}"
+                                                : mapper.writeValueAsString(
+                                                        Map.of(
+                                                                "key",
+                                                                admin.path("keys_base64")
+                                                                        .get(0)
+                                                                        .asText()))))
+                        .build();
+        assertThat(
+                        java.net.http.HttpClient.newHttpClient()
+                                .send(request, java.net.http.HttpResponse.BodyHandlers.ofString())
+                                .statusCode())
+                .isEqualTo(seal ? 204 : 200);
+    }
+
+    @Test
+    void transitOutagesKeepOldCredentialsAndResumeTheSameImmutablePackage() throws Exception {
+        var a = passwords.configured();
+        var browser = fixture.new Browser();
+        var op = verify(a, browser);
+        var id = Map.of("operationId", op.path("operationId").asText());
+        sealed(true);
+        try {
+            assertThat(browser.post("/auth/recovery/unlock", id).statusCode()).isEqualTo(503);
+            assertThat(a.browser().get("/auth/me").statusCode()).isEqualTo(200);
+            assertThat(browser.json(browser.get("/auth/recovery/status")).path("state").asText())
+                    .isEqualTo("WAITING_SERVICE");
+        } finally {
+            sealed(false);
+        }
+        assertThat(browser.post("/auth/recovery/unlock", id).statusCode()).isEqualTo(200);
+        var input = candidate(a, op, true);
+        sealed(true);
+        try {
+            assertThat(browser.post("/auth/recovery/prepare", input).statusCode()).isEqualTo(503);
+            assertThat(browser.post("/auth/recovery/commit", id).statusCode()).isEqualTo(409);
+            assertThat(a.browser().get("/auth/me").statusCode()).isEqualTo(200);
+            assertThat(passwords.vault(a.id()).get("VaultKeyVersion").toString()).isEqualTo("1");
+        } finally {
+            sealed(false);
+        }
+        assertThat(browser.post("/auth/recovery/prepare", input).statusCode()).isEqualTo(200);
+        assertThat(browser.post("/auth/recovery/commit", id).statusCode()).isEqualTo(200);
+    }
+
     @Test
     void changedAccountAndConcurrentCommitCannotOverwriteNewerState() throws Exception {
         var a = passwords.configured();

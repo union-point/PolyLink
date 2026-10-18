@@ -256,7 +256,7 @@ class IdentityIT {
                                         "/auth/recovery/unlock",
                                         Map.of("operationId", payload.get("operationId")))
                                 .statusCode())
-                .isEqualTo(403);
+                .isEqualTo(401);
         byte[] saved =
                 db.queryForObject(
                         "SELECT PreparedCiphertext FROM keyvault.Operations WHERE OperationId=?",
