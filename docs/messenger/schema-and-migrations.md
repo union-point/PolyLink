@@ -84,3 +84,5 @@ Migration semantics follow the official [Flyway baseline](https://documentation.
 V5 adds hashed, purpose-limited recovery authorizations and email-address snapshots on new challenges. Existing vaults, identities, sessions and chat data are retained. Older in-flight recovery codes without an email snapshot must be requested again. See [M4](m4.md).
 
 V6 adds `messaging.AttachmentBodies` for private binary ciphertext storage. Expired unbound bodies are removed while attachment UUID/digest tombstones remain immutable. Bound objects share message transactions and SQL backup coverage. Existing messages, identities and personal cutoffs are retained. See [M5](m5.md).
+
+V7 adds group metadata, durable group-operation receipts, current/historical membership intervals and the account-deletion ledger. Existing encrypted group owners are the lowest admitted, verified participant IDs; ownerless groups close. Personal state, direct-pair mappings, ciphertext and envelopes remain intact. Legacy plaintext is retained separately. See [M6](m6.md) for explicit import, lifecycle and restore replay commands.

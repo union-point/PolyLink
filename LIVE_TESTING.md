@@ -1,8 +1,8 @@
-# Live verification of M1–M3
+# Live verification of M1–M6
 
 First complete the [Linux/macOS quickstart in README.md](README.md#run-the-real-application): local setup, OpenBao/mail, explicit migrations, invitations and app startup. The helper scripts replace the old manual environment/key/truststore routine and retain private local state across worktrees. See [tools/local/README.md](tools/local/README.md) for their behavior.
 
-**Users do not save, download or type a recovery key.** Password login and email verification trigger automatic encryption-key setup. Local OpenBao operator credentials are separate from user login. Forgotten-password recovery remains M4.
+**Users do not save, download or type a recovery key.** Password login and email verification trigger automatic encryption-key setup. Local OpenBao operator credentials are separate from user login. Email-based account/history recovery is available; see [M4 recovery checks](docs/messenger/m4.md).
 
 Before the checks below, verify:
 
@@ -25,7 +25,7 @@ Use `http://localhost:8001` consistently. If ports 3004/8001 are already occupie
 7. Send a text message. In Bob's browser, open [Messages](http://localhost:8001/message.html). The text should appear within a few seconds while the page is visible. Reply from Bob and confirm Alice receives it.
 8. For the offline-recipient check, close Bob's browser after his setup has completed. Send another message from Alice, then reopen Bob's browser. Bob should be able to read it without any key exchange or action by Alice.
 
-Only direct **text** is included in this slice. Images, full personal-state actions, legacy/group migration and forgotten-password recovery remain later milestones. Some unrelated profile/forum/settings actions still report that they are unavailable; that does not mean the implemented messenger is using mock data.
+Encrypted images and personal actions are implemented in [M5](docs/messenger/m5.md), and dynamic groups, export and lifecycle in [M6](docs/messenger/m6.md). Apply migrations through V7 before testing. Some unrelated profile/forum/settings actions remain unavailable; HTTP mode never substitutes mock data.
 
 ## 2. Test session continuity and password change
 
@@ -84,3 +84,14 @@ Use separate test-administrator credentials if your runtime SQL user cannot crea
 Use Ctrl+C in the frontend/backend terminals. Keep the existing SQL/OpenBao volumes and the local environment file. On the next run, check infrastructure and unseal status, then run `source tools/local/env.sh`, and repeat the backend/frontend one-liners in the root README. Run the upgrade step again after pulling new migrations; existing admitted users simply log in.
 
 The backend renews its OpenBao service token while running. After a sufficiently long shutdown, new account setup may need `bash tools/local/provision-openbao.sh` or an operator-issued replacement token even though existing password-based logins and message history can work without OpenBao.
+
+
+## 6. Test dynamic groups and own-data boundaries
+
+1. In Messages, choose **Create group**, enter a name, find Bob and select him. Bob may be offline after completing key setup.
+2. Open **Group members** to rename the group, add another admitted/configured account, remove a member or transfer ownership. Only the owner receives management controls; a member may leave. An owner with other members must transfer ownership first.
+3. Send text and an image before and after an addition. The newcomer sees only messages sent after joining. Remove and re-add Bob: his new server history starts after rejoining, including images, previews, export and old-send results. Remaining participants retain their history.
+4. Reload after a removal or close the owner's browser. Another current unlocked participant resumes pending key rotation automatically. Text drafts survive reload encrypted in secure storage; browsers require selecting unsent files again.
+5. In Settings, download own data and confirm the export includes only your accessible authored messages/images and no encryption-key material. Use disposable accounts to test deactivation/deletion: deactivation suspends access, while deletion removes own bodies, closes direct sending and transfers owned groups deterministically. See the M6 operator instructions before production use.
+
+Run `python3 tools/m1/verify.py --groups` for the full disposable M1–M6 acceptance suite, or `bash tools/local/test.sh --full` to install test dependencies and run it. M7 retains the supported-platform and operational restore rehearsals.

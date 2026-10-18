@@ -46,3 +46,5 @@ These gates do not reopen the agreed platform-trusted recovery model, six-digit 
 M4 implementation: [atomic recovery, browser resumption and key rotation](m4.md). Apply V5 before starting this version.
 
 M5 implementation: [encrypted images, personal state and paginated chat UI](m5.md). Apply V6 before starting this version.
+
+M6 implementation: [dynamic groups, legacy import, lifecycle and acceptance](m6.md). Apply V7 before starting this version; M7 release/platform/restore checks remain.

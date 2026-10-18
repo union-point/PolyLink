@@ -47,9 +47,9 @@ jobs:
         run: |
           npm ci --prefix tools/m1 --ignore-scripts
           npx --prefix tools/m1 playwright install --with-deps chromium
-      - name: Verify migrations, identity, messenger, session continuity, password, recovery, images and personal-state flows
+      - name: Verify migrations, identity, messenger, session continuity, password, recovery, images, personal state, groups and lifecycle flows
         working-directory: .
-        run: python3 tools/m1/verify.py --messenger-ui
+        run: python3 tools/m1/verify.py --groups
       - name: Stop SQL Server
         working-directory: db
         if: always()

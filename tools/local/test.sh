@@ -31,7 +31,7 @@ if [ "${1:-}" = --full ]; then
   [ -n "$DB_TEST_ADMIN_PASSWORD" ] || { echo 'Set DB_TEST_ADMIN_PASSWORD for disposable SQL databases.' >&2; exit 1; }
   npm ci --prefix tools/m1 --ignore-scripts
   npx --prefix tools/m1 playwright install chromium
-  python3 tools/m1/verify.py --messenger-ui
+  python3 tools/m1/verify.py --groups
 else
   ./backend/mvnw -f backend/pom.xml verify
 fi

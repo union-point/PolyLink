@@ -10,11 +10,13 @@ M2 follow-up: [encrypted direct text implementation and verification](messenger/
 
 M3 follow-up: [session continuity and ordinary password lifecycle](messenger/m3.md) adds V4 independent access credentials, atomic password-copy/verifier replacement, cross-page/tab validation and storage-failure acceptance. Forgotten-password recovery remains M4.
 
-Progress note, 19 October 2026: M1–M5 are implemented. Continue M6 on top of its M5 baseline; do not replay M1–M5 or replace their existing contracts from the historical proposals below. This revision changes documentation only.
+Progress note, 19 October 2026: M1–M6 are implemented. Continue with M7 using the M6 handoff; do not replay earlier milestones or replace their existing contracts from the historical proposals below.
 
 M4 follow-up: [atomic recovery and automatic room-key rotation](messenger/m4.md) adds purpose-limited email recovery, local/Transit paths, durable prepare/status/commit and post-recovery login. Later milestones retain their stated scope.
 
 M5 follow-up: [encrypted images, personal state and paginated messenger UI](messenger/m5.md) adds V6 private ciphertext bodies, immutable staged uploads, sequence-based read/hide, mute/direct blocks and visible-page history reconciliation.
+
+M6 follow-up: [dynamic groups, legacy import, lifecycle and acceptance](messenger/m6.md) adds V7 metadata/intervals and durable operations, owner/member UI, fresh membership epochs, own-data export and account lifecycle/deletion replay. Continue with M7 release/platform/restore rehearsals.
 
 ## 1. Starting point and delivery strategy
 
@@ -208,6 +210,6 @@ Release also requires a private-storage cleanup rehearsal, bounded polling/uploa
 
 ## 9. Next implementation work
 
-For the reported M1–M5 implementation in the other worktree, start with M6.1 against that worktree’s actual schema, contracts and acceptance evidence. This documentation update neither ports that work nor authorizes rewriting it. Follow M6.1–M6.5, then M7.
+M6.1–M6.5 are implemented on the M5 baseline; see the [M6 handoff](messenger/m6.md) for migration, acceptance and operational boundaries. Next implement M7 release/platform checks and the joint SQL/OpenBao restore rehearsal. The earlier M1–M5 work was extended in place.
 
 Historical initial sequence, retained for context: start with M0: commit the API/crypto transition schemas, schema inventory and Flyway migration/test strategy. Then implement M1 as the smallest real path from two admitted, verified accounts to fully backed-up identities and working protected-page bootstrap. Do not start by replacing the mock `chat.send` with a plaintext POST: that would bypass the key-backup and identity invariants on which every later scenario depends.

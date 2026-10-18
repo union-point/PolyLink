@@ -1,6 +1,6 @@
 # PolyLink
 
-A university alumni/lecturer networking project with a Java 25/Spring Boot backend and a vanilla JavaScript frontend. The real application currently supports invitation registration, email verification, encrypted direct text messaging, persistent sessions, ordinary password changes and email-based account/history recovery. Encryption-key setup is automatic; users never save or enter a recovery key.
+A university alumni/lecturer networking project with a Java 25/Spring Boot backend and a vanilla JavaScript frontend. The real application currently supports invitation registration, email verification, encrypted direct/group text and image messaging, group membership management, persistent sessions, password changes, email-based account/history recovery, own-message export and account lifecycle actions. Encryption-key setup is automatic; users never save or enter a recovery key.
 
 ## Requirements — Linux and macOS
 
@@ -48,7 +48,7 @@ export MIGRATION_DB_PASSWORD="$DB_PASSWORD"
 ./backend/mvnw -f backend/pom.xml compile exec:java -Dexec.mainClass=am.polylink.database.SchemaCommand -Dexec.args=upgrade
 ```
 
-Use separate migration credentials if your runtime SQL user lacks permission. For an already-created **empty** database, use `-Dexec.args=fresh` instead. An existing database must pass the baseline guard; do not force it or delete tables. This applies/validates migrations through V5. Application startup never migrates a database. See [schema details](docs/messenger/schema-and-migrations.md).
+Use separate migration credentials if your runtime SQL user lacks permission. For an already-created **empty** database, use `-Dexec.args=fresh` instead. An existing database must pass the baseline guard; do not force it or delete tables. This applies/validates migrations through V7. Application startup never migrates a database. See [schema details](docs/messenger/schema-and-migrations.md).
 
 ### 4. Invite two test users
 
@@ -89,7 +89,7 @@ Use **`localhost` consistently**, rather than mixing it with `127.0.0.1`. Keep t
 5. Reload or restart the browser: a valid session and working secure browser storage restore access without another password. Bob can also close his browser and read Alice's later message when he returns.
 6. Try **Settings → Password**. The new password should preserve history and revoke other device sessions. A clean browser profile can open the same history with that password.
 
-Images, legacy/group migration and some unrelated profile/forum/settings actions remain later milestones. An unavailable action fails explicitly; HTTP mode never falls back to demo data. See [LIVE_TESTING.md](LIVE_TESTING.md) for detailed checks and troubleshooting.
+Use **Messages → Create group** and **Group members** for owner/member management. Settings provides own-message/image export and account deactivation/deletion; see [M6](docs/messenger/m6.md) before lifecycle or legacy-import operations. Some unrelated profile/forum/settings actions remain unavailable and fail explicitly; HTTP mode never falls back to demo data. See [LIVE_TESTING.md](LIVE_TESTING.md) for detailed checks and troubleshooting.
 
 ## Test automatically
 
@@ -132,5 +132,5 @@ To explore the independent mock UI without a backend, set `dataMode: 'mock'` in 
 - [Backend configuration and schema workflow](backend/README.md)
 - [OpenBao operator runbook](infra/openbao/README.md)
 - [Messenger specification](docs/messenger_spec.md) and [implementation plan](docs/messenger_implementation_plan.md)
-- [M0 contracts](docs/messenger/README.md), [M1 identity](docs/messenger/m1.md), [M2 messaging](docs/messenger/m2.md), [M3 sessions/passwords](docs/messenger/m3.md), [M4 recovery](docs/messenger/m4.md), [M5 messenger UI/images](docs/messenger/m5.md)
+- [M0 contracts](docs/messenger/README.md), [M1 identity](docs/messenger/m1.md), [M2 messaging](docs/messenger/m2.md), [M3 sessions/passwords](docs/messenger/m3.md), [M4 recovery](docs/messenger/m4.md), [M5 messenger UI/images](docs/messenger/m5.md), [M6 groups/lifecycle](docs/messenger/m6.md)
 - [Frontend architecture](docs/frontend_context.md) and [profile module](js/profile/README.md)
