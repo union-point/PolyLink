@@ -28,6 +28,7 @@ Implemented mock flows include registration/onboarding/login/recovery/2FA, owner
 - [Messenger implementation plan, milestones, and acceptance checks](docs/messenger_implementation_plan.md)
 - [M0 API/crypto contracts, schema baseline, and validation evidence](docs/messenger/README.md)
 - [M1 invitation enrollment, sessions, client key setup, and deployment](docs/messenger/m1.md)
+- [M2 encrypted direct text, persistent retries, and acceptance](docs/messenger/m2.md)
 - [Backend setup and tests on Linux and macOS](backend/README.md)
 - [Local Linux database, backups, restoration, and persistence](db/README.md)
 - [Java/Spring backend foundation plan and cross-platform team workflow](docs/backend_plan.md)

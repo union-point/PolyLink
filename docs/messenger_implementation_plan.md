@@ -6,6 +6,8 @@ M0 handoff, 18 October 2026: [contracts, schema migrations and validation eviden
 
 M1 follow-up: [implementation and deployment](messenger/m1.md) uses the approved email-bound invitation admission flow. Authentication and fully backed-up key setup are opt-in; remaining milestones and target-platform release checks are explicit in that handoff.
 
+M2 follow-up: [encrypted direct text implementation and verification](messenger/m2.md) adds opt-in messaging, backed-up participant envelopes, sequenced sends/history, encrypted persistent retries and browser polling. Later milestones retain their stated scope.
+
 ## 1. Starting point and delivery strategy
 
 The repository has a Java 25 / Spring Boot 4.1.1 scaffold, Maven verification and optional SQL Server integration tests. Security currently permits health only; Flyway is disabled pending reconciliation of the restored database. There are no domain entities, authentication APIs or messenger APIs.

@@ -7,7 +7,7 @@ def run(args,**kw): return subprocess.run(args,check=True,**kw)
 def free_port():
     with socket.socket() as sock:sock.bind(('127.0.0.1',0));return sock.getsockname()[1]
 def main():
-    parser=argparse.ArgumentParser(description=__doc__);parser.add_argument('--browser',action='store_true');args=parser.parse_args()
+    parser=argparse.ArgumentParser(description=__doc__);parser.add_argument('--browser',action='store_true');parser.add_argument('--messenger',action='store_true');args=parser.parse_args()
     password=os.environ.get('DB_TEST_ADMIN_PASSWORD')
     if not password:raise SystemExit('Set DB_TEST_ADMIN_PASSWORD for an isolated SQL Server administrator.')
     name='polylink_m1_'+uuid.uuid4().hex;bao=name+'-bao';mail=name+'-mail';database_created=False
@@ -57,10 +57,10 @@ def main():
             admin_sql('CREATE DATABASE ['+name+'] COLLATE SQL_Latin1_General_CP1_CI_AS');database_created=True
             run(maven+['exec:java','-Dexec.mainClass=am.polylink.database.SchemaCommand','-Dexec.args=fresh'],cwd=ROOT,env=env)
             run(maven+['-Pdatabase-tests','verify'],cwd=ROOT,env=env)
-            if args.browser:
+            if args.browser or args.messenger:
                 import browser_check
-                browser_check.run(ROOT,env,admin_sql,request,root)
-            print('M1 SQL, TLS Transit, SMTP and HTTP acceptance passed.')
+                browser_check.run(ROOT,env,admin_sql,request,root,messenger=args.messenger)
+            print(('M1/M2' if args.messenger else 'M1')+' SQL, TLS Transit, SMTP and HTTP acceptance passed.')
         finally:
             if database_created:admin_sql('ALTER DATABASE ['+name+'] SET SINGLE_USER WITH ROLLBACK IMMEDIATE; DROP DATABASE ['+name+']')
             subprocess.run(['docker','rm','-f',bao,mail],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)

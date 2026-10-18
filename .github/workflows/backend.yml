@@ -2,9 +2,9 @@ name: Backend
 
 on:
   pull_request:
-    paths: ["backend/**", "db/**", "infra/openbao/**", "js/**", "docs/messenger/**", "tools/contracts/**", "tools/m1/**", ".github/workflows/backend.yml"]
+    paths: ["backend/**", "db/**", "infra/openbao/**", "js/**", "docs/messenger/**", "tools/contracts/**", "tools/m1/**", "tools/m2/**", ".github/workflows/backend.yml"]
   push:
-    paths: ["backend/**", "db/**", "infra/openbao/**", "js/**", "docs/messenger/**", "tools/contracts/**", "tools/m1/**", ".github/workflows/backend.yml"]
+    paths: ["backend/**", "db/**", "infra/openbao/**", "js/**", "docs/messenger/**", "tools/contracts/**", "tools/m1/**", "tools/m2/**", ".github/workflows/backend.yml"]
 
 permissions:
   contents: read
@@ -47,9 +47,9 @@ jobs:
         run: |
           npm ci --prefix tools/m1 --ignore-scripts
           npx --prefix tools/m1 playwright install --with-deps chromium
-      - name: Verify SQL migrations, identity HTTP, TLS Transit, SMTP, and browser flows
+      - name: Verify SQL migrations, identity, encrypted messenger, and browser flows
         working-directory: .
-        run: python3 tools/m1/verify.py --browser
+        run: python3 tools/m1/verify.py --messenger
       - name: Stop SQL Server
         working-directory: db
         if: always()
