@@ -1,3 +1,4 @@
+import { isolateDecorativeAssets } from '../m1/browser-assets.mjs';
 import { chromium } from '../m1/node_modules/playwright/index.mjs';
 import assert from 'node:assert/strict';
 const origin=process.env.M1_FRONTEND,api=process.env.M1_API;
@@ -5,7 +6,7 @@ const browser=await chromium.launch({headless:true,executablePath:process.env.M1
 const contexts=[],outbound=[],errors=[];
 const password='M2 Browser fixture pass!4',canary='M2 secret text — Բարեւ 👋';
 async function context(){
-  const ctx=await browser.newContext();contexts.push(ctx);
+  const ctx=await browser.newContext();contexts.push(ctx);await isolateDecorativeAssets(ctx);
   await ctx.route('**/js/config.js',async route=>{const response=await route.fetch();await route.fulfill({response,body:(await response.text()).replace('http://localhost:3004',api),contentType:'application/javascript'});});
   await ctx.route('**/axios@*/dist/axios.min.js',route=>route.fulfill({path:new URL('../m1/node_modules/axios/dist/axios.min.js',import.meta.url).pathname,contentType:'application/javascript'}));
   ctx.on('request',request=>{if(request.url().startsWith(api+'/chat/'))outbound.push(request.postData()||'');});

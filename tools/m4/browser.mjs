@@ -1,3 +1,4 @@
+import { isolateDecorativeAssets } from '../m1/browser-assets.mjs';
 import { chromium } from '../m1/node_modules/playwright/index.mjs';
 import assert from 'node:assert/strict';
 const phase=process.argv[2],origin=process.env.M1_FRONTEND,api=process.env.M1_API;
@@ -5,6 +6,7 @@ const email=process.env.M1_BROWSER_EMAIL.replace('browser-',phase==='local'?'m2-
 const oldPassword='M2 Browser fixture pass!4',newPassword=`M4 ${phase} recovery pass!8`;
 const browser=await chromium.launch({headless:true,executablePath:process.env.M1_CHROMIUM||undefined});
 const ctx=await browser.newContext(),payloads=[],errors=[],rejections=[];
+await isolateDecorativeAssets(ctx);
 await ctx.route('**/js/config.js',async route=>{const response=await route.fetch();await route.fulfill({response,body:(await response.text()).replace('http://localhost:3004',api),contentType:'application/javascript'});});
 await ctx.route('**/axios@*/dist/axios.min.js',route=>route.fulfill({path:new URL('../m1/node_modules/axios/dist/axios.min.js',import.meta.url).pathname,contentType:'application/javascript'}));
 ctx.on('response',async response=>{if(response.url().startsWith(api)&&response.status()>=400){const body=await response.json().catch(()=>({}));rejections.push({path:new URL(response.url()).pathname,status:response.status(),code:body.code});}});

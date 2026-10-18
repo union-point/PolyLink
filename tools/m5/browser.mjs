@@ -1,3 +1,4 @@
+import { isolateDecorativeAssets } from '../m1/browser-assets.mjs';
 import { chromium } from '../m1/node_modules/playwright/index.mjs';
 import assert from 'node:assert/strict';
 import path from 'node:path';
@@ -6,7 +7,7 @@ const phase=process.argv[2],origin=process.env.M1_FRONTEND,api=process.env.M1_AP
 const contexts=[],errors=[],payloads=[],uploads=[],sends=[],reads=[];
 const email=index=>baseEmail.replace('browser-',`m5-${index}-`),password='M5 Browser fixture pass!8';
 async function context(index,mock=false){
-  const ctx=await chromium.launchPersistentContext(path.join(process.env.M1_ARTIFACT_DIR,`m5-${index}`),{headless:true,viewport:{width:1280,height:900},executablePath:process.env.M1_CHROMIUM||undefined});contexts.push(ctx);ctx.setDefaultTimeout(30000);ctx.setDefaultNavigationTimeout(60000);
+  const ctx=await chromium.launchPersistentContext(path.join(process.env.M1_ARTIFACT_DIR,`m5-${index}`),{headless:true,viewport:{width:1280,height:900},executablePath:process.env.M1_CHROMIUM||undefined});contexts.push(ctx);await isolateDecorativeAssets(ctx);ctx.setDefaultTimeout(30000);ctx.setDefaultNavigationTimeout(60000);
   await ctx.route('**/js/config.js',async route=>{const response=await route.fetch();let body=(await response.text()).replace('http://localhost:3004',api);if(mock)body=body.replace(/dataMode:\s*['"](?:http|mock)['"]/,"dataMode: 'mock'");await route.fulfill({response,body,contentType:'application/javascript'});});
   await ctx.route('**/axios@*/dist/axios.min.js',route=>route.fulfill({path:new URL('../m1/node_modules/axios/dist/axios.min.js',import.meta.url).pathname,contentType:'application/javascript'}));
   ctx.on('request',request=>{

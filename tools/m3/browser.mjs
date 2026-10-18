@@ -1,3 +1,4 @@
+import { isolateDecorativeAssets } from '../m1/browser-assets.mjs';
 import { chromium } from '../m1/node_modules/playwright/index.mjs';
 import assert from 'node:assert/strict';
 import path from 'node:path';
@@ -7,6 +8,7 @@ const profile=path.join(process.env.M1_ARTIFACT_DIR,'m3-profile');
 const browser=await chromium.launchPersistentContext(profile,{headless:true,executablePath:process.env.M1_CHROMIUM||undefined});
 const payloads=[],errors=[];let workers=0;
 async function configure(context){
+  await isolateDecorativeAssets(context);
   await context.route('**/js/config.js',async route=>{const response=await route.fetch();await route.fulfill({response,body:(await response.text()).replace('http://localhost:3004',api),contentType:'application/javascript'});});
   await context.route('**/axios@*/dist/axios.min.js',route=>route.fulfill({path:new URL('../m1/node_modules/axios/dist/axios.min.js',import.meta.url).pathname,contentType:'application/javascript'}));
   context.on('request',request=>{if(request.url().startsWith(api))payloads.push(request.postData()||'');if(request.url().includes('/derive-worker.js'))workers++;});

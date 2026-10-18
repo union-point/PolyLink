@@ -1,3 +1,4 @@
+import { isolateDecorativeAssets } from './browser-assets.mjs';
 import { chromium } from 'playwright';
 import assert from 'node:assert/strict';
 import path from 'node:path';
@@ -5,6 +6,7 @@ const phase=process.argv[2],origin=process.env.M1_FRONTEND,api=process.env.M1_AP
 const password='M1 Browser fixture pass!4';
 const profile=path.join(process.env.M1_ARTIFACT_DIR,phase==='factor'?'second-browser':'browser-profile');
 const browser=await chromium.launchPersistentContext(profile,{headless:true,executablePath:process.env.M1_CHROMIUM||undefined});
+await isolateDecorativeAssets(browser);
 const outbound=[];const failures=[];
 browser.on('request',request=>{if(request.url().startsWith(api))outbound.push(request.postData()||'');});
 await browser.route('**/js/config.js',async route=>{
