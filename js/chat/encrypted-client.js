@@ -166,7 +166,7 @@ export function createEncryptedChat(api,identity,store=outboxStore){
         if(old.text!==text||old.fileSignature!==(prepared?.fileSignature))throw new DataError('OUTBOX_RESOLVED','Your previous message was delivered. Send this draft again.');return saved;
       }
       // Only an explicit unsaved rejection permits a fresh message operation. Reuse immutable staged bytes.
-      if(old?.rejected&&old.upload&&((prepared&&prepared.fileSignature===old.fileSignature)||(!file&&old.text===text)))prepared={upload:old.upload,attachment:old.attachment,fileSignature:old.fileSignature};
+      if(old?.rejected&&old.upload&&prepared&&prepared.fileSignature===old.fileSignature)prepared={upload:old.upload,attachment:old.attachment,fileSignature:old.fileSignature};
       if(!text&&!prepared)throw new DataError('VALIDATION','Enter a message or choose an image.');
       for(let attempt=0;attempt<3;attempt++){
         const bundle=await ready(room,context),snapshot=bundle.snapshot,operationId=crypto.randomUUID();let key;

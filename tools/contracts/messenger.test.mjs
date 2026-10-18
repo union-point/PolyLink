@@ -81,3 +81,16 @@ test('a disposed selection cannot create a late plaintext image URL',async()=>{
   try{const abort=new AbortController(),request=createEncryptedChat(api,f.identity,f.store).page(room,{signal:abort.signal});await downloading;abort.abort();release(s.from_base64(prepared.upload.ciphertext,s.base64_variants.URLSAFE_NO_PADDING).buffer);await assert.rejects(request);assert.equal(urls,0);}
   finally{URL.createObjectURL=original;}
 });
+
+test('a definitively rejected image cannot reappear in an empty draft after reload',async()=>{
+  const f=fixture();let reject=true,posts=0;
+  const api={request:async request=>{
+    if(request.url.endsWith('/keys'))return f.bundle;
+    if(request.url.endsWith('/attachments'))return {};
+    posts++;if(reject)throw Object.assign(new Error('Not saved'),{code:'KEY_STALE_NOT_SAVED'});return {id:'saved',sequence:'1'};
+  }};
+  await assert.rejects(createEncryptedChat(api,f.identity,f.store).send(room,{file:file()}));assert.equal(posts,3);
+  reject=false;const client=createEncryptedChat(api,f.identity,f.store);
+  await assert.rejects(client.send(room,{}),error=>error.code==='VALIDATION');assert.equal(posts,3);
+  assert.equal((await client.send(room,{file:file()})).id,'saved');assert.equal(posts,4);
+});
