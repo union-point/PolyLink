@@ -84,6 +84,7 @@ async function digest(address, secret) {
 }
 function groupOwner(state,id){const room=roomForUser(state,id);if(!room.isGroup||room.closed||room.ownerId!==me(state).id)throw new DataError('FORBIDDEN','Only the group owner can do this.');return room;}
 function memberChange(room){room.membershipVersion=(BigInt(room.membershipVersion||'1')+1n).toString();}
+function compareUserIds(a,b){return /^\d+$/.test(a)&&/^\d+$/.test(b)?(BigInt(a)<BigInt(b)?-1:BigInt(a)>BigInt(b)?1:0):a.localeCompare(b);}
 function leaveMember(room,id){room.participants=room.participants.filter(person=>person!==id);memberChange(room);if(!room.participants.length)room.closed=true;}
 const operations = {
   'chat.saveDraft':(state,id,text)=>{preference(roomForUser(state,id),me(state).id).draft=text;},
@@ -111,7 +112,7 @@ const operations = {
     return profile(state, user);
   },
   'auth.login': (state, data) => {
-    const user = state.users.find(user => user.email === data.email && state.credentials[user.id] === data.digest);
+    const user = state.users.find(user => user.status==='active'&&user.email === data.email && state.credentials[user.id] === data.digest);
     if (!user) throw new DataError('UNAUTHORIZED', 'Սխալ էլ․ փոստ կամ գաղտնաբառ։');
     if (state.settings[user.id]?.twoFactorEnabled) { state.sessionUserId = null; return { status: 'challenge', ...newChallenge(state, user.id, 'second-factor') }; }
     user.status = 'active'; state.sessionUserId = user.id;
@@ -277,11 +278,11 @@ const operations = {
     state.replies = state.replies.filter(item => item.userId !== id && !topicIds.includes(item.topicId));
     state.replies.forEach(item => { item.likes = item.likes.filter(userId => userId !== id); });
     state.messages.forEach(item=>{if(item.senderId===id){item.senderId=null;item.text='Message deleted';item.attachment=null;item.deleted=true;}});
-    state.rooms.forEach(room=>{if(!room.participants.includes(id))return;if(room.isGroup){leaveMember(room,id);if(room.ownerId===id){room.ownerId=room.participants.filter(person=>state.users.find(u=>u.id===person)?.status==='active').sort((a,b)=>BigInt(a)<BigInt(b)?-1:1)[0]||null;if(!room.ownerId)room.closed=true;}}else room.closed=true;delete room.preferences[id];});
+    state.rooms.forEach(room=>{if(!room.participants.includes(id))return;if(room.isGroup){leaveMember(room,id);if(room.ownerId===id){room.ownerId=room.participants.filter(person=>state.users.find(u=>u.id===person)?.status==='active').sort(compareUserIds)[0]||null;if(!room.ownerId)room.closed=true;}}else room.closed=true;delete room.preferences[id];});
     state.rooms = state.rooms.filter(room => room.participants.length);
     state.blocks = state.blocks.filter(item => item.userId !== id && item.targetId !== id);
     state.challenges = state.challenges.filter(item => item.userId !== id);
-    state.users = state.users.filter(item => item.id !== id); delete state.credentials[id]; delete state.settings[id]; state.sessionUserId = null;
+    Object.assign(user,{status:'deleted',name:'Deleted account',firstName:'Deleted',lastName:'account',email:`deleted-${id}@deleted.invalid`,avatar:'',cover:'',description:''}); delete state.credentials[id]; delete state.settings[id]; state.sessionUserId = null;
     return null;
   },
   'settings.export': state => {
@@ -346,7 +347,7 @@ export function createMockProvider() {
     if(operation==='chat.send'&&args[1]?.file){const file=validateImage(args[1].file);await validateImageBytes(new Uint8Array(await file.arrayBuffer()),file.type);}
     const write = !readOperations.has(operation);
     const result = await transaction(state => {
-      for(const room of state.rooms)if(room.isGroup&&!room.ownerId&&!room.closed){room.ownerId=[...room.participants].sort((a,b)=>BigInt(a)<BigInt(b)?-1:1)[0];room.membershipVersion||='1';room.metadataVersion||='1';}
+      for(const room of state.rooms)if(room.isGroup&&!room.ownerId&&!room.closed){room.ownerId=[...room.participants].sort(compareUserIds)[0];room.membershipVersion||='1';room.metadataVersion||='1';}
       if (!publicOperations.has(operation)) me(state);
       return operations[operation](state, ...args);
     }, { write });

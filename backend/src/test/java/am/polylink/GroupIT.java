@@ -404,6 +404,14 @@ class GroupIT {
                 "/account/deactivate",
                 Map.of("expectedCredential", "1", "loginSecret", a.secret()));
         assertThat(a.browser().get("/auth/me").statusCode()).isEqualTo(401);
+        assertThat(
+                        b.browser()
+                                .post(
+                                        "/chat/rooms/" + room + "/messages",
+                                        fixture.packet(summary(b, room).path("keySnapshot")))
+                                .statusCode())
+                .isEqualTo(403);
+        assertThat(b.browser().get("/auth/me").statusCode()).isEqualTo(200);
         assertThat(summary(b, room).path("ownerId").asText()).isEqualTo("" + a.id());
         assertThat(summary(b, room).path("participants").size()).isEqualTo(2);
         assertThat(

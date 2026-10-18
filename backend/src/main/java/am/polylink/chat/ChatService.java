@@ -231,7 +231,11 @@ public class ChatService {
         if (Boolean.TRUE.equals(row.get("Closed")))
             throw new AuthFailure(403, "FORBIDDEN", "The conversation is closed.");
         var ids = members(room);
-        for (int id : ids) accounts.get(id).requireAdmitted();
+        for (int id : ids) {
+            var account = accounts.get(id);
+            if (!account.verified() || !account.admission().equals("ADMITTED"))
+                throw new AuthFailure(403, "FORBIDDEN", "A participant is unavailable.");
+        }
         if (!Boolean.TRUE.equals(row.get("IsGroup")) && blocked(ids.get(0), ids.get(1)))
             throw new AuthFailure(403, "FORBIDDEN", "This action is unavailable.");
     }

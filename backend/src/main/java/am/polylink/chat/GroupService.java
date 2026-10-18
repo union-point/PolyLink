@@ -39,7 +39,7 @@ public class GroupService {
         if (ids.isEmpty() || ids.size() > 100) throw AuthFailure.invalid();
         for (int id : ids) {
             var a = chat.accounts.get(id);
-            a.requireAdmitted();
+            if (!a.verified() || !a.admission().equals("ADMITTED")) throw forbidden();
             if (a.identity() < 1 || a.vaultKey() < 1 || a.vaultRevision() < 1)
                 throw new AuthFailure(
                         409,
@@ -269,7 +269,9 @@ public class GroupService {
                                     || input.name() != null
                                     || input.activation() != null
                                     || !members.contains(selected)) throw AuthFailure.invalid();
-                            chat.accounts.get(selected).requireAdmitted();
+                            var nextOwner = chat.accounts.get(selected);
+                            if (!nextOwner.verified() || !nextOwner.admission().equals("ADMITTED"))
+                                throw forbidden();
                             chat.db.update(
                                     "UPDATE messaging.Groups SET OwnerId=?,MetadataVersion=MetadataVersion+1 WHERE RoomId=?",
                                     selected,
