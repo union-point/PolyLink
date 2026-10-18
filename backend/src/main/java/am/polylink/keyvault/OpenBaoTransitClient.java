@@ -81,6 +81,39 @@ public class OpenBaoTransitClient implements TransitClient {
         return new Wrapped(ciphertext, context);
     }
 
+    @Override
+    public byte[] unwrap(int user, long version, String ciphertext, String context) {
+        String expected =
+                Base64.getEncoder()
+                        .encodeToString(
+                                mapper.writeValueAsBytes(
+                                        List.of("PLK1", "service-copy", "" + user, "" + version)));
+        if (!expected.equals(context) || !ciphertext.startsWith("vault:v"))
+            throw AuthFailure.denied();
+        try {
+            byte[] key =
+                    Base64.getDecoder()
+                            .decode(
+                                    post(
+                                                    "decrypt",
+                                                    Map.of(
+                                                            "ciphertext",
+                                                            ciphertext,
+                                                            "context",
+                                                            expected))
+                                            .path("data")
+                                            .path("plaintext")
+                                            .asText());
+            if (key.length != 32) {
+                Arrays.fill(key, (byte) 0);
+                throw AuthFailure.unavailable();
+            }
+            return key;
+        } catch (IllegalArgumentException e) {
+            throw AuthFailure.unavailable();
+        }
+    }
+
     @org.springframework.scheduling.annotation.Scheduled(fixedDelay = 600000, initialDelay = 600000)
     public void renewServiceToken() {
         try {

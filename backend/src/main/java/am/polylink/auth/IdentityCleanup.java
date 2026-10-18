@@ -27,7 +27,7 @@ public class IdentityCleanup {
             db.update("DELETE auth.EmailChallenges WHERE ExpiresAt<?", now.minusDays(1));
             db.update("DELETE auth.RateLimits WHERE WindowStart<?", now.minusDays(1));
             db.update(
-                    "UPDATE keyvault.Operations SET State='EXPIRED',PreparedCiphertext=NULL,PreparedLoginVerifier=NULL WHERE Kind IN ('SETUP','PASSWORD_CHANGE') AND State='READY' AND ExpiresAt<=?",
+                    "UPDATE keyvault.Operations SET State='EXPIRED',PreparedCiphertext=NULL,PreparedLoginVerifier=NULL WHERE State NOT IN ('COMPLETED','CANCELLED','EXPIRED') AND ExpiresAt<=?",
                     now);
         } catch (org.springframework.dao.DataAccessException ignored) {
             org.slf4j.LoggerFactory.getLogger(IdentityCleanup.class)

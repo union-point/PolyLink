@@ -83,6 +83,22 @@ public final class AuthDtos {
         }
     }
 
+    public record Recovery(
+            @NotNull @Pattern(regexp = "RECOVERY_LOCAL|RECOVERY_SERVICE") String kind,
+            @NotNull UUID operationId,
+            @NotNull @Valid Versions expected,
+            @NotNull @Valid Derivation derivation,
+            @NotNull @Pattern(regexp = "[A-Za-z0-9_-]{43}") String loginSecret,
+            @NotNull @Valid Packet vault,
+            @NotNull @Valid Packet passwordCopy,
+            @NotNull @Valid Identity identity,
+            @Pattern(regexp = "[A-Za-z0-9_-]{43}") String serviceVaultKey) {
+        @Override
+        public String toString() {
+            return "Recovery[redacted]";
+        }
+    }
+
     public record PasswordChange(
             @NotNull @Pattern(regexp = "PASSWORD_CHANGE") String kind,
             @NotNull UUID operationId,

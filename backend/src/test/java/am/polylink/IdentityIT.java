@@ -90,7 +90,7 @@ class IdentityIT {
                                         "/auth/recovery/unlock",
                                         Map.of("operationId", UUID.randomUUID().toString()))
                                 .statusCode())
-                .isEqualTo(403);
+                .isEqualTo(401);
     }
 
     @Test
@@ -605,8 +605,14 @@ class IdentityIT {
                         cookies.entrySet().stream()
                                 .map(e -> e.getKey() + "=" + e.getValue())
                                 .collect(java.util.stream.Collectors.joining("; ")));
-            if (csrf && cookies.containsKey("__Host-plk-refresh-csrf"))
-                request.header("X-CSRF-Token", cookies.get("__Host-plk-refresh-csrf"));
+            if (csrf) {
+                String csrfName =
+                        path.startsWith("/auth/recovery/")
+                                ? "__Host-plk-recovery-csrf"
+                                : "__Host-plk-refresh-csrf";
+                if (cookies.containsKey(csrfName))
+                    request.header("X-CSRF-Token", cookies.get(csrfName));
+            }
             if (body != null)
                 request.header("Content-Type", "application/json")
                         .method(

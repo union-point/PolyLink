@@ -45,6 +45,12 @@ public class SecurityConfiguration {
                         authorize
                                 .requestMatchers(
                                         HttpMethod.POST,
+                                        "/auth/recovery/request",
+                                        "/auth/recovery/verify",
+                                        "/auth/recovery/unlock",
+                                        "/auth/recovery/prepare",
+                                        "/auth/recovery/commit",
+                                        "/auth/recovery/login",
                                         "/auth/parameters",
                                         "/auth/register",
                                         "/auth/email/verify",
@@ -59,7 +65,12 @@ public class SecurityConfiguration {
                                         "/keys/setup/commit")
                                 .permitAll();
                         authorize
-                                .requestMatchers(HttpMethod.GET, "/auth/me", "/keys/me", "/users/*")
+                                .requestMatchers(
+                                        HttpMethod.GET,
+                                        "/auth/recovery/status",
+                                        "/auth/me",
+                                        "/keys/me",
+                                        "/users/*")
                                 .permitAll();
                     }
                     if (enabled && messenger) {

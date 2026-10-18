@@ -77,7 +77,7 @@ public class Challenges {
                         email,
                         browser);
         db.update(
-                "INSERT auth.EmailChallenges(ChallengeId,UserId,Purpose,CodeMac,SecretVersion,FailedAttempts,ExpiresAt,ResendAfter,CredentialVersion,BrowserHash) VALUES (?,?,?,?,1,0,?,?,?,?)",
+                "INSERT auth.EmailChallenges(ChallengeId,UserId,Purpose,CodeMac,SecretVersion,FailedAttempts,ExpiresAt,ResendAfter,CredentialVersion,BrowserHash,EmailSnapshot) VALUES (?,?,?,?,1,0,?,?,?,?,?)",
                 id,
                 userId,
                 purpose,
@@ -85,7 +85,8 @@ public class Challenges {
                 created.expires(),
                 created.resend(),
                 credential,
-                Secrets.hash(browser));
+                Secrets.hash(browser),
+                email);
         return created;
     }
 
@@ -134,7 +135,9 @@ public class Challenges {
                             Integer id = (Integer) row.get("UserId");
                             if (id == null) return null;
                             var account = accounts.get(id);
-                            if (account.credential() != version
+                            if (("RECOVERY".equals(purpose)
+                                            && !account.email().equals(row.get("EmailSnapshot")))
+                                    || account.credential() != version
                                     || !Set.of("PENDING", "ADMITTED").contains(account.admission()))
                                 return null;
                             db.update(
