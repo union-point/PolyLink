@@ -130,9 +130,9 @@ public class OpenBaoTransitClient implements TransitClient {
 
     private JsonNode request(String path, Map<String, String> body) {
         try {
-            if (Files.size(token) > 4096) throw AuthFailure.unavailable();
+            if (Files.size(token) > 4096) throw unavailable(path, "TOKEN_FILE_INVALID");
             String credential = Files.readString(token).strip();
-            if (credential.isEmpty()) throw AuthFailure.unavailable();
+            if (credential.isEmpty()) throw unavailable(path, "TOKEN_FILE_INVALID");
             var request =
                     HttpRequest.newBuilder(base.resolve(path))
                             .timeout(Duration.ofSeconds(5))
@@ -143,14 +143,32 @@ public class OpenBaoTransitClient implements TransitClient {
                                             mapper.writeValueAsBytes(body)))
                             .build();
             var response = http.send(request, HttpResponse.BodyHandlers.ofString());
-            if (response.statusCode() != 200 || response.body().length() > 16384)
-                throw AuthFailure.unavailable();
+            if (response.statusCode() != 200)
+                throw unavailable(path, "HTTP_" + response.statusCode());
+            if (response.body().length() > 16384) throw unavailable(path, "INVALID_RESPONSE");
             return mapper.readTree(response.body());
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
-            throw AuthFailure.unavailable();
+            throw unavailable(path, "INTERRUPTED");
+        } catch (AuthFailure e) {
+            throw e;
         } catch (Exception e) {
-            throw AuthFailure.unavailable();
+            String reason = "INVALID_RESPONSE";
+            if (e instanceof java.io.IOException) reason = "IO";
+            if (e instanceof HttpTimeoutException) reason = "TIMEOUT";
+            for (Throwable cause = e; cause != null; cause = cause.getCause())
+                if (cause instanceof javax.net.ssl.SSLException) {
+                    reason = "TLS_TRUST_OR_HANDSHAKE";
+                    break;
+                }
+            throw unavailable(path, reason);
         }
+    }
+
+    private AuthFailure unavailable(String path, String reason) {
+        // Never log credentials, request/response bodies, key material or exception messages.
+        org.slf4j.LoggerFactory.getLogger(OpenBaoTransitClient.class)
+                .warn("OpenBao request unavailable: operation={}, reason={}", path, reason);
+        return AuthFailure.unavailable();
     }
 }
