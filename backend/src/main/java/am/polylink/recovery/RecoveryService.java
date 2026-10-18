@@ -297,6 +297,7 @@ public class RecoveryService {
 
     public Map<String, Object> prepare(AuthDtos.Recovery input, HttpServletRequest request) {
         var initial = capability(request, true);
+        limits.consume("RECOVERY_PREP", "" + user(initial), 20, 1800);
         byte[] fingerprint = Secrets.digest(mapper.writeValueAsBytes(input));
         boolean ready =
                 tx.execute(
@@ -437,6 +438,8 @@ public class RecoveryService {
 
     public Sessions.Issued login(AuthDtos.Login input, HttpServletRequest request) {
         var initial = capability(request, true);
+        limits.consume("RECOVERY_LOGIN", "" + user(initial), 10, 1800);
+        limits.consume("RECOVERY_IP", request.getRemoteAddr(), 50, 1800);
         var account = accounts.get(user(initial));
         if (!account.email().equals(Accounts.email(input.email()))
                 || !encoder.matches(input.loginSecret(), account.verifier()))

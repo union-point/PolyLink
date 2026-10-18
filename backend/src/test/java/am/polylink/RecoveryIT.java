@@ -121,6 +121,20 @@ class RecoveryIT {
         var changed = new LinkedHashMap<>(input);
         changed.put("loginSecret", IdentityIT.secret());
         assertThat(browser.post("/auth/recovery/prepare", changed).statusCode()).isEqualTo(409);
+        var staged =
+                Rows.query(
+                                db,
+                                "SELECT * FROM keyvault.Operations WHERE OperationId=?",
+                                op.path("operationId").asText())
+                        .getFirst();
+        assertThat(staged.get("PreparedLoginVerifier").toString()).startsWith("$argon2id$");
+        assertThat(
+                        new String(
+                                (byte[]) staged.get("PreparedCiphertext"),
+                                java.nio.charset.StandardCharsets.UTF_8))
+                .doesNotContain(
+                        input.get("loginSecret").toString(),
+                        input.get("serviceVaultKey").toString());
         assertThat(passwords.vault(a.id()).get("ServiceCopy")).isEqualTo(old.get("ServiceCopy"));
         var committed = browser.post("/auth/recovery/commit", id);
         assertThat(committed.statusCode()).as(committed.body()).isEqualTo(200);
@@ -266,6 +280,35 @@ class RecoveryIT {
             sealed(false);
         }
         assertThat(browser.post("/auth/recovery/prepare", input).statusCode()).isEqualTo(200);
+        assertThat(browser.post("/auth/recovery/commit", id).statusCode()).isEqualTo(200);
+    }
+
+    @Test
+    void interruptedActivationRollsBackCredentialsIdentityAndCopiesTogether() throws Exception {
+        var a = passwords.configured();
+        var browser = fixture.new Browser();
+        var op = verify(a, browser);
+        var id = Map.of("operationId", op.path("operationId").asText());
+        assertThat(browser.post("/auth/recovery/unlock", id).statusCode()).isEqualTo(200);
+        assertThat(browser.post("/auth/recovery/prepare", candidate(a, op, true)).statusCode())
+                .isEqualTo(200);
+        db.execute(
+                "CREATE TRIGGER keyvault.M4RejectActivation ON keyvault.Vaults AFTER UPDATE AS THROW 51000,'Synthetic activation interruption',1;");
+        try {
+            assertThat(browser.post("/auth/recovery/commit", id).statusCode()).isEqualTo(503);
+            assertThat(a.browser().get("/auth/me").statusCode()).isEqualTo(200);
+            assertThat(passwords.vault(a.id()).get("VaultKeyVersion").toString()).isEqualTo("1");
+            assertThat(
+                            db.queryForObject(
+                                    "SELECT COUNT(*) FROM keyvault.Identities WHERE UserId=?",
+                                    Integer.class,
+                                    a.id()))
+                    .isEqualTo(1);
+            assertThat(browser.json(browser.get("/auth/recovery/status")).path("state").asText())
+                    .isEqualTo("READY");
+        } finally {
+            db.execute("DROP TRIGGER keyvault.M4RejectActivation");
+        }
         assertThat(browser.post("/auth/recovery/commit", id).statusCode()).isEqualTo(200);
     }
 
