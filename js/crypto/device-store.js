@@ -31,4 +31,9 @@ export async function openDevice(session){
   if(record.key?.extractable!==false)throw new Error('Invalid device key.');
   return new Uint8Array(await crypto.subtle.decrypt({name:'AES-GCM',iv:record.iv,additionalData:binding(record.account,record.id,record.vaultKeyVersion)},record.key,record.ciphertext));
 }
-export async function clearDevice(account){return locked(()=>account?transaction('readwrite',store=>store.delete(account)):transaction('readwrite',store=>store.clear()));}
+export async function clearDevice(account,expected){
+  return locked(async()=>{
+    if(expected){const record=await transaction('readonly',store=>store.get(account));if(record&&(record.familyId!==expected.familyId||record.credential!==expected.versions.credential))return;}
+    return account?transaction('readwrite',store=>store.delete(account)):transaction('readwrite',store=>store.clear());
+  });
+}

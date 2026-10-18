@@ -13,6 +13,7 @@ export function createHttpProvider(transportPromise = loadTransport()) {
   const identityClient = () => identityPromise ||= transport.then(api => createIdentityClient(api));
   return {
     async call(operation, ...args) {
+      if(operation==='settings.changePassword')return (await identityClient()).changePassword(...args);
       if(operation.startsWith('chat.')){const client=await chatClient();const method=operation.slice(5);if(typeof client[method]!=='function')throw new DataError('UNSUPPORTED','This chat operation is unavailable.');return client[method](...args);}
       if (operation.startsWith('auth.')) {
         const client = await identityClient(), method = operation.slice(5);

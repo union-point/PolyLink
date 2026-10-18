@@ -1,17 +1,22 @@
 import { settings } from './services/index.js';
 import { bootstrap, start, pending, notify, setTheme, dateTime } from './shared/ui.js';
-import { passwordsMatch } from './shared/auth-ui.js';
+import { auth } from './services/index.js';
+import { passwordsMatch, inlineCode } from './shared/auth-ui.js';
 
 start(async () => {
   const user = await bootstrap(); if (!user) return;
-  let preferences = await settings.get();
+  window.addEventListener('pagehide',()=>document.querySelectorAll('input[type=password]').forEach(input=>{input.value='';}));
+  let preferences;
+  try{preferences=await settings.get();}catch(error){if(error.code!=='UNSUPPORTED')throw error;preferences=null;}
   const controls = [...document.querySelectorAll('[data-setting]')];
   function applyControl(element, value) {
     if (element.type === 'checkbox') element.checked = value;
     else element.value = element.dataset.setting === 'isProfilePublic' ? value ? 'open' : 'closed' : value;
   }
   controls.forEach(element => {
-    const key = element.dataset.setting; applyControl(element, preferences[key]);
+    const key = element.dataset.setting;
+    if(!preferences){element.disabled=true;if(key==='twoFactorEnabled')element.checked=Boolean(user.emailFactorEnabled);element.title='This setting is not available yet.';return;}
+    applyControl(element, preferences[key]);
     element.onchange = async () => {
       const previous = preferences[key], value = element.type === 'checkbox' ? element.checked : key === 'isProfilePublic' ? element.value === 'open' : element.value;
       element.disabled = true;
@@ -52,7 +57,10 @@ start(async () => {
     const saved = await pending(event.currentTarget, passwordEdit.form, async () => {
       const newPassword = document.getElementById('new-password').value;
       passwordsMatch(newPassword, document.getElementById('confirm-password').value);
-      await settings.changePassword({ oldPassword: document.getElementById('old-password').value, newPassword });
+      let result=await settings.changePassword({ oldPassword: document.getElementById('old-password').value, newPassword });
+      passwordEdit.form.querySelectorAll('input').forEach(input=>{input.value='';});
+      if(result?.status==='challenge')result=await inlineCode(auth,result,'LOGIN',passwordEdit.form);
+      if(result?.storageUnavailable)notify('The password changed. Secure browser storage is unavailable; navigation will require your password.');
       passwordDescription.textContent = 'Գաղտնաբառը թարմացվել է';
     });
     if (saved) { passwordEdit.close(); notify('Գաղտնաբառը թարմացվել է'); }

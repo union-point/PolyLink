@@ -116,7 +116,7 @@ export async function bootstrap({ protectedPage = true, requireOnboarding = true
   document.addEventListener('input', event => { event.target.classList?.remove('error'); event.target.removeAttribute?.('aria-invalid'); });
   document.querySelectorAll('nav a[href="login.html"]').forEach(link => link.addEventListener('click', async event => {
     event.preventDefault();
-    leaving = true;
+    leaving = true;document.body.dataset.sessionCheck='';
     const { config } = await import('../config.js');
     if(config.dataMode==='http') {
       document.querySelector('main')?.replaceChildren();
@@ -136,11 +136,12 @@ export async function bootstrap({ protectedPage = true, requireOnboarding = true
   }
   if (!user && protectedPage) { location.replace('login.html'); return null; }
   if (user && protectedPage && requireOnboarding && !user.onboardingComplete) { location.replace('profile_info.html'); return null; }
+  if(user.storageUnavailable){const notice=document.createElement('p');notice.dataset.storageNotice='';notice.setAttribute('role','status');notice.textContent='Secure browser storage is unavailable. You can use this page; navigating or reloading will require your password.';(document.querySelector('main')||document.body).prepend(notice);}
   const validateSession = (nextUser, error, event) => {
     if (leaving) return;
     if (error) { showError(document.querySelector('main') || document.body, error); return; }
-    if (!nextUser) { leaving = true; document.querySelector('main')?.replaceChildren(); location.replace('login.html'); }
-    else if (nextUser.id !== user.id || event?.operation === 'reset') { leaving = true; location.reload(); }
+    if (!nextUser) { leaving = true; document.body.dataset.sessionCheck='';document.querySelector('main')?.replaceChildren(); location.replace('login.html'); }
+    else if (nextUser.id !== user.id || nextUser.sessionVersion!==user.sessionVersion || nextUser.cryptoLocked || event?.operation === 'reset') { leaving = true; location.reload(); }
   };
   const unsubscribe = await auth.subscribeSession(validateSession);
   window.addEventListener('pagehide', event => { if (!event.persisted) unsubscribe(); });
@@ -153,7 +154,7 @@ export async function bootstrap({ protectedPage = true, requireOnboarding = true
       checking=true;
       try {
         let next=await auth.me();
-        if(next?.cryptoLocked){document.body.dataset.sessionCheck='';const {unlockIdentity}=await import('./auth-ui.js');next=await unlockIdentity(auth,next);}
+        if(next?.cryptoLocked){document.body.dataset.sessionCheck='';const {unlockIdentity}=await import('./auth-ui.js');next=await unlockIdentity(auth,next);if(next)user=next;}
         validateSession(next);if(next&&!leaving){delete document.body.dataset.sessionCheck;document.querySelector('[data-session-status]')?.remove();}
       }catch(error){
         if(document.body.hasAttribute('data-session-check')){const status=document.querySelector('[data-session-status]')||document.createElement('p');status.dataset.sessionStatus='';status.setAttribute('role','status');status.textContent=error.message;document.body.appendChild(status);}

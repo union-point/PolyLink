@@ -7,7 +7,7 @@ export const auth = {
   verifySecondFactor: operation('auth.verifySecondFactor'), resendChallenge: operation('auth.resendChallenge'),
   forgotPassword: operation('auth.forgotPassword'), verifyRecovery: operation('auth.verifyRecovery'), resetPassword: operation('auth.resetPassword'),
   subscribeSession: listener => subscribe(event => {
-    if (['auth.logout', 'auth.login', 'auth.verifySecondFactor', 'auth.resetPassword', 'settings.deactivate', 'settings.deleteAccount', 'reset'].includes(event.operation)) {
+    if (['auth.logout', 'auth.login', 'auth.version', 'auth.revoked', 'auth.verifySecondFactor', 'auth.resetPassword', 'settings.deactivate', 'settings.deleteAccount', 'reset'].includes(event.operation)) {
       call('auth.me').then(user => listener(user, null, event)).catch(error => listener(null, error, event));
     }
   }),

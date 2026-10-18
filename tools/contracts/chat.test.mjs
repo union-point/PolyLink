@@ -41,3 +41,15 @@ test('decrypted render models authenticate sender and operation bindings',async(
   await assert.rejects(client.messages(room),error=>error.code==='DATA_INTEGRITY');
   message.sender.id='1';assert.equal((await client.messages(room))[0].text,'Authenticated text');
 });
+test('blocked outbox storage permits authenticated password-based reads and prevents a new send',async()=>{
+  const f=fixture(),operationId='20000000-0000-4000-8000-000000000002';let posts=0;
+  f.store.get=async()=>{throw new Error('IndexedDB blocked');};
+  const packet=await seal(JSON.stringify({text:'Password access remains available',attachment:null}),f.key,aad('message',room,'1',operationId,'1','1'));
+  const message={id:'saved',roomId:room,sequence:'1',operationId,keyVersion:'1',membershipVersion:'1',sender:{id:'1',name:'Sender'},packet};
+  const client=createEncryptedChat({request:async request=>{
+    if(request.method==='post'){posts++;throw new Error('Unexpected send');}
+    return request.url.endsWith('/keys')?f.bundle:{items:[message],nextAfter:'1',hasMore:false};
+  }},f.identity,f.store);
+  assert.equal((await client.messages(room))[0].text,'Password access remains available');
+  await assert.rejects(client.send(room,{text:'Requires durable outbox'}),error=>error.code==='STORAGE_UNAVAILABLE');assert.equal(posts,0);
+});

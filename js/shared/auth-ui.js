@@ -72,7 +72,7 @@ export async function inlineCode(auth, challenge, purpose, container){
 export async function unlockIdentity(auth,user){
   const panel=document.createElement('form');panel.dataset.identityUnlock='';
   panel.style.cssText='position:fixed;inset:15% 20%;z-index:5000;background:var(--card-background,#fff);padding:24px;border:1px solid #888;overflow:auto';
-  const label=document.createElement('label');label.textContent='Մուտք գործեք՝ այս դիտարկիչում տվյալները բացելու համար';
+  const label=document.createElement('label');label.textContent=user.storageUnavailable?'Secure browser storage is unavailable. Enter your password to use this page; navigation will require it again.':'Մուտք գործեք՝ այս դիտարկիչում տվյալները բացելու համար';
   const input=document.createElement('input');input.type='password';input.autocomplete='current-password';input.required=true;input.setAttribute('aria-label','Գաղտնաբառ');
   const button=document.createElement('button');button.type='submit';button.textContent='Մուտք գործել';
   const error=document.createElement('p');error.setAttribute('role','alert');panel.append(label,input,button,error);document.body.appendChild(panel);

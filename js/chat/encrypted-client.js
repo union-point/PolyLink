@@ -59,7 +59,7 @@ export function createEncryptedChat(api,identity,store=outboxStore){
   const outboxId=(context,room)=>`${context.session.user.id}:${room}`;
   const binding=(context,room,id)=>aad('outbox',context.session.user.id,room,id,context.session.versions.vaultKey);
   async function pending(context,room){
-    const record=await store.get(outboxId(context,room));if(!record)return null;
+    let record;try{record=await store.get(outboxId(context,room));}catch{throw new DataError('STORAGE_UNAVAILABLE','Encrypted outbox storage is unavailable. Enable secure browser storage before sending.');}if(!record)return null;
     const plain=await open(record.packet,context.vaultKey,binding(context,room,record.operationId));
     try{return JSON.parse(decoder.decode(plain));}finally{plain.fill(0);}
   }
@@ -89,7 +89,7 @@ export function createEncryptedChat(api,identity,store=outboxStore){
     });},
     openDirect:target=>identity.withKeys(()=>call('openDirect',typeof target==='object'?target.id:target)),
     async messages(room){return locked(room,()=>identity.withKeys(async context=>{
-      const operation=await pending(context,room);if(operation)await flush(context,room,operation);
+      let operation;try{operation=await pending(context,room);}catch(error){if(error.code!=='STORAGE_UNAVAILABLE')throw error;}if(operation)await flush(context,room,operation);
       const bundle=await call('keys',room);let after='0';const items=[];
       do{
         const page=await call('messages',room,{after,limit:100});
