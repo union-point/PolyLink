@@ -8,8 +8,8 @@ const encoder=new TextEncoder(),decoder=new TextDecoder('utf-8',{fatal:true});
 const versionList=snapshot=>snapshot.recipients.map(({userId,identityVersion})=>({userId,identityVersion}));
 export function createEncryptedChat(api,identity,store=outboxStore){
   const call=(name,...args)=>api.request(routes[`chat.${name}`](...args));
-  const roomLocks=new Map(),rotating=new Map(),images=new Map();let imageScope;
-  const release=room=>{for(const [id,entry]of images)if(!room||entry.room===room){URL.revokeObjectURL(entry.url);images.delete(id);}};
+  const roomLocks=new Map(),rotating=new Map(),images=new Map();let imageScope,imageGeneration=0;
+  const release=room=>{if(!room)imageGeneration++;for(const [id,entry]of images)if(!room||entry.room===room){URL.revokeObjectURL(entry.url);images.delete(id);}};
   identity.subscribe?.(event=>{if(['auth.logout','auth.revoked','auth.login','auth.version'].includes(event.operation))release();});
   globalThis.addEventListener?.('pagehide',()=>release());
   function scope(context){const value=JSON.stringify([context.session.user.id,context.session.familyId,context.session.versions]);if(value!==imageScope){release();imageScope=value;}}
@@ -64,7 +64,7 @@ export function createEncryptedChat(api,identity,store=outboxStore){
     throw new DataError('REVISION_CONFLICT','Conversation keys changed. Please retry.');
   }
   async function decrypt(message,bundle,context,loadImage=true,signal){
-    scope(context);
+    scope(context);const openingImageGeneration=imageGeneration;
     if(message.deleted)return {...message,sender:message.sender||{id:'',name:''},text:'Message deleted',attachment:null};
     let key,plain;
     try{
@@ -85,6 +85,7 @@ export function createEncryptedChat(api,identity,store=outboxStore){
             const bytes=new Uint8Array(await api.request({...routes['chat.download'](meta.id),signal}));
             const blob=await decryptImage(bytes,meta,message.roomId,message.sender.id);
             if(signal?.aborted)throw new DOMException('Selection changed','AbortError');
+            if(openingImageGeneration!==imageGeneration)throw new DataError('SESSION_CHANGED','Your session changed.');
             const url=URL.createObjectURL(blob);images.set(meta.id,{url,room:message.roomId,owner:message.sender.id,fingerprint});attachment.url=url;
           }
         }

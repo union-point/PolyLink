@@ -68,7 +68,8 @@ test('viewport acknowledgement excludes unseen arrivals and handles a message ta
   assert(!messageShown({top:-100,bottom:700,height:800},viewport));
 });
 
-test('a disposed selection cannot create a late plaintext image URL',async()=>{
+test('a disposed selection or account cannot create a late plaintext image URL',async()=>{
+  for(const reason of ['selection','logout']){
   const f=fixture(),prepared=await encryptImage(file(),room,'1'),operationId=crypto.randomUUID();
   const packet=await seal(JSON.stringify({text:'',attachment:prepared.attachment}),f.key,aad('message',room,'1',operationId,'1','1'));
   let release,started;const downloading=new Promise(resolve=>{started=resolve;}),body=new Promise(resolve=>{release=resolve;});
@@ -77,9 +78,11 @@ test('a disposed selection cannot create a late plaintext image URL',async()=>{
     if(request.url.startsWith('/chat/attachments/')){started();return body;}
     return {items:[{id:'late',roomId:room,sequence:'1',operationId,keyVersion:'1',membershipVersion:'1',sender:{id:'1'},attachmentId:prepared.attachment.id,packet}],nextAfter:'1',hasMore:false};
   }};
+  let notify;f.identity.subscribe=listener=>{notify=listener;return()=>{};};
   const original=URL.createObjectURL;let urls=0;URL.createObjectURL=(...args)=>{urls++;return original(...args);};
-  try{const abort=new AbortController(),request=createEncryptedChat(api,f.identity,f.store).page(room,{signal:abort.signal});await downloading;abort.abort();release(s.from_base64(prepared.upload.ciphertext,s.base64_variants.URLSAFE_NO_PADDING).buffer);await assert.rejects(request);assert.equal(urls,0);}
+  try{const abort=new AbortController(),request=createEncryptedChat(api,f.identity,f.store).page(room,{signal:abort.signal});await downloading;if(reason==='selection')abort.abort();else notify({operation:'auth.logout'});release(s.from_base64(prepared.upload.ciphertext,s.base64_variants.URLSAFE_NO_PADDING).buffer);await assert.rejects(request);assert.equal(urls,0);}
   finally{URL.createObjectURL=original;}
+  }
 });
 
 test('a definitively rejected image cannot reappear in an empty draft after reload',async()=>{
