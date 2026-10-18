@@ -9,8 +9,9 @@ const outbound=[];const failures=[];
 browser.on('request',request=>{if(request.url().startsWith(api))outbound.push(request.postData()||'');});
 await browser.route('**/js/config.js',async route=>{
   const response=await route.fetch();let text=await response.text();
-  assert(text.includes("dataMode: 'mock'"));
-  text=text.replace("dataMode: 'mock'","dataMode: 'http'").replace('http://localhost:3004',api);
+  const mode=/dataMode:\s*['"](?:mock|http)['"]/;
+  assert(mode.test(text),'Browser acceptance requires a recognized data mode');
+  text=text.replace(mode,"dataMode: 'http'").replace('http://localhost:3004',api);
   await route.fulfill({response,body:text,contentType:'application/javascript'});
 });
 // Use a local pinned transport in acceptance, so the test does not depend on a CDN.
