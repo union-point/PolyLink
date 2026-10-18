@@ -18,7 +18,8 @@ public class IdentityErrors {
     @ExceptionHandler({
         org.springframework.web.bind.MethodArgumentNotValidException.class,
         org.springframework.http.converter.HttpMessageNotReadableException.class,
-        org.springframework.web.method.annotation.HandlerMethodValidationException.class
+        org.springframework.web.method.annotation.HandlerMethodValidationException.class,
+        org.springframework.web.method.annotation.MethodArgumentTypeMismatchException.class
     })
     public ResponseEntity<?> invalid(Exception ignored) {
         return auth(AuthFailure.invalid());

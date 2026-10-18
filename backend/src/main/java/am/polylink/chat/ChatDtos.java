@@ -7,20 +7,50 @@ import java.util.*;
 public final class ChatDtos {
     private ChatDtos() {}
 
-    public record Direct(String userId) {}
+    public record Direct(String userId) {
+        public Direct {
+            user(userId);
+        }
+    }
 
-    public record Versions(String membership, String roomKey) {}
+    public record Versions(String membership, String roomKey) {
+        public Versions {
+            if (counter(membership) < 1) throw AuthFailure.invalid();
+            counter(roomKey);
+        }
+    }
 
     public record Recipient(String userId, String identityVersion, String publicKey) {}
 
-    public record RecipientVersion(String userId, String identityVersion) {}
+    public record RecipientVersion(String userId, String identityVersion) {
+        public RecipientVersion {
+            user(userId);
+            if (counter(identityVersion) < 1) throw AuthFailure.invalid();
+        }
+    }
 
     public record Snapshot(
             String roomId, Versions versions, List<Recipient> recipients, String keyState) {}
 
-    public record Envelope(String userId, String identityVersion, String sealedPacket) {}
+    public record Envelope(String userId, String identityVersion, String sealedPacket) {
+        public Envelope {
+            user(userId);
+            if (counter(identityVersion) < 1) throw AuthFailure.invalid();
+            binary(sealedPacket, 49, 1024);
+        }
+    }
 
-    public record Activation(Snapshot expected, String newKeyVersion, List<Envelope> envelopes) {}
+    public record Activation(Snapshot expected, String newKeyVersion, List<Envelope> envelopes) {
+        public Activation {
+            if (expected == null
+                    || envelopes == null
+                    || envelopes.isEmpty()
+                    || envelopes.size() > 100
+                    || envelopes.stream().anyMatch(Objects::isNull)
+                    || counter(newKeyVersion) < 1) throw AuthFailure.invalid();
+            envelopes = List.copyOf(envelopes);
+        }
+    }
 
     public record Packet(String scheme, String nonce, String ciphertext) {
         public void validate() {
@@ -40,7 +70,20 @@ public final class ChatDtos {
             Versions expected,
             List<RecipientVersion> recipientVersions,
             Packet packet,
-            String attachmentId) {}
+            String attachmentId) {
+        public Send {
+            uuid(operationId);
+            if (expected == null
+                    || packet == null
+                    || recipientVersions == null
+                    || recipientVersions.size() < 2
+                    || recipientVersions.size() > 100
+                    || recipientVersions.stream().anyMatch(Objects::isNull)
+                    || attachmentId != null) throw AuthFailure.invalid();
+            packet.validate();
+            recipientVersions = List.copyOf(recipientVersions);
+        }
+    }
 
     public static long counter(String value) {
         try {

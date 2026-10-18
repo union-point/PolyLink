@@ -525,6 +525,35 @@ public class ChatService {
         return result;
     }
 
+    /** Minimal admitted-account directory for the existing search page's Connect action. */
+    public List<Map<String, Object>> people(String query) {
+        if (query == null || query.length() > 100) throw AuthFailure.invalid();
+        String text =
+                query.strip()
+                        .replace("!", "!!")
+                        .replace("%", "!%")
+                        .replace("_", "!_")
+                        .replace("[", "![");
+        return Rows.query(
+                        db,
+                        "SELECT TOP (100) u.UserId,u.FirstName,u.LastName FROM dbo.Users u JOIN auth.AccountSecurity a ON a.UserId=u.UserId WHERE a.AdmissionStatus='ADMITTED' AND a.EmailVerifiedAt IS NOT NULL AND (u.FirstName+' '+u.LastName LIKE ? ESCAPE '!') ORDER BY u.FirstName,u.LastName,u.UserId",
+                        "%" + text + "%")
+                .stream()
+                .map(
+                        r -> {
+                            Map<String, Object> person = new LinkedHashMap<>();
+                            person.put("id", r.get("UserId").toString());
+                            person.put("firstName", r.get("FirstName"));
+                            person.put("lastName", r.get("LastName"));
+                            person.put(
+                                    "role",
+                                    accounts.get(((Number) r.get("UserId")).intValue()).role());
+                            person.put("onboardingComplete", true);
+                            return person;
+                        })
+                .toList();
+    }
+
     public List<Map<String, Object>> list(int caller) {
         return db
                 .queryForList(

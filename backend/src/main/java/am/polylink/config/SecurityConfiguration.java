@@ -64,6 +64,7 @@ public class SecurityConfiguration {
                         authorize
                                 .requestMatchers(
                                         HttpMethod.GET,
+                                        "/search",
                                         "/chat/rooms",
                                         "/chat/rooms/*/messages",
                                         "/chat/rooms/*/keys")

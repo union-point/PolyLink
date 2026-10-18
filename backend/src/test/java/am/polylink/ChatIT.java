@@ -72,11 +72,30 @@ class ChatIT {
                             "sealedPacket",
                             Secrets.encode(new byte[128])));
         var request = Map.of("expected", snapshot, "newKeyVersion", "1", "envelopes", envelopes);
-        var response = a.browser().post("/chat/rooms/" + room + "/keys/activate", request);
-        assertThat(response.statusCode()).as(response.body()).isEqualTo(200);
-        assertThat(a.browser().post("/chat/rooms/" + room + "/keys/activate", request).statusCode())
-                .isEqualTo(409);
-        return a.browser().json(response);
+        try (var pool = Executors.newFixedThreadPool(2)) {
+            var first =
+                    pool.submit(
+                            () -> {
+                                var browser = fixture.new Browser();
+                                browser.access = a.browser().access;
+                                return browser.post(
+                                        "/chat/rooms/" + room + "/keys/activate", request);
+                            });
+            var second =
+                    pool.submit(
+                            () -> {
+                                var browser = fixture.new Browser();
+                                browser.access = a.browser().access;
+                                return browser.post(
+                                        "/chat/rooms/" + room + "/keys/activate", request);
+                            });
+            var one = first.get(10, TimeUnit.SECONDS);
+            var two = second.get(10, TimeUnit.SECONDS);
+            assertThat(List.of(one.statusCode(), two.statusCode()))
+                    .containsExactlyInAnyOrder(200, 409);
+            var response = one.statusCode() == 200 ? one : two;
+            return a.browser().json(response);
+        }
     }
 
     Map<String, Object> packet(JsonNode snapshot) {

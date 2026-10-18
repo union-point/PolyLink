@@ -29,6 +29,13 @@ public class ChatController {
         return sessions.require(request).account().id();
     }
 
+    @GetMapping("/search")
+    public List<Map<String, Object>> people(
+            @RequestParam(defaultValue = "") String q, HttpServletRequest request) {
+        user(request);
+        return chat.people(q);
+    }
+
     @PostMapping("/chat/direct")
     public Map<String, Object> direct(
             @RequestBody ChatDtos.Direct input, HttpServletRequest request) {
