@@ -191,6 +191,31 @@ class MessengerStateIT {
     }
 
     @Test
+    void roomScanCannotReturnAHiddenPreviewFromAnEarlierSnapshot() throws Exception {
+        var a = fixture.configured();
+        var b = fixture.configured();
+        var c = fixture.configured();
+        String first = direct(a, b), second = direct(a, c);
+        for (String room : List.of(first, second))
+            assertThat(
+                            a.browser()
+                                    .post(
+                                            "/chat/rooms/" + room + "/messages",
+                                            fixture.packet(fixture.activate(a, room)))
+                                    .statusCode())
+                    .isEqualTo(200);
+        var scan = a.browser().json(a.browser().get("/chat/rooms?limit=1"));
+        String cursor = scan.path("nextCursor").asText();
+        assertThat(cursor).isNotBlank();
+        for (String room : List.of(first, second))
+            assertThat(a.browser().post("/chat/rooms/" + room + "/hide", Map.of()).statusCode())
+                    .isEqualTo(200);
+        var remainder =
+                a.browser().json(a.browser().get("/chat/rooms?cursor=" + cursor + "&limit=1"));
+        assertThat(remainder.path("items").size()).isZero();
+    }
+
+    @Test
     void expiredUploadsAreRemovedAndInterruptedBindingRollsBackWithoutLosingTheStagedObject()
             throws Exception {
         var a = fixture.configured();
@@ -212,6 +237,8 @@ class MessengerStateIT {
                                 Integer.class,
                                 expired))
                 .isZero();
+        assertThat(binary(a, path + "/attachments", expired, new byte[20]).statusCode())
+                .isEqualTo(409);
         var input = fixture.packet(snapshot);
         input.put("attachmentId", id);
         db.execute(

@@ -655,14 +655,16 @@ public class ChatService {
                     sendable(room, row);
                     long staged =
                             db.queryForObject(
-                                    "SELECT COALESCE(SUM(CiphertextBytes),0) FROM messaging.Attachments WHERE OwnerId=? AND Sequence IS NULL",
+                                    "SELECT COALESCE(SUM(CiphertextBytes),0) FROM messaging.Attachments WHERE OwnerId=? AND Sequence IS NULL AND ExpiresAt>?",
                                     Long.class,
-                                    caller);
+                                    caller,
+                                    now());
                     if (staged + bytes.length > 104857920
                             || db.queryForObject(
-                                            "SELECT COUNT(*) FROM messaging.Attachments WHERE OwnerId=? AND Sequence IS NULL",
+                                            "SELECT COUNT(*) FROM messaging.Attachments WHERE OwnerId=? AND Sequence IS NULL AND ExpiresAt>?",
                                             Integer.class,
-                                            caller)
+                                            caller,
+                                            now())
                                     >= 20)
                         throw new AuthFailure(
                                 429, "RATE_LIMITED", "Too many pending image uploads.");
@@ -744,6 +746,19 @@ public class ChatService {
                 .toList();
     }
 
+    public Map<String, Object> visibleSummary(int caller, UUID room) {
+        return transaction(
+                () -> {
+                    var row = locked(caller, room);
+                    if (db.queryForObject(
+                            "SELECT Hidden FROM messaging.Participants WHERE RoomId=? AND UserId=?",
+                            Boolean.class,
+                            room,
+                            caller)) throw missing();
+                    return summary(caller, room, row);
+                });
+    }
+
     public List<Map<String, Object>> list(int caller) {
         return db
                 .queryForList(
@@ -752,12 +767,15 @@ public class ChatService {
                         caller)
                 .stream()
                 .map(
-                        id ->
-                                transaction(
-                                        () -> {
-                                            UUID room = UUID.fromString(id);
-                                            return summary(caller, room, locked(caller, room));
-                                        }))
+                        id -> {
+                            try {
+                                return visibleSummary(caller, UUID.fromString(id));
+                            } catch (AuthFailure failure) {
+                                if (failure.status == 404) return null;
+                                throw failure;
+                            }
+                        })
+                .filter(Objects::nonNull)
                 .sorted(
                         Comparator.<Map<String, Object>, String>comparing(
                                         r ->

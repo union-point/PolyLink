@@ -21,10 +21,10 @@ public class AttachmentCleanup {
 
     @Scheduled(fixedDelay = 60000, initialDelay = 60000)
     public void expire() {
-        // Row deletion and cascading private-body deletion are one atomic SQL statement.
+        // Retain immutable ID/digest tombstones; expire only unbound private ciphertext.
         try {
             db.update(
-                    "DELETE TOP (100) FROM messaging.Attachments WHERE Sequence IS NULL AND ExpiresAt<=?",
+                    "DELETE TOP (100) b FROM messaging.AttachmentBodies b JOIN messaging.Attachments a ON a.AttachmentId=b.AttachmentId WHERE a.Sequence IS NULL AND a.ExpiresAt<=?",
                     OffsetDateTime.now(clock));
         } catch (org.springframework.dao.DataAccessException ignored) {
             org.slf4j.LoggerFactory.getLogger(AttachmentCleanup.class)

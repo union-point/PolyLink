@@ -82,8 +82,8 @@ public class ChatController {
         var visible = new ArrayList<Map<String, Object>>();
         for (var room : scan.rooms().subList(offset, end)) {
             try {
-                chat.history(caller, UUID.fromString(room.get("id").toString()), null, null, 1);
-                visible.add(room);
+                visible.add(
+                        chat.visibleSummary(caller, UUID.fromString(room.get("id").toString())));
             } catch (AuthFailure e) {
                 if (e.status != 404) throw e;
             }
