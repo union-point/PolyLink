@@ -1,3 +1,4 @@
+import { createIdentityClient } from '../../auth/identity-client.js';
 import { loadTransport } from './transport.js';
 import { routes } from './routes.js';
 import { DataError } from '../errors.js';
@@ -6,31 +7,30 @@ import { unwrap, list, normalizeUser, normalizePost, normalizeComment, normalize
 export function createHttpProvider(transportPromise = loadTransport()) {
   // Prevent an unhandled rejection when a CDN fails before the first operation.
   const transport = Promise.resolve(transportPromise); transport.catch(() => {});
+  let identityPromise;
+  const identityClient = () => identityPromise ||= transport.then(api => createIdentityClient(api));
   return {
     async call(operation, ...args) {
+      if (operation.startsWith('auth.')) {
+        const client = await identityClient(), method = operation.slice(5);
+        if (typeof client[method] !== 'function') throw new DataError('UNSUPPORTED', 'This authentication operation is not available yet.');
+        return client[method](...args);
+      }
       if (!routes[operation]) throw new DataError('UNSUPPORTED', 'Այս գործառույթի backend պայմանագիրը դեռ սահմանված չէ։');
       const api = await transport;
       let body;
       try { body = unwrap(await api.request(routes[operation](...args))); }
       catch (error) { if (operation === 'auth.me' && error?.response?.status === 401) return null; throw error; }
-      if (operation === 'auth.logout') { api.setToken(null); return null; }
-      if (operation === 'auth.login') {
-        if (body?.challengeId) return { status: 'challenge', challengeId: body.challengeId, expiresAt: body.expiresAt, resendAfter: body.resendAfter };
-        if (!body?.accessToken) throw new DataError('CONTRACT', 'Login response is missing accessToken.');
-        api.setToken(body.accessToken);
-        return { status: 'authenticated', user: normalizeUser(body.user || unwrap(await api.request(routes['auth.me']()))) };
-      }
       if (operation === 'profiles.upload' && !(body?.id ?? body?.UserId)) {
         if (typeof body?.url !== 'string' || !body.url) throw new DataError('CONTRACT', 'API պատասխանը չի պարունակում լուսանկարի հասցեն։');
         const user = normalizeUser(unwrap(await api.request(routes['auth.me']())));
         if (!user) throw new DataError('UNAUTHORIZED', 'Նախ մուտք գործեք։');
         return { ...user, [args[0] === 'avatar' ? 'avatar' : 'cover']: body.url };
       }
-      if (operation === 'auth.me' || operation.startsWith('profiles.') && ['get', 'update', 'onboard', 'upload'].includes(operation.split('.')[1])) {
+      if (operation.startsWith('profiles.') && ['get', 'update', 'onboard', 'upload'].includes(operation.split('.')[1])) {
         if (body == null && operation !== 'auth.me') throw new DataError('CONTRACT', 'API պատասխանը չի պարունակում պրոֆիլը։');
         return normalizeUser(body);
       }
-      if (operation === 'auth.register') return body;
       if (operation.endsWith('.delete')) return null;
       if (operation === 'posts.list') return list(body, normalizePost).filter(post => (!args[0]?.category || post.category === args[0].category) && (!args[0]?.sphere || post.sphere === args[0].sphere));
       if (operation === 'posts.create' || operation === 'posts.update') return normalizePost(body);
@@ -43,6 +43,6 @@ export function createHttpProvider(transportPromise = loadTransport()) {
       if (operation === 'search.people') return list(body, normalizeUser).filter(user => (!args[0]?.institute || user.institute === args[0].institute) && (!args[0]?.specialization || user.specialization === args[0].specialization) && (!args[0]?.year || user.graduationYear === String(args[0].year)));
       return body;
     },
-    subscribe() { return () => {}; }, // Real-time protocol awaits a backend contract.
+    async subscribe(listener) { return (await identityClient()).subscribe(listener); },
   };
 }

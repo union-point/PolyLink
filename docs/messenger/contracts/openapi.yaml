@@ -1,10 +1,10 @@
 openapi: 3.1.1
 info:
   title: PolyLink messenger
-  version: 0.1.0
-  description: M0 contract baseline. Not implemented endpoints. PLK1 formats and independent
-    versions are normative; browser KDF benchmark, admission proof and OpenBao deployment
-    gates remain explicit. No raw passwords in any HTTP DTO.
+  version: 0.2.0
+  description: M0 wire formats with M1 invitation enrollment, real sessions and backed-up
+    key setup. Only the M1 endpoints are implemented; messaging and recovery remain
+    later milestones. Original passwords never enter HTTP DTOs.
 servers:
 - url: http://localhost:3004
   description: Local development; deployment requires HTTPS
@@ -51,7 +51,9 @@ paths:
   /auth/register:
     post:
       operationId: register
-      description: ''
+      description: M1 requires an operator-approved, unexpired, single-use email/role
+        invitation for enrollment. Verification/resend is browser-bound and credential-version-bound;
+        revoked/replaced enrollment cannot reuse an old proof.
       security: []
       responses:
         '200':
@@ -88,7 +90,9 @@ paths:
   /auth/email/verify:
     post:
       operationId: verifyEmail
-      description: ''
+      description: M1 requires an operator-approved, unexpired, single-use email/role
+        invitation for enrollment. Verification/resend is browser-bound and credential-version-bound;
+        revoked/replaced enrollment cannot reuse an old proof.
       security: []
       responses:
         '200':
@@ -162,7 +166,9 @@ paths:
   /auth/login/verify:
     post:
       operationId: verifyLogin
-      description: ''
+      description: M1 requires an operator-approved, unexpired, single-use email/role
+        invitation for enrollment. Verification/resend is browser-bound and credential-version-bound;
+        revoked/replaced enrollment cannot reuse an old proof.
       security: []
       responses:
         '200':
@@ -199,7 +205,9 @@ paths:
   /auth/challenges/resend:
     post:
       operationId: resendChallenge
-      description: ''
+      description: M1 requires an operator-approved, unexpired, single-use email/role
+        invitation for enrollment. Verification/resend is browser-bound and credential-version-bound;
+        revoked/replaced enrollment cannot reuse an old proof.
       security: []
       responses:
         '200':
@@ -1330,6 +1338,30 @@ paths:
         required: true
         schema:
           $ref: '#/components/schemas/Uuid'
+  /users/{userId}:
+    get:
+      operationId: ownIdentityProfile
+      description: M1 owner-only identity header; foreign accounts return NOT_FOUND.
+        This does not expose registry or authentication state.
+      security:
+      - bearer: []
+      parameters:
+      - name: userId
+        in: path
+        required: true
+        schema:
+          $ref: '#/components/schemas/Id'
+      responses:
+        '200':
+          description: Minimal own profile
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OwnIdentityProfile'
+        '401':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
 components:
   securitySchemes:
     bearer:
@@ -1342,13 +1374,22 @@ components:
       in: cookie
       name: __Host-plk-refresh
       description: Secure HttpOnly SameSite=Lax Path=/; 7-day idle / 30-day absolute;
-        rotation coordinated across tabs.
+        rotation coordinated across tabs. Identical previous-refresh retry returns
+        the same encrypted replay result for 10 seconds; it never creates another
+        family or extends the absolute lifetime.
     recoveryCookie:
       type: apiKey
       in: cookie
       name: __Host-plk-recovery
       description: Secure HttpOnly SameSite=Lax Path=/; 30 minutes from verification,
         purpose/operation/version bound.
+    challengeCookie:
+      type: apiKey
+      in: cookie
+      name: __Host-plk-challenge
+      description: Secure HttpOnly SameSite=Lax Path=/ browser binding for EMAIL_VERIFY/LOGIN
+        challenges; renews for 10 minutes on successful resend. Stores random proof
+        only; no password-derived material.
   parameters:
     Csrf:
       name: X-CSRF-Token
@@ -1358,12 +1399,11 @@ components:
         type: string
         minLength: 32
         maxLength: 128
-      description: For mutating cookie-auth requests, echo the signed session-bound
-        __Host-plk-refresh-csrf or __Host-plk-recovery-csrf cookie. These CSRF cookies
-        are script-readable, Secure, SameSite=Lax, Path=/ and separate from HttpOnly
-        credentials. Login/verification sets them. All mutating requests, including
-        public login/verification, require an allowed Origin. Safe GET status requires
-        neither the header nor key release.
+      description: For mutating cookie-auth requests, echo the __Host-plk-refresh-csrf
+        cookie in X-CSRF-Token. It is a random session-bound value whose hash is stored
+        by the server, separate from the HttpOnly refresh credential. All mutating
+        requests, including login and verification, require an allowed Origin. Recovery
+        has a separate cookie/CSRF context when implemented.
   responses:
     Error:
       description: Safe error; no secret values. saveOutcome=not_saved only when the
@@ -1570,6 +1610,12 @@ components:
           type: boolean
         emailFactorEnabled:
           type: boolean
+        email:
+          $ref: '#/components/schemas/Email'
+        onboardingComplete:
+          type: boolean
+          description: M1 minimal identity enrollment is complete; academic-profile
+            editing remains separate.
       required:
       - id
       - firstName
@@ -1578,6 +1624,8 @@ components:
       - admission
       - emailVerified
       - emailFactorEnabled
+      - email
+      - onboardingComplete
     Session:
       type: object
       additionalProperties: false
@@ -2234,3 +2282,68 @@ components:
       additionalProperties: false
       properties: {}
       required: []
+    OwnIdentityProfile:
+      type: object
+      additionalProperties: false
+      properties:
+        id:
+          $ref: '#/components/schemas/Id'
+        firstName:
+          type: string
+        lastName:
+          type: string
+        role:
+          type: string
+          enum:
+          - graduate
+          - lecturer
+        admission:
+          type: string
+          enum:
+          - PENDING
+          - ADMITTED
+          - DEACTIVATED
+        emailVerified:
+          type: boolean
+        emailFactorEnabled:
+          type: boolean
+        email:
+          $ref: '#/components/schemas/Email'
+        onboardingComplete:
+          type: boolean
+          description: M1 minimal identity enrollment is complete; academic-profile
+            editing remains separate.
+        jobTitle:
+          type: string
+        description:
+          type: string
+        avatar:
+          type: string
+        cover:
+          type: string
+        education:
+          type: array
+          maxItems: 0
+          items: {}
+        licenses:
+          type: array
+          maxItems: 0
+          items: {}
+      required:
+      - id
+      - firstName
+      - lastName
+      - role
+      - admission
+      - emailVerified
+      - emailFactorEnabled
+      - email
+      - onboardingComplete
+      - jobTitle
+      - description
+      - avatar
+      - cover
+      - education
+      - licenses
+      description: M1 owner-only minimal identity/profile header. Other profile sections
+        are outside this milestone.

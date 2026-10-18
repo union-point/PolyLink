@@ -2,12 +2,9 @@
 // explicit until a backend contract is agreed; add them here, never in page scripts.
 export const routes = {
   'auth.me': () => ({ method: 'get', url: '/auth/me' }),
-  'auth.login': data => ({ method: 'post', url: '/auth/login', data }),
-  'auth.register': data => ({ method: 'post', url: '/auth/register', data }),
+  'auth.login': ({email, loginSecret, scheme}) => ({ method: 'post', url: '/auth/login', data: {email, loginSecret, scheme} }),
+  'auth.register': ({email, firstName, lastName, role, loginSecret, derivation}) => ({ method: 'post', url: '/auth/register', data: {email, firstName, lastName, role, loginSecret, derivation} }),
   'auth.logout': () => ({ method: 'post', url: '/auth/logout' }),
-  'auth.forgotPassword': email => ({ method: 'post', url: '/auth/forgot-password', data: { email } }),
-  'auth.verifyRecovery': ({ email, code }) => ({ method: 'post', url: '/auth/verify-code', data: { email, code } }),
-  'auth.resetPassword': ({ email, code, newPassword }) => ({ method: 'post', url: '/auth/reset-password', data: { email, code, newPassword } }),
   'profiles.get': id => ({ method: 'get', url: id ? `/users/${encodeURIComponent(id)}` : '/auth/me' }),
   'profiles.update': data => ({ method: 'put', url: '/users/me', data: pick(data, ["firstName", "lastName", "jobTitle", "description"]) }),
   'profiles.onboard': data => ({ method: 'put', url: '/users/profile', data: form(pick(data, ["role", "institute", "department", "specialization", "description", "startYear", "endYear"])) }),

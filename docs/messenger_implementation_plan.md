@@ -4,6 +4,8 @@ Planning baseline: 18 October 2026. The authority for product behavior is the [a
 
 M0 handoff, 18 October 2026: [contracts, schema migrations and validation evidence](messenger/README.md) are now present. The handoff records selected engineering formats and remaining M1/M6 gates; later implementation must use those versioned contracts rather than treating the proposals below as existing APIs.
 
+M1 follow-up: [implementation and deployment](messenger/m1.md) uses the approved email-bound invitation admission flow. Authentication and fully backed-up key setup are opt-in; remaining milestones and target-platform release checks are explicit in that handoff.
+
 ## 1. Starting point and delivery strategy
 
 The repository has a Java 25 / Spring Boot 4.1.1 scaffold, Maven verification and optional SQL Server integration tests. Security currently permits health only; Flyway is disabled pending reconciliation of the restored database. There are no domain entities, authentication APIs or messenger APIs.

@@ -1,6 +1,6 @@
 # PolyLink
 
-A university alumni/lecturer networking course project using static HTML/CSS and vanilla JavaScript ES modules. The frontend works with persistent mock data without an API server. The initial Java/Spring Boot scaffold is in [backend/](backend/README.md); optional local Linux SQL Server tooling is in [db/](db/README.md). Feature APIs remain to be implemented.
+A university alumni/lecturer networking course project using static HTML/CSS and vanilla JavaScript ES modules. The frontend works with persistent mock data without an API server. The initial Java/Spring Boot scaffold is in [backend/](backend/README.md); optional local Linux SQL Server tooling is in [db/](db/README.md). Opt-in invitation authentication and backed-up client key setup are implemented in M1; other feature APIs remain to be implemented.
 
 ## Run the demo
 
@@ -27,6 +27,7 @@ Implemented mock flows include registration/onboarding/login/recovery/2FA, owner
 - [Agreed messenger specification: client encryption, keys, and trusted history recovery](docs/messenger_spec.md)
 - [Messenger implementation plan, milestones, and acceptance checks](docs/messenger_implementation_plan.md)
 - [M0 API/crypto contracts, schema baseline, and validation evidence](docs/messenger/README.md)
+- [M1 invitation enrollment, sessions, client key setup, and deployment](docs/messenger/m1.md)
 - [Backend setup and tests on Linux and macOS](backend/README.md)
 - [Local Linux database, backups, restoration, and persistence](db/README.md)
 - [Java/Spring backend foundation plan and cross-platform team workflow](docs/backend_plan.md)

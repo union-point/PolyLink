@@ -2,6 +2,8 @@
 
 Implemented 18 October 2026 against the [messenger specification](../messenger_spec.md) and [implementation plan](../messenger_implementation_plan.md). This milestone adds reviewable contracts and executable migration/format validation. Messenger endpoints remain unavailable; it does not implement M1 authentication or ship encryption to users.
 
+Follow-up: [M1 identity and backed-up key setup](m1.md) implements the approved invitation/email flow, real sessions, local crypto assets and guarded key publication. The API is now version 0.2.0; the evidence below records the earlier M0 baseline.
+
 | Artifact | Purpose |
 | --- | --- |
 | [OpenAPI 0.1.0](contracts/openapi.yaml) | 33 operations, strict request/response DTOs, independent versions, cookie/Bearer boundaries, pagination and replay/recovery transitions. |

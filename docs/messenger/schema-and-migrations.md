@@ -2,6 +2,8 @@
 
 M0 baseline, 18 October 2026. Source: read-only SQL catalog inspection of the restored `polylink` database, SQL Server 17.0.5015.4, compatibility 160, collation `SQL_Latin1_General_CP1_CI_AS`. The [catalog query](../../backend/src/main/resources/db/inventory/legacy-schema.sql) and [metadata snapshot](../../backend/src/main/resources/db/inventory/legacy-schema.json) contain no row values, users' email addresses, password hashes or message bodies.
 
+M1 follow-up: [invitation enrollment and real sessions](m1.md) add V3 and additional integration dependencies. V1/V2 and their historical validation below remain unchanged.
+
 ## Inspected legacy schema
 
 There are 27 tables, no user views/procedures/triggers/functions/sequences. V1 reproduces their columns, collations, identity seeds, defaults, checks, primary/unique indexes and foreign-key actions. It preserves original generated constraint names so a different schema cannot silently pass as this baseline. `AlumniRegistry_Import` is a staging heap without a primary key. Legacy `Users.LanguageId` references `Languages.Id` (not a fabricated `LanguageId` primary key).

@@ -41,7 +41,7 @@ The backend reads this file with the `local` profile. It does not read `db/.env`
 ./mvnw spring-boot:run -Dspring-boot.run.profiles=local
 ```
 
-Health: [http://127.0.0.1:3004/actuator/health](http://127.0.0.1:3004/actuator/health). Other endpoints are denied until feature APIs and authentication are implemented.
+Health: [http://127.0.0.1:3004/actuator/health](http://127.0.0.1:3004/actuator/health). Other endpoints are denied by default. Explicitly enabling configured M1 exposes only the implemented auth/key setup and owner identity endpoints.
 
 ## Migrations
 
@@ -96,10 +96,12 @@ M0 migrations were verified only in disposable test databases, including a resto
 
 ```sh
 ./mvnw verify                    # Formatting, HTTP/security tests, executable JAR; no DB required
-./mvnw -Pdatabase-tests verify   # JDBC probe and isolated database migration tests
+./mvnw -Pdatabase-tests verify   # Full integration profile; use the M1 runner below
 ./mvnw spotless:apply            # Format Java sources
 ```
 
-The JDBC probe uses the same local connection settings or environment overrides and a temporary table. It checks Unicode and rollback without changing application tables. Migration tests additionally require `DB_TEST_ADMIN_PASSWORD` and optionally `DB_TEST_ADMIN_USERNAME` (default `sa`), with permission to create/drop disposable databases on the configured host/port. They create uniquely named databases, test fresh/upgrade/drift behavior and remove only those databases. Missing credentials or connection failures fail that profile.
+The JDBC probe uses the same local connection settings or environment overrides and a temporary table. Migration tests require `DB_TEST_ADMIN_PASSWORD` and optionally `DB_TEST_ADMIN_USERNAME` (default `sa`), with permission to create/drop disposable databases. M1 identity tests additionally require TLS OpenBao and a local SMTP capture service. From the repository root, use `python3 tools/m1/verify.py --browser` to provision those isolated dependencies, run the full profile, exercise real browser flows and clean up. Install the Node/browser dependencies first as described in the [M1 instructions](../docs/messenger/m1.md). Missing dependencies fail the profile rather than skipping acceptance. No working database is migrated by that runner.
 
 Flyway startup remains disabled; Hibernate uses schema validation and domain entity mappings are not implemented yet. M0 includes a captured legacy baseline and additive messenger migrations. Run them explicitly with separate migration credentials using the [schema workflow](../docs/messenger/schema-and-migrations.md). Historical ignored SQL scripts are never run automatically. API/crypto contracts and remaining gates are in the [M0 handoff](../docs/messenger/README.md).
+
+M1 authentication and backed-up client key setup are available behind `IDENTITY_ENABLED=true`. Configure the keys, mail and OpenBao prerequisites, apply V3, and issue email/role invitations using the [M1 deployment instructions](../docs/messenger/m1.md). The default remains disabled and the frontend defaults to mock mode. Chat and account/history recovery APIs are later milestones.

@@ -101,6 +101,21 @@ SQL
 
 A named volume provides persistence, not an independent backup. Keep `.bak` files outside Docker storage as well.
 
+## Apply schema migrations
+
+Restoring a backup and applying migrations are separate steps. Container startup/restart does not apply migrations. M0 left the working `polylink` database at its original 27-table schema; its migration checks used disposable databases.
+
+Follow the [backend migration instructions](../backend/README.md#migrations) to export the target and migration credentials. The migration tool reads neither this directory's `.env` nor the backend's local properties file. From `db/`, change to the backend directory and run the guarded upgrade after reviewing the schema inventory and taking a safety backup:
+
+```sh
+cd ../backend
+./mvnw compile exec:java \
+  -Dexec.mainClass=am.polylink.database.SchemaCommand \
+  -Dexec.args=upgrade
+```
+
+Use `upgrade` for an existing restored database and subsequent numbered migrations. Use `fresh` only after creating a new empty database and selecting it through `DB_NAME`; it refuses existing tables. V2 adds the messenger schemas while preserving legacy data. New migration files belong in `backend/src/main/resources/db/migration/`, not `db/scripts/legacy/`.
+
 ## Local JDK used during setup
 
 This laptop also has a full Temurin JDK in the user cache. If the system installation cannot compile the backend, select it before running Maven:
@@ -114,4 +129,4 @@ This is specific to this laptop. Other developers can use their existing full JD
 
 ## CI
 
-The backend workflow runs Compose from `db/` on a disposable Linux runner, creates an empty CI database, and tests JDBC behavior. It does not use this laptop's volume or require the local backups.
+The backend workflow runs Compose from `db/` on a disposable Linux runner, tests JDBC behavior and creates separate uniquely named databases for fresh/upgrade/drift migration checks. It does not use this laptop's volume or require the local backups. Explicit migration commands and the captured legacy schema are documented in the [M0 schema workflow](../docs/messenger/schema-and-migrations.md); application startup still does not migrate a database.

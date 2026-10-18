@@ -33,3 +33,6 @@ build/
 
 ### VS Code ###
 .vscode/
+
+# Service tokens are provisioned separately from SQL/application artifacts.
+secrets/

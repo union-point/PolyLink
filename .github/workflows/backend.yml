@@ -2,9 +2,9 @@ name: Backend
 
 on:
   pull_request:
-    paths: ["backend/**", "db/**", "docs/messenger/**", "tools/contracts/**", ".github/workflows/backend.yml"]
+    paths: ["backend/**", "db/**", "infra/openbao/**", "js/**", "docs/messenger/**", "tools/contracts/**", "tools/m1/**", ".github/workflows/backend.yml"]
   push:
-    paths: ["backend/**", "db/**", "docs/messenger/**", "tools/contracts/**", ".github/workflows/backend.yml"]
+    paths: ["backend/**", "db/**", "infra/openbao/**", "js/**", "docs/messenger/**", "tools/contracts/**", "tools/m1/**", ".github/workflows/backend.yml"]
 
 permissions:
   contents: read
@@ -12,7 +12,7 @@ permissions:
 jobs:
   verify:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
     defaults:
       run:
         working-directory: backend
@@ -30,6 +30,11 @@ jobs:
           java-version: "25"
           cache: maven
           cache-dependency-path: backend/pom.xml
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: tools/m1/package-lock.json
       - name: Start SQL Server
         working-directory: db
         run: docker compose up -d --wait --wait-timeout 180 sqlserver
@@ -37,8 +42,14 @@ jobs:
         working-directory: db
         run: |
           docker compose exec -T sqlserver sh -c 'SQLCMDPASSWORD="$MSSQL_SA_PASSWORD" exec /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -C -b -Q "CREATE DATABASE [polylink_ci]"'
-      - name: Verify formatting, HTTP security, SQL connectivity, and isolated migrations
-        run: ./mvnw -B -Pdatabase-tests verify
+      - name: Install browser acceptance dependencies
+        working-directory: .
+        run: |
+          npm ci --prefix tools/m1 --ignore-scripts
+          npx --prefix tools/m1 playwright install --with-deps chromium
+      - name: Verify SQL migrations, identity HTTP, TLS Transit, SMTP, and browser flows
+        working-directory: .
+        run: python3 tools/m1/verify.py --browser
       - name: Stop SQL Server
         working-directory: db
         if: always()
@@ -67,3 +78,7 @@ jobs:
         run: |
           npm ci --prefix tools/contracts --ignore-scripts
           npm test --prefix tools/contracts
+      - name: Verify vendored browser crypto matches the pinned source
+        run: |
+          node tools/contracts/vendor-sodium.mjs
+          git diff --exit-code -- js/crypto/vendor

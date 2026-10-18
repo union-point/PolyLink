@@ -117,22 +117,54 @@ export async function bootstrap({ protectedPage = true, requireOnboarding = true
   document.querySelectorAll('nav a[href="login.html"]').forEach(link => link.addEventListener('click', async event => {
     event.preventDefault();
     leaving = true;
+    const { config } = await import('../config.js');
+    if(config.dataMode==='http') {
+      document.querySelector('main')?.replaceChildren();
+      try { await auth.logout(); }
+      catch(error) { try { sessionStorage.setItem('polylink.logoutNotice', error.message); } catch {} }
+      finally { location.href='login.html'; }
+      return;
+    }
     const done = await pending(null, document.querySelector('main') || document.body, async () => { await auth.logout(); location.href = 'login.html'; });
     if (!done) leaving = false;
   }));
   if (!protectedPage) return null;
-  const user = await auth.me();
+  let user = await auth.me();
+  if (user?.cryptoLocked) {
+    const { unlockIdentity } = await import('./auth-ui.js');
+    user = await unlockIdentity(auth, user);
+  }
   if (!user && protectedPage) { location.replace('login.html'); return null; }
   if (user && protectedPage && requireOnboarding && !user.onboardingComplete) { location.replace('profile_info.html'); return null; }
   const validateSession = (nextUser, error, event) => {
     if (leaving) return;
     if (error) { showError(document.querySelector('main') || document.body, error); return; }
-    if (!nextUser) { leaving = true; location.replace('login.html'); }
+    if (!nextUser) { leaving = true; document.querySelector('main')?.replaceChildren(); location.replace('login.html'); }
     else if (nextUser.id !== user.id || event?.operation === 'reset') { leaving = true; location.reload(); }
   };
   const unsubscribe = await auth.subscribeSession(validateSession);
   window.addEventListener('pagehide', event => { if (!event.persisted) unsubscribe(); });
-  window.addEventListener('pageshow', event => { if (event.persisted) { leaving = false; auth.me().then(next => validateSession(next)).catch(error => validateSession(null, error)); } });
+  const { config } = await import('../config.js');
+  if(config.dataMode==='http') {
+    const style=document.createElement('style');style.textContent='body[data-session-check] > :not([data-identity-unlock]):not([data-session-status]):not(script):not(style) {visibility:hidden}';document.head.appendChild(style);
+    let checking=false;
+    const check=async()=>{
+      if(leaving||checking||document.visibilityState==='hidden')return;
+      checking=true;
+      try {
+        let next=await auth.me();
+        if(next?.cryptoLocked){document.body.dataset.sessionCheck='';const {unlockIdentity}=await import('./auth-ui.js');next=await unlockIdentity(auth,next);}
+        validateSession(next);if(next&&!leaving){delete document.body.dataset.sessionCheck;document.querySelector('[data-session-status]')?.remove();}
+      }catch(error){
+        if(document.body.hasAttribute('data-session-check')){const status=document.querySelector('[data-session-status]')||document.createElement('p');status.dataset.sessionStatus='';status.setAttribute('role','status');status.textContent=error.message;document.body.appendChild(status);}
+        else validateSession(null,error);
+      }finally{checking=false;}
+    };
+    const interval=setInterval(check,15000);
+    window.addEventListener('pagehide',event=>{document.body.dataset.sessionCheck='';if(!event.persisted)clearInterval(interval);});
+    window.addEventListener('pageshow',event=>{if(event.persisted){leaving=false;check();}});
+    window.addEventListener('focus',check);document.addEventListener('visibilitychange',check);
+  }else window.addEventListener('pageshow', event => { if (event.persisted) { leaving = false; auth.me().then(next => validateSession(next)).catch(error => validateSession(null, error)); } });
   return user;
 }
 
