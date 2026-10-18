@@ -42,6 +42,7 @@ export function createTransport(axios){
   api.interceptors.request.use(request=>{
     request.headers ||= {};request._sessionGeneration=generation;
     if(accessToken)request.headers.Authorization=`Bearer ${accessToken}`;
+    if(request.url.startsWith('/auth/recovery/')&&!['/auth/recovery/request','/auth/recovery/verify'].includes(request.url))request.headers['X-CSRF-Token']=cookie('__Host-plk-recovery-csrf');
     if(['/auth/refresh','/auth/logout'].includes(request.url))request.headers['X-CSRF-Token']=csrfCookie();
     return request;
   });

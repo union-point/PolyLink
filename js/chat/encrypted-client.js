@@ -7,7 +7,21 @@ const encoder=new TextEncoder(),decoder=new TextDecoder('utf-8',{fatal:true});
 const versionList=snapshot=>snapshot.recipients.map(({userId,identityVersion})=>({userId,identityVersion}));
 export function createEncryptedChat(api,identity,store=outboxStore){
   const call=(name,...args)=>api.request(routes[`chat.${name}`](...args));
-  const roomLocks=new Map();
+  const roomLocks=new Map(),rotating=new Map();
+  let rotationTimer;
+  const rotate=(room,context)=>{
+    if(!rotating.has(room))rotating.set(room,ready(room,context).finally(()=>rotating.delete(room)));
+    return rotating.get(room);
+  };
+  const rotateLater=rooms=>{
+    clearTimeout(rotationTimer);
+    rotationTimer=setTimeout(async()=>{
+      for(const room of rooms){
+        try{await identity.withKeys(context=>rotate(room,context));}
+        catch{/* Polling/refocus retries against a fresh session and recipient snapshot. */}
+      }
+    },0);
+  };
   async function locked(room,work){
     if(globalThis.navigator?.locks)return navigator.locks.request(`polylink-outbox:${room}`,work);
     const previous=roomLocks.get(room)||Promise.resolve();const next=previous.catch(()=>{}).then(work);roomLocks.set(room,next);
@@ -85,12 +99,16 @@ export function createEncryptedChat(api,identity,store=outboxStore){
         room.unreadCount=BigInt(room.unreadCount)===0n?0:room.unreadCount;
         if(room.lastMessage){const bundle=await call('keys',room.id);room.lastMessage=await decrypt(room.lastMessage,bundle,context);}
       }
+      rotateLater(rooms.filter(room=>room.canSend&&room.keySnapshot?.keyState!=='ready').map(room=>room.id));
       return rooms;
     });},
     openDirect:target=>identity.withKeys(()=>call('openDirect',typeof target==='object'?target.id:target)),
     async messages(room){return locked(room,()=>identity.withKeys(async context=>{
       let operation;try{operation=await pending(context,room);}catch(error){if(error.code!=='STORAGE_UNAVAILABLE')throw error;}if(operation)await flush(context,room,operation);
-      const bundle=await call('keys',room);let after='0';const items=[];
+      const bundle=await call('keys',room);
+      // Start the open room immediately; historical envelopes remain readable during rotation.
+      if(bundle.snapshot.keyState!=='ready')rotate(room,context).catch(()=>{});
+      let after='0';const items=[];
       do{
         const page=await call('messages',room,{after,limit:100});
         for(const message of page.items)items.push(await decrypt(message,bundle,context));
@@ -124,7 +142,7 @@ export function createEncryptedChat(api,identity,store=outboxStore){
       const tick=()=>{if(stopped)return;if(document.visibilityState!=='hidden')listener({operation:'chat.incoming'});timer=setTimeout(tick,2500);};
       const visible=()=>{if(document.visibilityState!=='hidden')listener({operation:'chat.incoming'});};
       timer=setTimeout(tick,2500);document.addEventListener('visibilitychange',visible);globalThis.addEventListener('online',visible);
-      return()=>{stopped=true;clearTimeout(timer);document.removeEventListener('visibilitychange',visible);globalThis.removeEventListener('online',visible);};
+      return()=>{stopped=true;clearTimeout(timer);clearTimeout(rotationTimer);document.removeEventListener('visibilitychange',visible);globalThis.removeEventListener('online',visible);};
     }
   };
 }

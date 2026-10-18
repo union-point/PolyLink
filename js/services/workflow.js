@@ -11,12 +11,12 @@ export function saveWorkflow(data) { sessionStorage.setItem(key, JSON.stringify(
 export function clearWorkflow() { sessionStorage.removeItem(key); }
 export function requireChallenge(purpose) {
   const data = loadWorkflow();
-  if (data.purpose !== purpose || !data.challengeId || (data.expiresAt && data.expiresAt <= Date.now())) throw new DataError('VALIDATION', 'Նախ պահանջեք նոր վավերացման կոդ։');
+  if (data.purpose !== purpose || !data.challengeId || (data.expiresAt && (typeof data.expiresAt==='string'?Date.parse(data.expiresAt):data.expiresAt) <= Date.now())) throw new DataError('VALIDATION', 'Նախ պահանջեք նոր վավերացման կոդ։');
   return data;
 }
 export function rememberChallenge(purpose, result, address) {
   if (!result?.challengeId) throw new DataError('CONTRACT', 'Verification response is missing challengeId.');
-  const data = { ...result, purpose, email: address, resendAt: Date.now() + (result.resendAfter ?? 60) * 1000 };
+  const data = { ...result, purpose, email: address, resendAt: Date.now() + (typeof result.resendAfter==='string'?Math.max(0,(Date.parse(result.resendAfter)-Date.now())/1000):(result.resendAfter ?? 60)) * 1000 };
   saveWorkflow(data);
   return data;
 }

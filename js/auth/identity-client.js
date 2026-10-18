@@ -1,3 +1,4 @@
+import { createRecoveryClient } from './recovery-client.js';
 import { sodium, derive, seal, open, aad } from '../crypto/sodium.js';
 import { saveDevice, openDevice, clearDevice } from '../crypto/device-store.js';
 import { outboxStore } from '../crypto/outbox-store.js';
@@ -80,7 +81,27 @@ export function createIdentityClient(api){
       return {status:'authenticated',user:user(),storageUnavailable};
     }finally{derived.login.fill(0);derived.wrapping.fill(0);pending=null;changing=false;transitionUser=null;}
   }
+  const recovery=createRecoveryClient(api,{
+    readVault,
+    local:async operation=>{
+      await client.me();
+      if(!session||!vaultKey||session.user.id!==operation.userId||JSON.stringify(session.versions)!==JSON.stringify(operation.baseVersions))return null;
+      return {key:vaultKey.slice(),contents:structuredClone(vault),bundle:await api.request({method:'get',url:'/keys/me'})};
+    },
+    finish:async(email,password)=>{
+      const settings=await post('/auth/parameters',{email}),derived=await derive(password,settings),s=await sodium();
+      try{
+        const input={email,scheme:'PLK1',loginSecret:s.to_base64(derived.login,s.base64_variants.URLSAFE_NO_PADDING)};
+        let result;
+        try{result=await post('/auth/recovery/login',input);}
+        catch(error){if(error.code!=='UNAUTHORIZED')throw error;result=await post('/auth/login',input);}
+        if(result.status==='challenge'){pending={derived,settings,challenge:result.challenge};return {status:'challenge',...result.challenge};}
+        return await complete(result,derived,settings);
+      }catch(error){if(!pending){derived.login.fill(0);derived.wrapping.fill(0);}throw error;}
+    }
+  });
   const client={
+    ...recovery,
     async login({email,password}){
       if(pending){pending.derived.login.fill(0);pending.derived.wrapping.fill(0);pending=null;}
       const attemptRevision=revision;const settings=await post('/auth/parameters',{email});const derived=await derive(password,settings),s=await sodium();
@@ -105,7 +126,8 @@ export function createIdentityClient(api){
       finally{derived.login.fill(0);derived.wrapping.fill(0);}
     },
     async verifyEmail({challengeId,code}){return post('/auth/email/verify',{challengeId,code});},
-    async resendChallenge({challengeId}){
+    async resendChallenge(input){
+      const challengeId=typeof input==='string'?input:input.challengeId;
       const result=await post('/auth/challenges/resend',{challengeId});if(pending)pending.challenge=result;return result;
     },
     async me(){
