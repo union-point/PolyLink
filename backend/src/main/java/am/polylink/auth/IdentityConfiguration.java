@@ -17,7 +17,7 @@ public class IdentityConfiguration {
     }
 
     @Bean
-    PasswordEncoder loginSecretEncoder() {
+    public PasswordEncoder loginSecretEncoder() {
         return new BoundedPasswordEncoder(new Argon2PasswordEncoder(16, 32, 1, 65536, 3), 2);
     }
 

@@ -785,51 +785,48 @@ public class ChatService {
         }
         final String start = lastRoom;
         final long sequence = after;
-        return transaction(
-                () -> {
-                    var items = new ArrayList<Map<String, Object>>();
-                    var rooms =
-                            db
-                                    .queryForList(
-                                            "SELECT RoomId FROM messaging.Participants WHERE UserId=?",
-                                            String.class,
-                                            caller)
-                                    .stream()
-                                    .map(id -> id.toLowerCase(Locale.ROOT))
-                                    .sorted()
-                                    .toList();
-                    for (String id : rooms) {
-                        if (id.compareTo(start) < 0) continue;
-                        UUID room = uuid(id);
-                        try {
-                            locked(caller, room);
-                        } catch (AuthFailure e) {
-                            if (e.status == 404) continue;
-                            throw e;
-                        }
-                        items.addAll(
-                                messages(
-                                        caller,
-                                        room,
-                                        "m.SenderId=? AND m.DeletedAt IS NULL AND m.Sequence>? ORDER BY m.Sequence OFFSET 0 ROWS FETCH NEXT ? ROWS ONLY",
-                                        caller,
-                                        id.equals(start) ? sequence : 0,
-                                        limit + 1 - items.size()));
-                        if (items.size() > limit) break;
-                    }
-                    boolean more = items.size() > limit;
-                    if (more) items.removeLast();
-                    var result = new LinkedHashMap<String, Object>();
-                    result.put("items", items);
-                    result.put(
-                            "nextCursor",
-                            more
-                                    ? items.getLast().get("roomId")
-                                            + ":"
-                                            + items.getLast().get("sequence")
-                                    : null);
-                    return result;
-                });
+        var items = new ArrayList<Map<String, Object>>();
+        var rooms =
+                db
+                        .queryForList(
+                                "SELECT RoomId FROM messaging.Participants WHERE UserId=?",
+                                String.class,
+                                caller)
+                        .stream()
+                        .map(id -> id.toLowerCase(Locale.ROOT))
+                        .sorted()
+                        .toList();
+        for (String id : rooms) {
+            if (id.compareTo(start) < 0) continue;
+            UUID room = uuid(id);
+            try {
+                items.addAll(
+                        transaction(
+                                () -> {
+                                    locked(caller, room);
+                                    return messages(
+                                            caller,
+                                            room,
+                                            "m.SenderId=? AND m.DeletedAt IS NULL AND m.Sequence>? ORDER BY m.Sequence OFFSET 0 ROWS FETCH NEXT ? ROWS ONLY",
+                                            caller,
+                                            id.equals(start) ? sequence : 0,
+                                            limit + 1 - items.size());
+                                }));
+            } catch (AuthFailure e) {
+                if (e.status != 404) throw e;
+            }
+            if (items.size() > limit) break;
+        }
+        boolean more = items.size() > limit;
+        if (more) items.removeLast();
+        var result = new LinkedHashMap<String, Object>();
+        result.put("items", items);
+        result.put(
+                "nextCursor",
+                more
+                        ? items.getLast().get("roomId") + ":" + items.getLast().get("sequence")
+                        : null);
+        return result;
     }
 
     public Map<String, Object> visibleSummary(int caller, UUID room) {

@@ -28,6 +28,7 @@ class GroupIT {
     @Autowired JsonMapper mapper;
     @Autowired ChatService service;
     @Autowired GroupService groups;
+    @Autowired AccountLifecycle lifecycle;
     final ChatIT fixture = new ChatIT();
 
     @DynamicPropertySource
@@ -299,5 +300,217 @@ class GroupIT {
                                         fixture.packet(summary(a, room).path("keySnapshot")))
                                 .statusCode())
                 .isEqualTo(200);
+    }
+
+    @Test
+    void deletionRevokesAccessRemovesOnlyOwnBodiesAndTransfersOwnership() throws Exception {
+        var a = fixture.configured();
+        var b = fixture.configured();
+        var c = fixture.configured();
+        var create = creation(a, b);
+        String room = create.get("roomId").toString(), path = "/chat/rooms/" + room;
+        json(a, "POST", "/chat/groups", create);
+        add(a, room, c);
+        var snapshot = summary(a, room).path("keySnapshot");
+        var state = new MessengerStateIT();
+        state.port = port;
+        String attachment = UUID.randomUUID().toString();
+        assertThat(state.binary(a, path + "/attachments", attachment, new byte[20]).statusCode())
+                .isEqualTo(201);
+        var own = fixture.packet(snapshot);
+        own.put("attachmentId", attachment);
+        json(a, "POST", path + "/messages", own);
+        json(b, "POST", path + "/messages", fixture.packet(snapshot));
+        var exported = json(a, "GET", "/chat/export?limit=1", null);
+        assertThat(exported.path("items").size()).isEqualTo(1);
+        assertThat(exported.path("items").get(0).path("sender").path("id").asText())
+                .isEqualTo("" + a.id());
+        String direct =
+                json(a, "POST", "/chat/direct", Map.of("userId", "" + b.id())).path("id").asText();
+        assertThat(
+                        a.browser()
+                                .post(
+                                        "/account/delete",
+                                        Map.of(
+                                                "expectedCredential",
+                                                "1",
+                                                "loginSecret",
+                                                fixture.fixture.secret()))
+                                .statusCode())
+                .isEqualTo(401);
+        json(
+                a,
+                "POST",
+                "/account/delete",
+                Map.of("expectedCredential", "1", "loginSecret", a.secret()));
+        assertThat(a.browser().get(path + "/messages").statusCode()).isEqualTo(401);
+        assertThat(a.browser().get("/keys/me").statusCode()).isEqualTo(401);
+        assertThat(summary(b, room).path("ownerId").asText())
+                .isEqualTo("" + Math.min(b.id(), c.id()));
+        assertThat(summary(b, room).path("keySnapshot").path("keyState").asText())
+                .isEqualTo("stale");
+        var history = json(b, "GET", path + "/messages", null).path("items");
+        assertThat(history.size()).isEqualTo(2);
+        assertThat(history.get(0).path("deleted").asBoolean()).isTrue();
+        assertThat(history.get(0).path("packet").isNull()).isTrue();
+        assertThat(history.get(1).path("deleted").asBoolean()).isFalse();
+        assertThat(state.binary(b, "/chat/attachments/" + attachment, null, null).statusCode())
+                .isEqualTo(404);
+        assertThat(
+                        db.queryForObject(
+                                "SELECT COUNT(*) FROM keyvault.Vaults WHERE UserId=?",
+                                Integer.class,
+                                a.id()))
+                .isZero();
+        assertThat(
+                        db.queryForObject(
+                                "SELECT COUNT(*) FROM auth.AccountDeletions WHERE UserId=?",
+                                Integer.class,
+                                a.id()))
+                .isEqualTo(1);
+        assertThat(
+                        db.queryForObject(
+                                "SELECT Closed FROM messaging.Rooms WHERE RoomId=?",
+                                Boolean.class,
+                                direct))
+                .isTrue();
+        rotate(b, room);
+        assertThat(
+                        b.browser()
+                                .post(
+                                        path + "/messages",
+                                        fixture.packet(summary(b, room).path("keySnapshot")))
+                                .statusCode())
+                .isEqualTo(200);
+        assertThat(json(b, "GET", "/chat/export", null).path("items").size()).isEqualTo(2);
+    }
+
+    @Test
+    void deactivationSuspendsSessionsWithoutChangingMembershipOwnerOrPasswordCopy()
+            throws Exception {
+        var a = fixture.configured();
+        var b = fixture.configured();
+        var create = creation(a, b);
+        String room = create.get("roomId").toString();
+        json(a, "POST", "/chat/groups", create);
+        byte[] passwordCopy =
+                db.queryForObject(
+                        "SELECT PasswordCopy FROM keyvault.Vaults WHERE UserId=?",
+                        byte[].class,
+                        a.id());
+        json(
+                a,
+                "POST",
+                "/account/deactivate",
+                Map.of("expectedCredential", "1", "loginSecret", a.secret()));
+        assertThat(a.browser().get("/auth/me").statusCode()).isEqualTo(401);
+        assertThat(summary(b, room).path("ownerId").asText()).isEqualTo("" + a.id());
+        assertThat(summary(b, room).path("participants").size()).isEqualTo(2);
+        assertThat(
+                        db.queryForObject(
+                                "SELECT PasswordCopy FROM keyvault.Vaults WHERE UserId=?",
+                                byte[].class,
+                                a.id()))
+                .isEqualTo(passwordCopy);
+        assertThat(
+                        db.queryForObject(
+                                "SELECT CredentialVersion FROM auth.AccountSecurity WHERE UserId=?",
+                                Long.class,
+                                a.id()))
+                .isEqualTo(1);
+        assertThat(
+                        a.browser()
+                                .post(
+                                        "/auth/login",
+                                        Map.of(
+                                                "email",
+                                                a.email(),
+                                                "scheme",
+                                                "PLK1",
+                                                "loginSecret",
+                                                a.secret()))
+                                .statusCode())
+                .isEqualTo(401);
+    }
+
+    @Test
+    void explicitLegacyImportKeepsPlaintextSeparateAndDeletionReplayIsIdempotent()
+            throws Exception {
+        var a = fixture.configured();
+        var b = fixture.configured();
+        int legacy =
+                db.queryForObject(
+                        "INSERT dbo.ChatRooms(IsGroup) OUTPUT inserted.RoomId VALUES (1)",
+                        Integer.class);
+        db.update(
+                "INSERT dbo.ChatParticipants(RoomId,UserId) VALUES (?,?),(?,?)",
+                legacy,
+                a.id(),
+                legacy,
+                b.id());
+        db.update(
+                "INSERT dbo.ChatMessages(RoomId,SenderId,EncryptedContent) VALUES (?,?,N'Legacy canary stays plaintext')",
+                legacy,
+                a.id());
+        UUID room = groups.importLegacy(legacy, a.id(), "Reviewed import");
+        assertThat(groups.importLegacy(legacy, a.id(), "Reviewed import")).isEqualTo(room);
+        assertThat(
+                        db.queryForObject(
+                                "SELECT EncryptedContent FROM dbo.ChatMessages WHERE RoomId=?",
+                                String.class,
+                                legacy))
+                .isEqualTo("Legacy canary stays plaintext");
+        assertThat(json(a, "GET", "/chat/rooms/" + room + "/messages", null).path("items").size())
+                .isZero();
+        var snap = rotate(a, room.toString());
+        json(a, "POST", "/chat/rooms/" + room + "/messages", fixture.packet(snap));
+        byte[] ciphertext =
+                db.queryForObject(
+                        "SELECT Ciphertext FROM messaging.Messages WHERE RoomId=?",
+                        byte[].class,
+                        room);
+        lifecycle.replayDeletion(a.id());
+        // Restore-equivalent fixture: replay an externally retained ledger over resurrected SQL
+        // rows.
+        db.update("DELETE auth.AccountDeletions WHERE UserId=?", a.id());
+        db.update(
+                "UPDATE auth.AccountSecurity SET AdmissionStatus='ADMITTED' WHERE UserId=?",
+                a.id());
+        db.update(
+                "UPDATE messaging.Messages SET SenderId=?,Ciphertext=?,DeletedAt=NULL WHERE RoomId=?",
+                a.id(),
+                ciphertext,
+                room);
+        db.update(
+                "UPDATE messaging.MembershipIntervals SET LeftMembership=NULL,LeftSequence=NULL WHERE RoomId=? AND UserId=?",
+                room,
+                a.id());
+        db.update("UPDATE messaging.Groups SET OwnerId=? WHERE RoomId=?", a.id(), room);
+        lifecycle.replayDeletion(a.id());
+        lifecycle.replayDeletion(a.id());
+        assertThat(
+                        db.queryForObject(
+                                "SELECT Ciphertext FROM messaging.Messages WHERE RoomId=?",
+                                byte[].class,
+                                room))
+                .isNull();
+        assertThat(
+                        db.queryForObject(
+                                "SELECT OwnerId FROM messaging.Groups WHERE RoomId=?",
+                                Integer.class,
+                                room))
+                .isEqualTo(b.id());
+        assertThat(
+                        db.queryForObject(
+                                "SELECT AdmissionStatus FROM auth.AccountSecurity WHERE UserId=?",
+                                String.class,
+                                a.id()))
+                .isEqualTo("DELETED");
+        assertThat(
+                        db.queryForObject(
+                                "SELECT COUNT(*) FROM auth.AccountDeletions WHERE UserId=?",
+                                Integer.class,
+                                a.id()))
+                .isEqualTo(1);
     }
 }

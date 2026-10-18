@@ -96,6 +96,64 @@ class DatabaseMigrationIT {
                 });
     }
 
+    @Test
+    void m5UpgradePreservesCiphertextKeysAndPersonalStateAndAssignsExistingGroupOwner()
+            throws Exception {
+        inIsolatedDatabase(
+                connection -> {
+                    var source = new SingleConnectionDataSource(connection, true);
+                    Flyway.configure()
+                            .dataSource(source)
+                            .locations("classpath:db/migration")
+                            .target("6")
+                            .load()
+                            .migrate();
+                    try (var statement = connection.createStatement()) {
+                        statement.execute(
+                                "INSERT dbo.Languages(Code,Name) VALUES (N'en',N'English')");
+                        statement.execute(
+                                """
+                    INSERT dbo.Users(FirstName,LastName,Email,PasswordHash,RoleId,LanguageId)
+                    SELECT N'Upgrade',N'One',N'upgrade1@example.invalid',N'NOT_AUTH',r.RoleId,l.Id FROM dbo.Roles r CROSS JOIN dbo.Languages l WHERE r.Name=N'graduate' AND l.Code=N'en';
+                    INSERT dbo.Users(FirstName,LastName,Email,PasswordHash,RoleId,LanguageId)
+                    SELECT N'Upgrade',N'Two',N'upgrade2@example.invalid',N'NOT_AUTH',r.RoleId,l.Id FROM dbo.Roles r CROSS JOIN dbo.Languages l WHERE r.Name=N'graduate' AND l.Code=N'en';
+                    INSERT auth.AccountSecurity(UserId,AdmissionStatus,EmailVerifiedAt,CredentialVersion,SchemeVersion,ClientSalt,ClientOpsLimit,ClientMemoryBytes,LoginVerifier,EmailFactorEnabled)
+                    SELECT UserId,'ADMITTED',SYSDATETIMEOFFSET(),1,1,0x00,2,67108864,'SYNTHETIC',0 FROM dbo.Users;
+                    INSERT keyvault.Identities SELECT UserId,1,0x00,SYSDATETIMEOFFSET() FROM dbo.Users;
+                    DECLARE @group uniqueidentifier='10000000-0000-4000-8000-000000000001',@direct uniqueidentifier='20000000-0000-4000-8000-000000000001';
+                    INSERT messaging.Rooms(RoomId,IsGroup,Closed,MembershipVersion,LastSequence,CreatedAt) VALUES (@group,1,0,1,3,SYSDATETIMEOFFSET()),(@direct,0,0,1,0,SYSDATETIMEOFFSET());
+                    INSERT messaging.Participants SELECT @group,UserId,1,1,2,1,1 FROM dbo.Users;
+                    INSERT messaging.Participants SELECT @direct,UserId,1,0,0,0,0 FROM dbo.Users;
+                    INSERT messaging.DirectPairs VALUES (1,2,@direct);
+                    INSERT messaging.RoomKeys VALUES (@group,1,1,0x1122,0x00,SYSDATETIMEOFFSET());
+                    UPDATE messaging.Rooms SET ActiveKeyVersion=1 WHERE RoomId=@group;
+                    INSERT messaging.Envelopes SELECT @group,1,UserId,1,0x3344 FROM dbo.Users;
+                    INSERT messaging.Messages(RoomId,Sequence,MessageId,SenderId,ClientOperationId,KeyVersion,Ciphertext,SentAt) VALUES (@group,3,NEWID(),1,NEWID(),1,0x5566,SYSDATETIMEOFFSET());
+                    """);
+                    }
+                    SchemaCommand.migrate(connection, "upgrade");
+                    try (var statement = connection.createStatement();
+                            var rows =
+                                    statement.executeQuery(
+                                            "SELECT g.OwnerId,p.HistoryCutoff,p.LastReadSequence,p.Muted,p.Hidden,m.Ciphertext,e.SealedPacket FROM messaging.Groups g JOIN messaging.Participants p ON p.RoomId=g.RoomId JOIN messaging.Messages m ON m.RoomId=g.RoomId JOIN messaging.Envelopes e ON e.RoomId=p.RoomId AND e.UserId=p.UserId ORDER BY p.UserId")) {
+                        int n = 0;
+                        while (rows.next()) {
+                            n++;
+                            assertThat(rows.getInt("OwnerId")).isEqualTo(1);
+                            assertThat(rows.getLong("HistoryCutoff")).isEqualTo(1);
+                            assertThat(rows.getLong("LastReadSequence")).isEqualTo(2);
+                            assertThat(rows.getBoolean("Muted")).isTrue();
+                            assertThat(rows.getBoolean("Hidden")).isTrue();
+                            assertThat(rows.getBytes("Ciphertext")).containsExactly(0x55, 0x66);
+                            assertThat(rows.getBytes("SealedPacket")).containsExactly(0x33, 0x44);
+                        }
+                        assertThat(n).isEqualTo(2);
+                    }
+                    assertThat(count(connection, "messaging.MembershipIntervals")).isEqualTo(2);
+                    assertThat(count(connection, "messaging.DirectPairs")).isEqualTo(1);
+                });
+    }
+
     private static int count(Connection connection, String table) throws Exception {
         try (var statement = connection.createStatement();
                 var result = statement.executeQuery("SELECT COUNT(*) FROM " + table)) {

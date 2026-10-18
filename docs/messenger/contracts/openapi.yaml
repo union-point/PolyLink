@@ -3,7 +3,7 @@ info:
   title: PolyLink messenger
   version: 0.5.0
   description: M0 wire formats with M1 invitation enrollment, real sessions and backed-up
-    key setup. M1–M5 identity, recovery, encrypted messaging/images and personal state are implemented; later features retain
+    key setup. M1–M6 identity, recovery, encrypted messaging/images, personal state, groups and lifecycle are implemented; release checks retain
     their milestone scope. Original passwords never enter HTTP DTOs.
 servers:
 - url: http://localhost:3004
@@ -11,6 +11,109 @@ servers:
 security:
 - bearer: []
 paths:
+  /account/deactivate:
+    post:
+      operationId: deactivateAccount
+      description: 'M6: authenticated own-data operation; see m6.md. Export contains
+        only caller-authored accessible ciphertext, decrypted in the browser.'
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LifecycleResult'
+        '400':
+          $ref: '#/components/responses/Error'
+        '401':
+          $ref: '#/components/responses/Error'
+        '403':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+        '429':
+          $ref: '#/components/responses/Error'
+        '503':
+          $ref: '#/components/responses/Error'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LifecycleRequest'
+  /account/delete:
+    post:
+      operationId: deleteAccount
+      description: 'M6: authenticated own-data operation; see m6.md. Export contains
+        only caller-authored accessible ciphertext, decrypted in the browser.'
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LifecycleResult'
+        '400':
+          $ref: '#/components/responses/Error'
+        '401':
+          $ref: '#/components/responses/Error'
+        '403':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+        '429':
+          $ref: '#/components/responses/Error'
+        '503':
+          $ref: '#/components/responses/Error'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LifecycleRequest'
+  /chat/export:
+    get:
+      operationId: exportOwnMessages
+      description: 'M6: authenticated own-data operation; see m6.md. Export contains
+        only caller-authored accessible ciphertext, decrypted in the browser.'
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OwnMessagePage'
+        '400':
+          $ref: '#/components/responses/Error'
+        '401':
+          $ref: '#/components/responses/Error'
+        '403':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+        '429':
+          $ref: '#/components/responses/Error'
+        '503':
+          $ref: '#/components/responses/Error'
+      parameters:
+      - name: cursor
+        in: query
+        schema:
+          type: string
+          maxLength: 80
+      - name: limit
+        in: query
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 100
+          default: 50
   /chat/groups/prepare:
     post:
       operationId: prepareGroup
@@ -2453,7 +2556,7 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/RecipientVersion'
-          minItems: 2
+          minItems: 1
         packet:
           type: object
           additionalProperties: false
@@ -2548,6 +2651,14 @@ components:
       type: object
       additionalProperties: false
       properties:
+        ownerId:
+          anyOf:
+          - $ref: '#/components/schemas/Id'
+          - type: 'null'
+        metadataVersion:
+          $ref: '#/components/schemas/Version'
+        canManage:
+          type: boolean
         id:
           $ref: '#/components/schemas/Uuid'
         isGroup:
@@ -2583,6 +2694,9 @@ components:
           - $ref: '#/components/schemas/Message'
           - type: 'null'
       required:
+      - ownerId
+      - metadataVersion
+      - canManage
       - id
       - isGroup
       - name
@@ -2794,3 +2908,40 @@ components:
       - membershipVersion
       - metadataVersion
       - closed
+    LifecycleRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        expectedCredential:
+          $ref: '#/components/schemas/Version'
+        loginSecret:
+          type: string
+          pattern: ^[A-Za-z0-9_-]{43}$
+      required:
+      - expectedCredential
+      - loginSecret
+    LifecycleResult:
+      type: object
+      additionalProperties: false
+      properties:
+        status:
+          const: completed
+      required:
+      - status
+    OwnMessagePage:
+      type: object
+      additionalProperties: false
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Message'
+          maxItems: 100
+        nextCursor:
+          type:
+          - string
+          - 'null'
+          maxLength: 80
+      required:
+      - items
+      - nextCursor

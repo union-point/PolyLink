@@ -191,5 +191,23 @@
       "owner": true
     },
     "valid": false
+  },
+  {
+    "name": "lifecycle derived secret",
+    "schema": "LifecycleRequest",
+    "value": {
+      "expectedCredential": "1",
+      "loginSecret": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+    },
+    "valid": true
+  },
+  {
+    "name": "lifecycle rejects raw password",
+    "schema": "LifecycleRequest",
+    "value": {
+      "expectedCredential": "1",
+      "password": "raw secret"
+    },
+    "valid": false
   }
 ]
