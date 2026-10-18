@@ -2,9 +2,9 @@ name: Backend
 
 on:
   pull_request:
-    paths: ["backend/**", "db/**", "infra/openbao/**", "js/**", "docs/messenger/**", "tools/contracts/**", "tools/m1/**", "tools/m2/**", "tools/m3/**", "tools/m4/**", ".github/workflows/backend.yml"]
+    paths: ["backend/**", "db/**", "infra/openbao/**", "js/**", "docs/messenger/**", "tools/contracts/**", "tools/m1/**", "tools/m2/**", "tools/m3/**", "tools/m4/**", "tools/m5/**", ".github/workflows/backend.yml"]
   push:
-    paths: ["backend/**", "db/**", "infra/openbao/**", "js/**", "docs/messenger/**", "tools/contracts/**", "tools/m1/**", "tools/m2/**", "tools/m3/**", "tools/m4/**", ".github/workflows/backend.yml"]
+    paths: ["backend/**", "db/**", "infra/openbao/**", "js/**", "docs/messenger/**", "tools/contracts/**", "tools/m1/**", "tools/m2/**", "tools/m3/**", "tools/m4/**", "tools/m5/**", ".github/workflows/backend.yml"]
 
 permissions:
   contents: read
@@ -47,9 +47,9 @@ jobs:
         run: |
           npm ci --prefix tools/m1 --ignore-scripts
           npx --prefix tools/m1 playwright install --with-deps chromium
-      - name: Verify migrations, identity, messenger, session continuity, password and recovery flows
+      - name: Verify migrations, identity, messenger, session continuity, password, recovery, images and personal-state flows
         working-directory: .
-        run: python3 tools/m1/verify.py --recovery
+        run: python3 tools/m1/verify.py --messenger-ui
       - name: Stop SQL Server
         working-directory: db
         if: always()
