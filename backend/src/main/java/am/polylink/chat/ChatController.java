@@ -44,6 +44,14 @@ public class ChatController {
         return chat.direct(user(request), input.userId());
     }
 
+    @GetMapping("/chat/export")
+    public Map<String, Object> exportOwn(
+            @RequestParam(required = false) String cursor,
+            @RequestParam(defaultValue = "50") int limit,
+            HttpServletRequest request) {
+        return chat.exportOwn(user(request), cursor, limit);
+    }
+
     @GetMapping("/chat/rooms")
     public Map<String, Object> rooms(
             @RequestParam(required = false) String cursor,

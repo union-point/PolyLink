@@ -14,11 +14,11 @@ import tools.jackson.databind.json.JsonMapper;
 @Service
 @IdentityEnabled
 public class ChatService {
-    private final JdbcTemplate db;
-    private final Accounts accounts;
-    private final TransactionTemplate tx;
-    private final JsonMapper json;
-    private final Clock clock;
+    final JdbcTemplate db;
+    final Accounts accounts;
+    final TransactionTemplate tx;
+    final JsonMapper json;
+    final Clock clock;
 
     public ChatService(
             JdbcTemplate db,
@@ -33,7 +33,7 @@ public class ChatService {
         this.clock = clock;
     }
 
-    private OffsetDateTime now() {
+    OffsetDateTime now() {
         return OffsetDateTime.now(clock);
     }
 
@@ -46,7 +46,7 @@ public class ChatService {
     }
 
     // SQL Server victims retry the entire transaction, never an individual statement.
-    private <T> T transaction(Supplier<T> work) {
+    <T> T transaction(Supplier<T> work) {
         for (int attempt = 0; ; attempt++) {
             try {
                 return tx.execute(status -> work.get());
@@ -56,25 +56,40 @@ public class ChatService {
         }
     }
 
-    private List<Integer> members(UUID room) {
+    List<Integer> members(UUID room) {
         return db.queryForList(
-                "SELECT UserId FROM messaging.Participants WHERE RoomId=? ORDER BY UserId",
+                "SELECT p.UserId FROM messaging.Participants p WHERE RoomId=? AND (NOT EXISTS(SELECT 1 FROM messaging.MembershipIntervals i WHERE i.RoomId=p.RoomId AND i.UserId=p.UserId) OR EXISTS(SELECT 1 FROM messaging.MembershipIntervals i WHERE i.RoomId=p.RoomId AND i.UserId=p.UserId AND i.LeftMembership IS NULL)) ORDER BY p.UserId",
                 Integer.class,
                 room);
     }
 
-    private Map<String, Object> locked(int caller, UUID room) {
-        var ids = members(room);
-        if (!ids.contains(caller)) throw missing();
-        for (int id : ids) accounts.lock(id);
+    Map<String, Object> locked(int caller, UUID room) {
+        return locked(caller, room, List.of());
+    }
+
+    Map<String, Object> locked(int caller, UUID room, Collection<Integer> extra) {
+        var ids = allMembers(room);
+        var affected = new TreeSet<>(ids);
+        affected.addAll(extra);
+        affected.add(caller);
+        for (int id : affected) accounts.lock(id);
         var rows =
                 Rows.query(
                         db,
                         "SELECT * FROM messaging.Rooms WITH(UPDLOCK,HOLDLOCK) WHERE RoomId=?",
                         room);
-        if (rows.isEmpty() || !ids.equals(members(room))) throw conflict("REVISION_CONFLICT");
+        if (rows.isEmpty()) throw missing();
+        if (!ids.equals(allMembers(room))) throw conflict("REVISION_CONFLICT");
+        if (!members(room).contains(caller)) throw missing();
         accounts.get(caller).requireAdmitted();
         return rows.getFirst();
+    }
+
+    List<Integer> allMembers(UUID room) {
+        return db.queryForList(
+                "SELECT UserId FROM messaging.Participants WHERE RoomId=? ORDER BY UserId",
+                Integer.class,
+                room);
     }
 
     public Map<String, Object> direct(int caller, String target) {
@@ -139,13 +154,13 @@ public class ChatService {
                 .toList();
     }
 
-    private Snapshot snapshot(UUID room, Map<String, Object> row) {
+    Snapshot snapshot(UUID room, Map<String, Object> row) {
         var recipients = new ArrayList<Recipient>();
         boolean configured = true;
         for (int id : members(room)) {
             var a = accounts.get(id);
             String key = null;
-            if (a.identity() > 0)
+            if (a.identity() > 0 && a.vaultKey() > 0 && a.vaultRevision() > 0)
                 key =
                         Secrets.encode(
                                 (byte[])
@@ -192,7 +207,7 @@ public class ChatService {
                     for (var e :
                             Rows.query(
                                     db,
-                                    "SELECT e.*,k.MembershipVersion FROM messaging.Envelopes e JOIN messaging.RoomKeys k ON k.RoomId=e.RoomId AND k.KeyVersion=e.KeyVersion WHERE e.RoomId=? AND e.UserId=? AND (e.KeyVersion=? OR EXISTS(SELECT 1 FROM messaging.Messages m JOIN messaging.Participants p ON p.RoomId=m.RoomId AND p.UserId=? WHERE m.RoomId=e.RoomId AND m.KeyVersion=e.KeyVersion AND m.Sequence>=p.JoinedSequence AND m.Sequence>p.HistoryCutoff))",
+                                    "SELECT e.*,k.MembershipVersion FROM messaging.Envelopes e JOIN messaging.RoomKeys k ON k.RoomId=e.RoomId AND k.KeyVersion=e.KeyVersion WHERE e.RoomId=? AND e.UserId=? AND NOT EXISTS(SELECT 1 FROM messaging.MembershipIntervals i WHERE i.RoomId=e.RoomId AND i.UserId=e.UserId AND i.LeftMembership IS NULL AND i.JoinedMembership>k.MembershipVersion) AND (e.KeyVersion=? OR EXISTS(SELECT 1 FROM messaging.Messages m JOIN messaging.Participants p ON p.RoomId=m.RoomId AND p.UserId=? WHERE m.RoomId=e.RoomId AND m.KeyVersion=e.KeyVersion AND m.Sequence>=p.JoinedSequence AND m.Sequence>p.HistoryCutoff))",
                                     room,
                                     caller,
                                     row.get("ActiveKeyVersion"),
@@ -386,8 +401,7 @@ public class ChatService {
                 });
     }
 
-    private List<Map<String, Object>> messages(
-            int caller, UUID room, String condition, Object... args) {
+    List<Map<String, Object>> messages(int caller, UUID room, String condition, Object... args) {
         var params = new ArrayList<Object>(List.of(caller, room));
         params.addAll(Arrays.asList(args));
         return Rows.query(
@@ -478,7 +492,7 @@ public class ChatService {
                 });
     }
 
-    private Map<String, Object> summary(int caller, UUID room, Map<String, Object> row) {
+    Map<String, Object> summary(int caller, UUID room, Map<String, Object> row) {
         var p =
                 Rows.query(
                                 db,
@@ -515,6 +529,19 @@ public class ChatService {
                         .findFirst()
                         .orElse("Conversation"));
         result.put("participants", people);
+        var groups = Rows.query(db, "SELECT * FROM messaging.Groups WHERE RoomId=?", room);
+        var group = groups.isEmpty() ? null : groups.getFirst();
+        String owner = group == null ? null : Objects.toString(group.get("OwnerId"), null);
+        result.put("ownerId", owner);
+        result.put(
+                "metadataVersion", group == null ? "1" : group.get("MetadataVersion").toString());
+        result.put(
+                "canManage",
+                owner != null
+                        && owner.equals("" + caller)
+                        && !Boolean.TRUE.equals(row.get("Closed")));
+
+        if (group != null) result.put("name", group.get("Name"));
         result.put(
                 "blocked",
                 !Boolean.TRUE.equals(row.get("IsGroup"))
@@ -744,6 +771,65 @@ public class ChatService {
                             return person;
                         })
                 .toList();
+    }
+
+    public Map<String, Object> exportOwn(int caller, String cursor, int limit) {
+        if (limit < 1 || limit > 100) throw AuthFailure.invalid();
+        String lastRoom = "";
+        long after = 0;
+        if (cursor != null) {
+            var parts = cursor.split(":");
+            if (parts.length != 2) throw AuthFailure.invalid();
+            lastRoom = uuid(parts[0]).toString();
+            after = counter(parts[1]);
+        }
+        final String start = lastRoom;
+        final long sequence = after;
+        return transaction(
+                () -> {
+                    var items = new ArrayList<Map<String, Object>>();
+                    var rooms =
+                            db
+                                    .queryForList(
+                                            "SELECT RoomId FROM messaging.Participants WHERE UserId=?",
+                                            String.class,
+                                            caller)
+                                    .stream()
+                                    .map(id -> id.toLowerCase(Locale.ROOT))
+                                    .sorted()
+                                    .toList();
+                    for (String id : rooms) {
+                        if (id.compareTo(start) < 0) continue;
+                        UUID room = uuid(id);
+                        try {
+                            locked(caller, room);
+                        } catch (AuthFailure e) {
+                            if (e.status == 404) continue;
+                            throw e;
+                        }
+                        items.addAll(
+                                messages(
+                                        caller,
+                                        room,
+                                        "m.SenderId=? AND m.DeletedAt IS NULL AND m.Sequence>? ORDER BY m.Sequence OFFSET 0 ROWS FETCH NEXT ? ROWS ONLY",
+                                        caller,
+                                        id.equals(start) ? sequence : 0,
+                                        limit + 1 - items.size()));
+                        if (items.size() > limit) break;
+                    }
+                    boolean more = items.size() > limit;
+                    if (more) items.removeLast();
+                    var result = new LinkedHashMap<String, Object>();
+                    result.put("items", items);
+                    result.put(
+                            "nextCursor",
+                            more
+                                    ? items.getLast().get("roomId")
+                                            + ":"
+                                            + items.getLast().get("sequence")
+                                    : null);
+                    return result;
+                });
     }
 
     public Map<String, Object> visibleSummary(int caller, UUID room) {

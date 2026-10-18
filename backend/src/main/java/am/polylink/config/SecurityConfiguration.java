@@ -29,7 +29,7 @@ public class SecurityConfiguration {
             var cors = new CorsConfiguration();
             cors.setAllowedOrigins(List.copyOf(origins));
             cors.setAllowCredentials(true);
-            cors.setAllowedMethods(List.of("GET", "POST", "PUT", "OPTIONS"));
+            cors.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
             cors.setAllowedHeaders(
                     List.of("Content-Type", "Authorization", "X-CSRF-Token", "X-Attachment-Id"));
             cors.setMaxAge(600L);
@@ -60,6 +60,8 @@ public class SecurityConfiguration {
                                         "/auth/challenges/resend",
                                         "/auth/refresh",
                                         "/auth/logout",
+                                        "/account/deactivate",
+                                        "/account/delete",
                                         "/auth/password-change/prepare",
                                         "/auth/password-change/commit",
                                         "/keys/setup/prepare",
@@ -80,14 +82,21 @@ public class SecurityConfiguration {
                                         HttpMethod.GET,
                                         "/search",
                                         "/chat/rooms",
+                                        "/chat/export",
                                         "/chat/rooms/*/messages",
                                         "/chat/rooms/*/keys",
+                                        "/chat/rooms/*/participants",
                                         "/chat/attachments/*")
                                 .permitAll();
                         authorize
                                 .requestMatchers(
                                         HttpMethod.POST,
                                         "/chat/direct",
+                                        "/chat/groups",
+                                        "/chat/groups/prepare",
+                                        "/chat/rooms/*/participants",
+                                        "/chat/rooms/*/participants/prepare",
+                                        "/chat/rooms/*/leave",
                                         "/chat/rooms/*/messages",
                                         "/chat/rooms/*/keys/activate",
                                         "/chat/rooms/*/hide",
@@ -99,9 +108,16 @@ public class SecurityConfiguration {
                                 .requestMatchers(
                                         HttpMethod.PUT,
                                         "/chat/rooms/*/read",
+                                        "/chat/rooms/*/owner",
                                         "/chat/rooms/*/mute",
                                         "/chat/blocks/*")
                                 .permitAll();
+                    if (enabled && messenger) {
+                        authorize.requestMatchers(HttpMethod.PATCH, "/chat/rooms/*").permitAll();
+                        authorize
+                                .requestMatchers(HttpMethod.DELETE, "/chat/rooms/*/participants/*")
+                                .permitAll();
+                    }
                     authorize.anyRequest().denyAll();
                 });
         return http.formLogin(AbstractHttpConfigurer::disable)

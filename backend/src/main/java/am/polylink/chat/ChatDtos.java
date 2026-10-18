@@ -76,7 +76,7 @@ public final class ChatDtos {
             if (expected == null
                     || packet == null
                     || recipientVersions == null
-                    || recipientVersions.size() < 2
+                    || recipientVersions.isEmpty()
                     || recipientVersions.size() > 100
                     || recipientVersions.stream().anyMatch(Objects::isNull))
                 throw AuthFailure.invalid();
@@ -84,6 +84,52 @@ public final class ChatDtos {
             packet.validate();
             recipientVersions = List.copyOf(recipientVersions);
         }
+    }
+
+    public record GroupPrepare(String roomId, List<String> userIds) {
+        public GroupPrepare {
+            uuid(roomId);
+            if (userIds == null
+                    || userIds.isEmpty()
+                    || userIds.size() > 100
+                    || new HashSet<>(userIds).size() != userIds.size()) throw AuthFailure.invalid();
+            userIds.forEach(ChatDtos::user);
+            userIds = List.copyOf(userIds);
+        }
+    }
+
+    public record GroupCreate(
+            String operationId, String roomId, String name, Activation activation) {
+        public GroupCreate {
+            uuid(operationId);
+            uuid(roomId);
+            groupName(name);
+            if (activation == null) throw AuthFailure.invalid();
+        }
+    }
+
+    public record GroupChange(
+            String operationId,
+            String expectedMembership,
+            String expectedMetadata,
+            String userId,
+            String name,
+            Activation activation) {
+        public GroupChange {
+            uuid(operationId);
+            if (counter(expectedMembership) < 1 || counter(expectedMetadata) < 1)
+                throw AuthFailure.invalid();
+            if (userId != null) user(userId);
+            if (name != null) groupName(name);
+        }
+    }
+
+    public static String groupName(String name) {
+        if (name == null
+                || name.strip().isEmpty()
+                || name.length() > 100
+                || !name.equals(name.strip())) throw AuthFailure.invalid();
+        return name;
     }
 
     public record Read(String throughSequence) {
