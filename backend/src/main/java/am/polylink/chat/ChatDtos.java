@@ -78,10 +78,23 @@ public final class ChatDtos {
                     || recipientVersions == null
                     || recipientVersions.size() < 2
                     || recipientVersions.size() > 100
-                    || recipientVersions.stream().anyMatch(Objects::isNull)
-                    || attachmentId != null) throw AuthFailure.invalid();
+                    || recipientVersions.stream().anyMatch(Objects::isNull))
+                throw AuthFailure.invalid();
+            if (attachmentId != null) uuid(attachmentId);
             packet.validate();
             recipientVersions = List.copyOf(recipientVersions);
+        }
+    }
+
+    public record Read(String throughSequence) {
+        public Read {
+            counter(throughSequence);
+        }
+    }
+
+    public record Toggle(Boolean enabled) {
+        public Toggle {
+            if (enabled == null) throw AuthFailure.invalid();
         }
     }
 

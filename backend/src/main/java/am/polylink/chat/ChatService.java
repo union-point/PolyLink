@@ -279,8 +279,7 @@ public class ChatService {
         if (input == null
                 || input.packet() == null
                 || input.expected() == null
-                || input.recipientVersions() == null
-                || input.attachmentId() != null) throw AuthFailure.invalid();
+                || input.recipientVersions() == null) throw AuthFailure.invalid();
         UUID operation = uuid(input.operationId());
         input.packet().validate();
         counter(input.expected().membership());
@@ -306,7 +305,7 @@ public class ChatService {
                                                 .toList(),
                                         input.packet().nonce(),
                                         input.packet().ciphertext(),
-                                        null)));
+                                        input.attachmentId())));
         return transaction(
                 () -> {
                     var row = locked(caller, room);
@@ -336,6 +335,21 @@ public class ChatService {
                     if (!current.versions().equals(input.expected())
                             || !versions(current).equals(recipients))
                         throw conflict("KEY_STALE_NOT_SAVED");
+                    if (input.attachmentId() != null) {
+                        var uploads =
+                                Rows.query(
+                                        db,
+                                        "SELECT * FROM messaging.Attachments WITH(UPDLOCK,HOLDLOCK) WHERE AttachmentId=?",
+                                        uuid(input.attachmentId()));
+                        if (uploads.isEmpty()) throw missing();
+                        var upload = uploads.getFirst();
+                        if (!room.toString().equalsIgnoreCase(upload.get("RoomId").toString())
+                                || ((Number) upload.get("OwnerId")).intValue() != caller)
+                            throw missing();
+                        if (upload.get("Sequence") != null
+                                || !((OffsetDateTime) upload.get("ExpiresAt")).isAfter(now()))
+                            throw conflict("ATTACHMENT_UNAVAILABLE_NOT_SAVED");
+                    }
                     long sequence =
                             Math.addExact(((Number) row.get("LastSequence")).longValue(), 1);
                     db.update(
@@ -348,6 +362,11 @@ public class ChatService {
                             counter(input.expected().roomKey()),
                             json.writeValueAsBytes(input.packet()),
                             now());
+                    if (input.attachmentId() != null)
+                        db.update(
+                                "UPDATE messaging.Attachments SET Sequence=? WHERE AttachmentId=?",
+                                sequence,
+                                uuid(input.attachmentId()));
                     db.update(
                             "INSERT messaging.SendOperations VALUES (?,?,?,?,?)",
                             room,
@@ -373,7 +392,7 @@ public class ChatService {
         params.addAll(Arrays.asList(args));
         return Rows.query(
                         db,
-                        "SELECT m.*,k.MembershipVersion,u.FirstName,u.LastName FROM messaging.Messages m JOIN messaging.RoomKeys k ON k.RoomId=m.RoomId AND k.KeyVersion=m.KeyVersion JOIN messaging.Participants p ON p.RoomId=m.RoomId AND p.UserId=? LEFT JOIN dbo.Users u ON u.UserId=m.SenderId WHERE m.RoomId=? AND m.Sequence>=p.JoinedSequence AND m.Sequence>p.HistoryCutoff AND "
+                        "SELECT m.*,a.AttachmentId,k.MembershipVersion,u.FirstName,u.LastName FROM messaging.Messages m LEFT JOIN messaging.Attachments a ON a.RoomId=m.RoomId AND a.Sequence=m.Sequence JOIN messaging.RoomKeys k ON k.RoomId=m.RoomId AND k.KeyVersion=m.KeyVersion JOIN messaging.Participants p ON p.RoomId=m.RoomId AND p.UserId=? LEFT JOIN dbo.Users u ON u.UserId=m.SenderId WHERE m.RoomId=? AND m.Sequence>=p.JoinedSequence AND m.Sequence>p.HistoryCutoff AND "
                                 + condition,
                         params.toArray())
                 .stream()
@@ -391,7 +410,13 @@ public class ChatService {
                             result.put("membershipVersion", m.get("MembershipVersion").toString());
                             result.put("createdAt", m.get("SentAt").toString());
                             result.put("deleted", m.get("DeletedAt") != null);
-                            result.put("attachmentId", null);
+                            result.put(
+                                    "attachmentId",
+                                    m.get("AttachmentId") == null
+                                            ? null
+                                            : m.get("AttachmentId")
+                                                    .toString()
+                                                    .toLowerCase(Locale.ROOT));
                             result.put(
                                     "sender",
                                     m.get("SenderId") == null
@@ -490,7 +515,18 @@ public class ChatService {
                         .findFirst()
                         .orElse("Conversation"));
         result.put("participants", people);
-        result.put("blocked", block);
+        result.put(
+                "blocked",
+                !Boolean.TRUE.equals(row.get("IsGroup"))
+                        && db.queryForObject(
+                                        "SELECT COUNT(*) FROM messaging.Blocks WHERE UserId=? AND TargetId=?",
+                                        Integer.class,
+                                        caller,
+                                        members(room).stream()
+                                                .filter(id -> id != caller)
+                                                .findFirst()
+                                                .orElse(caller))
+                                > 0);
         result.put("closed", row.get("Closed"));
         result.put(
                 "canSend",
@@ -523,6 +559,160 @@ public class ChatService {
                         room);
         result.put("lastMessage", last.isEmpty() ? null : last.getFirst());
         return result;
+    }
+
+    public Map<String, Object> read(int caller, UUID room, Read input) {
+        long sequence = counter(input.throughSequence());
+        return transaction(
+                () -> {
+                    var row = locked(caller, room);
+                    if (sequence > 0 && messages(caller, room, "m.Sequence=?", sequence).isEmpty())
+                        throw AuthFailure.invalid();
+                    db.update(
+                            "UPDATE messaging.Participants SET LastReadSequence=CASE WHEN LastReadSequence<? THEN ? ELSE LastReadSequence END WHERE RoomId=? AND UserId=?",
+                            sequence,
+                            sequence,
+                            room,
+                            caller);
+                    return summary(caller, room, row);
+                });
+    }
+
+    public Map<String, Object> mute(int caller, UUID room, boolean value) {
+        return transaction(
+                () -> {
+                    var row = locked(caller, room);
+                    db.update(
+                            "UPDATE messaging.Participants SET Muted=? WHERE RoomId=? AND UserId=?",
+                            value,
+                            room,
+                            caller);
+                    return summary(caller, room, row);
+                });
+    }
+
+    public Map<String, Object> hide(int caller, UUID room) {
+        return transaction(
+                () -> {
+                    var row = locked(caller, room);
+                    long cutoff = ((Number) row.get("LastSequence")).longValue();
+                    db.update(
+                            "UPDATE messaging.Participants SET Hidden=1,HistoryCutoff=?,LastReadSequence=CASE WHEN LastReadSequence<? THEN ? ELSE LastReadSequence END WHERE RoomId=? AND UserId=?",
+                            cutoff,
+                            cutoff,
+                            cutoff,
+                            room,
+                            caller);
+                    return Map.of("historyCutoff", "" + cutoff);
+                });
+    }
+
+    public void block(int caller, int target, boolean value) {
+        if (caller == target) throw AuthFailure.invalid();
+        transaction(
+                () -> {
+                    for (int id : new TreeSet<>(List.of(caller, target))) {
+                        try {
+                            accounts.lock(id);
+                        } catch (AuthFailure e) {
+                            throw missing();
+                        }
+                    }
+                    accounts.get(caller).requireAdmitted();
+                    db.update(
+                            "DELETE messaging.Blocks WHERE UserId=? AND TargetId=?",
+                            caller,
+                            target);
+                    if (value) db.update("INSERT messaging.Blocks VALUES (?,?)", caller, target);
+                    return null;
+                });
+    }
+
+    public Map<String, Object> upload(int caller, UUID room, UUID id, byte[] bytes) {
+        if (bytes == null || bytes.length < 17 || bytes.length > 5242896)
+            throw AuthFailure.invalid();
+        byte[] digest = Secrets.digest(bytes);
+        return transaction(
+                () -> {
+                    var row = locked(caller, room);
+                    var existing =
+                            Rows.query(
+                                    db,
+                                    "SELECT * FROM messaging.Attachments WITH(UPDLOCK,HOLDLOCK) WHERE AttachmentId=?",
+                                    id);
+                    if (!existing.isEmpty()) {
+                        var old = existing.getFirst();
+                        if (((Number) old.get("OwnerId")).intValue() != caller
+                                || !room.toString().equalsIgnoreCase(old.get("RoomId").toString()))
+                            throw missing();
+                        if (!Secrets.equal(digest, (byte[]) old.get("CiphertextDigest")))
+                            throw conflict("OPERATION_PAYLOAD_CONFLICT");
+                        if (old.get("Sequence") == null
+                                && !((OffsetDateTime) old.get("ExpiresAt")).isAfter(now()))
+                            throw conflict("ATTACHMENT_UNAVAILABLE_NOT_SAVED");
+                        return uploadResult(old);
+                    }
+                    sendable(room, row);
+                    long staged =
+                            db.queryForObject(
+                                    "SELECT COALESCE(SUM(CiphertextBytes),0) FROM messaging.Attachments WHERE OwnerId=? AND Sequence IS NULL",
+                                    Long.class,
+                                    caller);
+                    if (staged + bytes.length > 104857920
+                            || db.queryForObject(
+                                            "SELECT COUNT(*) FROM messaging.Attachments WHERE OwnerId=? AND Sequence IS NULL",
+                                            Integer.class,
+                                            caller)
+                                    >= 20)
+                        throw new AuthFailure(
+                                429, "RATE_LIMITED", "Too many pending image uploads.");
+                    var expiry = now().plusHours(24);
+                    db.update(
+                            "INSERT messaging.Attachments(AttachmentId,RoomId,OwnerId,ObjectKey,CiphertextBytes,CiphertextDigest,ExpiresAt) VALUES (?,?,?,?,?,?,?)",
+                            id,
+                            room,
+                            caller,
+                            id.toString(),
+                            bytes.length,
+                            digest,
+                            expiry);
+                    db.update("INSERT messaging.AttachmentBodies VALUES (?,?)", id, bytes);
+                    return uploadResult(
+                            Rows.query(
+                                            db,
+                                            "SELECT * FROM messaging.Attachments WHERE AttachmentId=?",
+                                            id)
+                                    .getFirst());
+                });
+    }
+
+    private Map<String, Object> uploadResult(Map<String, Object> row) {
+        return Map.of(
+                "attachmentId",
+                row.get("AttachmentId").toString().toLowerCase(Locale.ROOT),
+                "ciphertextBytes",
+                ((Number) row.get("CiphertextBytes")).longValue(),
+                "expiresAt",
+                row.get("ExpiresAt").toString());
+    }
+
+    public byte[] download(int caller, UUID id) {
+        var rows =
+                Rows.query(db, "SELECT RoomId FROM messaging.Attachments WHERE AttachmentId=?", id);
+        if (rows.isEmpty()) throw missing();
+        UUID room = UUID.fromString(rows.getFirst().get("RoomId").toString());
+        return transaction(
+                () -> {
+                    locked(caller, room);
+                    var objects =
+                            Rows.query(
+                                    db,
+                                    "SELECT b.Ciphertext FROM messaging.Attachments a JOIN messaging.AttachmentBodies b ON b.AttachmentId=a.AttachmentId JOIN messaging.Messages m ON m.RoomId=a.RoomId AND m.Sequence=a.Sequence JOIN messaging.Participants p ON p.RoomId=m.RoomId AND p.UserId=? WHERE a.AttachmentId=? AND m.DeletedAt IS NULL AND m.Sequence>=p.JoinedSequence AND m.Sequence>p.HistoryCutoff",
+                                    caller,
+                                    id);
+                    if (objects.isEmpty()) throw missing();
+                    return (byte[]) objects.getFirst().get("Ciphertext");
+                });
     }
 
     /** Minimal admitted-account directory for the existing search page's Connect action. */

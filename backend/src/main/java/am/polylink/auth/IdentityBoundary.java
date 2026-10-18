@@ -33,7 +33,13 @@ public final class IdentityBoundary extends OncePerRequestFilter {
                             "{\"code\":\"FORBIDDEN\",\"message\":\"Request origin is not allowed.\"}");
             return;
         }
-        if (request.getContentLengthLong() > 2_100_000) {
+        long limit =
+                "POST".equals(request.getMethod())
+                                && request.getRequestURI()
+                                        .matches("/chat/rooms/[0-9a-f-]{36}/attachments")
+                        ? 5_242_896
+                        : 2_100_000;
+        if (request.getContentLengthLong() > limit) {
             response.setStatus(413);
             return;
         }
@@ -46,7 +52,7 @@ public final class IdentityBoundary extends OncePerRequestFilter {
                             private long count;
 
                             private void count(int size) throws IOException {
-                                if (size > 0 && (count += size) > 2_100_000)
+                                if (size > 0 && (count += size) > limit)
                                     throw new IOException("Request size limit exceeded");
                             }
 

@@ -14,15 +14,17 @@ public class ChatController {
     private final Sessions sessions;
     private final ChatService chat;
     private final Clock clock;
+    private final RateLimiter limits;
 
     private record Scan(int user, Instant expiry, List<Map<String, Object>> rooms) {}
 
     private final Map<String, Scan> scans = new LinkedHashMap<>();
 
-    public ChatController(Sessions sessions, ChatService chat, Clock clock) {
+    public ChatController(Sessions sessions, ChatService chat, Clock clock, RateLimiter limits) {
         this.sessions = sessions;
         this.chat = chat;
         this.clock = clock;
+        this.limits = limits;
     }
 
     private int user(HttpServletRequest request) {
@@ -122,5 +124,60 @@ public class ChatController {
             @RequestBody ChatDtos.Send input,
             HttpServletRequest request) {
         return chat.send(user(request), ChatDtos.uuid(roomId), input);
+    }
+
+    @PutMapping("/chat/rooms/{roomId}/read")
+    public Map<String, Object> read(
+            @PathVariable String roomId,
+            @RequestBody ChatDtos.Read input,
+            HttpServletRequest request) {
+        return chat.read(user(request), ChatDtos.uuid(roomId), input);
+    }
+
+    @PutMapping("/chat/rooms/{roomId}/mute")
+    public Map<String, Object> mute(
+            @PathVariable String roomId,
+            @RequestBody ChatDtos.Toggle input,
+            HttpServletRequest request) {
+        return chat.mute(user(request), ChatDtos.uuid(roomId), input.enabled());
+    }
+
+    @PostMapping("/chat/rooms/{roomId}/hide")
+    public Map<String, Object> hide(
+            @PathVariable String roomId,
+            @RequestBody Map<String, Object> input,
+            HttpServletRequest request) {
+        if (!input.isEmpty()) throw AuthFailure.invalid();
+        return chat.hide(user(request), ChatDtos.uuid(roomId));
+    }
+
+    @PutMapping("/chat/blocks/{userId}")
+    @ResponseStatus(org.springframework.http.HttpStatus.NO_CONTENT)
+    public void block(
+            @PathVariable String userId,
+            @RequestBody ChatDtos.Toggle input,
+            HttpServletRequest request) {
+        chat.block(user(request), ChatDtos.user(userId), input.enabled());
+    }
+
+    @PostMapping(value = "/chat/rooms/{roomId}/attachments", consumes = "application/octet-stream")
+    @ResponseStatus(org.springframework.http.HttpStatus.CREATED)
+    public Map<String, Object> upload(
+            @PathVariable String roomId,
+            @RequestHeader("X-Attachment-Id") String id,
+            @RequestBody byte[] bytes,
+            HttpServletRequest request) {
+        int caller = user(request);
+        limits.consume("UPLOAD_ACCOUNT", "" + caller, 60, 3600);
+        return chat.upload(caller, ChatDtos.uuid(roomId), ChatDtos.uuid(id), bytes);
+    }
+
+    @GetMapping("/chat/attachments/{attachmentId}")
+    public org.springframework.http.ResponseEntity<byte[]> download(
+            @PathVariable String attachmentId, HttpServletRequest request) {
+        return org.springframework.http.ResponseEntity.ok()
+                .header("Content-Disposition", "attachment")
+                .contentType(org.springframework.http.MediaType.APPLICATION_OCTET_STREAM)
+                .body(chat.download(user(request), ChatDtos.uuid(attachmentId)));
     }
 }

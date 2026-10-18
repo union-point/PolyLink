@@ -29,8 +29,9 @@ public class SecurityConfiguration {
             var cors = new CorsConfiguration();
             cors.setAllowedOrigins(List.copyOf(origins));
             cors.setAllowCredentials(true);
-            cors.setAllowedMethods(List.of("GET", "POST", "OPTIONS"));
-            cors.setAllowedHeaders(List.of("Content-Type", "Authorization", "X-CSRF-Token"));
+            cors.setAllowedMethods(List.of("GET", "POST", "PUT", "OPTIONS"));
+            cors.setAllowedHeaders(
+                    List.of("Content-Type", "Authorization", "X-CSRF-Token", "X-Attachment-Id"));
             cors.setMaxAge(600L);
             var source = new UrlBasedCorsConfigurationSource();
             source.registerCorsConfiguration("/**", cors);
@@ -80,16 +81,27 @@ public class SecurityConfiguration {
                                         "/search",
                                         "/chat/rooms",
                                         "/chat/rooms/*/messages",
-                                        "/chat/rooms/*/keys")
+                                        "/chat/rooms/*/keys",
+                                        "/chat/attachments/*")
                                 .permitAll();
                         authorize
                                 .requestMatchers(
                                         HttpMethod.POST,
                                         "/chat/direct",
                                         "/chat/rooms/*/messages",
-                                        "/chat/rooms/*/keys/activate")
+                                        "/chat/rooms/*/keys/activate",
+                                        "/chat/rooms/*/hide",
+                                        "/chat/rooms/*/attachments")
                                 .permitAll();
                     }
+                    if (enabled && messenger)
+                        authorize
+                                .requestMatchers(
+                                        HttpMethod.PUT,
+                                        "/chat/rooms/*/read",
+                                        "/chat/rooms/*/mute",
+                                        "/chat/blocks/*")
+                                .permitAll();
                     authorize.anyRequest().denyAll();
                 });
         return http.formLogin(AbstractHttpConfigurer::disable)
