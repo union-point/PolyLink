@@ -1,0 +1,2947 @@
+openapi: 3.1.1
+info:
+  title: PolyLink messenger
+  version: 0.5.0
+  description: M0 wire formats with M1 invitation enrollment, real sessions and backed-up
+    key setup. M1–M6 identity, recovery, encrypted messaging/images, personal state, groups and lifecycle are implemented; release checks retain
+    their milestone scope. Original passwords never enter HTTP DTOs.
+servers:
+- url: http://localhost:3004
+  description: Local development; deployment requires HTTPS
+security:
+- bearer: []
+paths:
+  /account/deactivate:
+    post:
+      operationId: deactivateAccount
+      description: 'M6: authenticated own-data operation; see m6.md. Export contains
+        only caller-authored accessible ciphertext, decrypted in the browser.'
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LifecycleResult'
+        '400':
+          $ref: '#/components/responses/Error'
+        '401':
+          $ref: '#/components/responses/Error'
+        '403':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+        '429':
+          $ref: '#/components/responses/Error'
+        '503':
+          $ref: '#/components/responses/Error'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LifecycleRequest'
+  /account/delete:
+    post:
+      operationId: deleteAccount
+      description: 'M6: authenticated own-data operation; see m6.md. Export contains
+        only caller-authored accessible ciphertext, decrypted in the browser.'
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LifecycleResult'
+        '400':
+          $ref: '#/components/responses/Error'
+        '401':
+          $ref: '#/components/responses/Error'
+        '403':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+        '429':
+          $ref: '#/components/responses/Error'
+        '503':
+          $ref: '#/components/responses/Error'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LifecycleRequest'
+  /chat/export:
+    get:
+      operationId: exportOwnMessages
+      description: 'M6: authenticated own-data operation; see m6.md. Export contains
+        only caller-authored accessible ciphertext, decrypted in the browser.'
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OwnMessagePage'
+        '400':
+          $ref: '#/components/responses/Error'
+        '401':
+          $ref: '#/components/responses/Error'
+        '403':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+        '429':
+          $ref: '#/components/responses/Error'
+        '503':
+          $ref: '#/components/responses/Error'
+      parameters:
+      - name: cursor
+        in: query
+        schema:
+          type: string
+          maxLength: 80
+      - name: limit
+        in: query
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 100
+          default: 50
+  /chat/groups/prepare:
+    post:
+      operationId: prepareGroup
+      description: M6 durable operation; see m6.md for permissions, snapshots and interval
+        boundaries.
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RoomSnapshot'
+        '400':
+          $ref: '#/components/responses/Error'
+        '401':
+          $ref: '#/components/responses/Error'
+        '403':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+        '429':
+          $ref: '#/components/responses/Error'
+        '503':
+          $ref: '#/components/responses/Error'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GroupPrepare'
+  /chat/groups:
+    post:
+      operationId: createGroup
+      description: M6 durable operation; see m6.md for permissions, snapshots and interval
+        boundaries.
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GroupResult'
+        '400':
+          $ref: '#/components/responses/Error'
+        '401':
+          $ref: '#/components/responses/Error'
+        '403':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+        '429':
+          $ref: '#/components/responses/Error'
+        '503':
+          $ref: '#/components/responses/Error'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GroupCreate'
+  /chat/rooms/{roomId}/participants:
+    get:
+      operationId: groupParticipants
+      description: M6 durable operation; see m6.md for permissions, snapshots and interval
+        boundaries.
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Room'
+        '400':
+          $ref: '#/components/responses/Error'
+        '401':
+          $ref: '#/components/responses/Error'
+        '403':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+        '429':
+          $ref: '#/components/responses/Error'
+        '503':
+          $ref: '#/components/responses/Error'
+      parameters:
+      - name: roomId
+        in: path
+        required: true
+        schema: &m6path001
+          type: string
+          format: uuid
+    post:
+      operationId: addGroupParticipant
+      description: M6 durable operation; see m6.md for permissions, snapshots and interval
+        boundaries.
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GroupResult'
+        '400':
+          $ref: '#/components/responses/Error'
+        '401':
+          $ref: '#/components/responses/Error'
+        '403':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+        '429':
+          $ref: '#/components/responses/Error'
+        '503':
+          $ref: '#/components/responses/Error'
+      parameters:
+      - name: roomId
+        in: path
+        required: true
+        schema: *m6path001
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GroupChange'
+  /chat/rooms/{roomId}/participants/prepare:
+    post:
+      operationId: prepareGroupAddition
+      description: M6 durable operation; see m6.md for permissions, snapshots and interval
+        boundaries.
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RoomSnapshot'
+        '400':
+          $ref: '#/components/responses/Error'
+        '401':
+          $ref: '#/components/responses/Error'
+        '403':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+        '429':
+          $ref: '#/components/responses/Error'
+        '503':
+          $ref: '#/components/responses/Error'
+      parameters:
+      - name: roomId
+        in: path
+        required: true
+        schema: *m6path001
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GroupPrepare'
+  /chat/rooms/{roomId}/participants/{userId}:
+    delete:
+      operationId: removeGroupParticipant
+      description: M6 durable operation; see m6.md for permissions, snapshots and interval
+        boundaries.
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GroupResult'
+        '400':
+          $ref: '#/components/responses/Error'
+        '401':
+          $ref: '#/components/responses/Error'
+        '403':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+        '429':
+          $ref: '#/components/responses/Error'
+        '503':
+          $ref: '#/components/responses/Error'
+      parameters:
+      - name: roomId
+        in: path
+        required: true
+        schema: *m6path001
+      - name: userId
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: ^[1-9][0-9]{0,18}$
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GroupChange'
+  /chat/rooms/{roomId}/leave:
+    post:
+      operationId: leaveGroup
+      description: M6 durable operation; see m6.md for permissions, snapshots and interval
+        boundaries.
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GroupResult'
+        '400':
+          $ref: '#/components/responses/Error'
+        '401':
+          $ref: '#/components/responses/Error'
+        '403':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+        '429':
+          $ref: '#/components/responses/Error'
+        '503':
+          $ref: '#/components/responses/Error'
+      parameters:
+      - name: roomId
+        in: path
+        required: true
+        schema: *m6path001
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GroupChange'
+  /chat/rooms/{roomId}:
+    patch:
+      operationId: renameGroup
+      description: M6 durable operation; see m6.md for permissions, snapshots and interval
+        boundaries.
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GroupResult'
+        '400':
+          $ref: '#/components/responses/Error'
+        '401':
+          $ref: '#/components/responses/Error'
+        '403':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+        '429':
+          $ref: '#/components/responses/Error'
+        '503':
+          $ref: '#/components/responses/Error'
+      parameters:
+      - name: roomId
+        in: path
+        required: true
+        schema: *m6path001
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GroupChange'
+  /chat/rooms/{roomId}/owner:
+    put:
+      operationId: transferGroupOwner
+      description: M6 durable operation; see m6.md for permissions, snapshots and interval
+        boundaries.
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GroupResult'
+        '400':
+          $ref: '#/components/responses/Error'
+        '401':
+          $ref: '#/components/responses/Error'
+        '403':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+        '429':
+          $ref: '#/components/responses/Error'
+        '503':
+          $ref: '#/components/responses/Error'
+      parameters:
+      - name: roomId
+        in: path
+        required: true
+        schema: *m6path001
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GroupChange'
+  /auth/parameters:
+    post:
+      operationId: parameters
+      description: ''
+      security: []
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Derivation'
+          headers:
+            Cache-Control:
+              schema:
+                const: no-store
+              description: Sensitive responses are never cached.
+        '400':
+          $ref: '#/components/responses/Error'
+        '401':
+          $ref: '#/components/responses/Error'
+        '403':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+        '429':
+          $ref: '#/components/responses/Error'
+        '503':
+          $ref: '#/components/responses/Error'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EmailRequest'
+  /auth/register:
+    post:
+      operationId: register
+      description: M1 requires an operator-approved, unexpired, single-use email/role
+        invitation for enrollment. Verification/resend is browser-bound and credential-version-bound;
+        revoked/replaced enrollment cannot reuse an old proof.
+      security: []
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Challenge'
+          headers:
+            Cache-Control:
+              schema:
+                const: no-store
+              description: Sensitive responses are never cached.
+        '400':
+          $ref: '#/components/responses/Error'
+        '401':
+          $ref: '#/components/responses/Error'
+        '403':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+        '429':
+          $ref: '#/components/responses/Error'
+        '503':
+          $ref: '#/components/responses/Error'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegistrationRequest'
+  /auth/email/verify:
+    post:
+      operationId: verifyEmail
+      description: M1 requires an operator-approved, unexpired, single-use email/role
+        invitation for enrollment. Verification/resend is browser-bound and credential-version-bound;
+        revoked/replaced enrollment cannot reuse an old proof.
+      security: []
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Empty'
+          headers:
+            Cache-Control:
+              schema:
+                const: no-store
+              description: Sensitive responses are never cached.
+        '400':
+          $ref: '#/components/responses/Error'
+        '401':
+          $ref: '#/components/responses/Error'
+        '403':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+        '429':
+          $ref: '#/components/responses/Error'
+        '503':
+          $ref: '#/components/responses/Error'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CodeProof'
+  /auth/login:
+    post:
+      operationId: login
+      description: ''
+      security: []
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResult'
+          headers:
+            Cache-Control:
+              schema:
+                const: no-store
+              description: Sensitive responses are never cached.
+        '400':
+          $ref: '#/components/responses/Error'
+        '401':
+          $ref: '#/components/responses/Error'
+        '403':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+        '429':
+          $ref: '#/components/responses/Error'
+        '503':
+          $ref: '#/components/responses/Error'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+  /auth/login/verify:
+    post:
+      operationId: verifyLogin
+      description: M1 requires an operator-approved, unexpired, single-use email/role
+        invitation for enrollment. Verification/resend is browser-bound and credential-version-bound;
+        revoked/replaced enrollment cannot reuse an old proof.
+      security: []
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Authenticated'
+          headers:
+            Cache-Control:
+              schema:
+                const: no-store
+              description: Sensitive responses are never cached.
+        '400':
+          $ref: '#/components/responses/Error'
+        '401':
+          $ref: '#/components/responses/Error'
+        '403':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+        '429':
+          $ref: '#/components/responses/Error'
+        '503':
+          $ref: '#/components/responses/Error'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CodeProof'
+  /auth/challenges/resend:
+    post:
+      operationId: resendChallenge
+      description: M1 requires an operator-approved, unexpired, single-use email/role
+        invitation for enrollment. Verification/resend is browser-bound and credential-version-bound;
+        revoked/replaced enrollment cannot reuse an old proof.
+      security: []
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Challenge'
+          headers:
+            Cache-Control:
+              schema:
+                const: no-store
+              description: Sensitive responses are never cached.
+        '400':
+          $ref: '#/components/responses/Error'
+        '401':
+          $ref: '#/components/responses/Error'
+        '403':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+        '429':
+          $ref: '#/components/responses/Error'
+        '503':
+          $ref: '#/components/responses/Error'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ResendRequest'
+  /auth/recovery/request:
+    post:
+      operationId: requestRecovery
+      description: ''
+      security: []
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Challenge'
+          headers:
+            Cache-Control:
+              schema:
+                const: no-store
+              description: Sensitive responses are never cached.
+        '400':
+          $ref: '#/components/responses/Error'
+        '401':
+          $ref: '#/components/responses/Error'
+        '403':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+        '429':
+          $ref: '#/components/responses/Error'
+        '503':
+          $ref: '#/components/responses/Error'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EmailRequest'
+  /auth/recovery/verify:
+    post:
+      operationId: verifyRecovery
+      description: ''
+      security: []
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RecoveryVerified'
+          headers:
+            Cache-Control:
+              schema:
+                const: no-store
+              description: Sensitive responses are never cached.
+        '400':
+          $ref: '#/components/responses/Error'
+        '401':
+          $ref: '#/components/responses/Error'
+        '403':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+        '429':
+          $ref: '#/components/responses/Error'
+        '503':
+          $ref: '#/components/responses/Error'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CodeProof'
+  /auth/refresh:
+    post:
+      operationId: refresh
+      description: ''
+      security:
+      - refreshCookie: []
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Authenticated'
+          headers:
+            Cache-Control:
+              schema:
+                const: no-store
+              description: Sensitive responses are never cached.
+        '400':
+          $ref: '#/components/responses/Error'
+        '401':
+          $ref: '#/components/responses/Error'
+        '403':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+        '429':
+          $ref: '#/components/responses/Error'
+        '503':
+          $ref: '#/components/responses/Error'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Empty'
+      parameters:
+      - $ref: '#/components/parameters/Csrf'
+  /auth/logout:
+    post:
+      operationId: logout
+      description: ''
+      security:
+      - refreshCookie: []
+      responses:
+        '204':
+          description: Completed
+          headers:
+            Cache-Control:
+              schema:
+                const: no-store
+              description: Sensitive responses are never cached.
+        '400':
+          $ref: '#/components/responses/Error'
+        '401':
+          $ref: '#/components/responses/Error'
+        '403':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+        '429':
+          $ref: '#/components/responses/Error'
+        '503':
+          $ref: '#/components/responses/Error'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Empty'
+      parameters:
+      - $ref: '#/components/parameters/Csrf'
+  /auth/me:
+    get:
+      operationId: me
+      description: ''
+      security:
+      - bearer: []
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Session'
+          headers:
+            Cache-Control:
+              schema:
+                const: no-store
+              description: Sensitive responses are never cached.
+        '400':
+          $ref: '#/components/responses/Error'
+        '401':
+          $ref: '#/components/responses/Error'
+        '403':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+        '429':
+          $ref: '#/components/responses/Error'
+        '503':
+          $ref: '#/components/responses/Error'
+  /keys/setup/prepare:
+    post:
+      operationId: setupPrepare
+      description: Idempotent immutable prepared package. Same operation with changed
+        bytes conflicts. Plain serviceVaultKey is permitted only for setup and service
+        recovery; never persisted. Local recovery and password change retain the existing
+        service copy. The kind must match the server-authorized operation; service
+        unlock permanently selects RECOVERY_SERVICE for that operation.
+      security:
+      - bearer: []
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OperationStatus'
+          headers:
+            Cache-Control:
+              schema:
+                const: no-store
+              description: Sensitive responses are never cached.
+        '400':
+          $ref: '#/components/responses/Error'
+        '401':
+          $ref: '#/components/responses/Error'
+        '403':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+        '429':
+          $ref: '#/components/responses/Error'
+        '503':
+          $ref: '#/components/responses/Error'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              allOf:
+              - $ref: '#/components/schemas/PrepareKeyPackage'
+              - properties:
+                  kind:
+                    enum:
+                    - SETUP
+  /keys/setup/commit:
+    post:
+      operationId: setupCommit
+      description: Atomic expected-version activation. Completed repeats return the
+        same result; no key release. An original unexpired access credential may replay
+        only its own completed PASSWORD_CHANGE result, bound to its initiating family
+        and operation expiry; revocation still denies every other capability.
+        Expired/cancelled/newer credential versions reject all writes.
+      security:
+      - bearer: []
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OperationStatus'
+          headers:
+            Cache-Control:
+              schema:
+                const: no-store
+              description: Sensitive responses are never cached.
+        '400':
+          $ref: '#/components/responses/Error'
+        '401':
+          $ref: '#/components/responses/Error'
+        '403':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+        '429':
+          $ref: '#/components/responses/Error'
+        '503':
+          $ref: '#/components/responses/Error'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OperationRequest'
+  /auth/password-change/prepare:
+    post:
+      operationId: passwordChangePrepare
+      description: Idempotent immutable prepared package. Same operation with changed
+        bytes conflicts. Plain serviceVaultKey is permitted only for setup and service
+        recovery; never persisted. Local recovery and password change retain the existing
+        service copy. The kind must match the server-authorized operation; service
+        unlock permanently selects RECOVERY_SERVICE for that operation.
+      security:
+      - bearer: []
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OperationStatus'
+          headers:
+            Cache-Control:
+              schema:
+                const: no-store
+              description: Sensitive responses are never cached.
+        '400':
+          $ref: '#/components/responses/Error'
+        '401':
+          $ref: '#/components/responses/Error'
+        '403':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+        '429':
+          $ref: '#/components/responses/Error'
+        '503':
+          $ref: '#/components/responses/Error'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              allOf:
+              - $ref: '#/components/schemas/PrepareKeyPackage'
+              - properties:
+                  kind:
+                    enum:
+                    - PASSWORD_CHANGE
+  /auth/password-change/commit:
+    post:
+      operationId: passwordChangeCommit
+      description: Atomic expected-version activation. Completed repeats return the
+        same result; no key release. Expired/cancelled/newer credential versions reject
+        all writes.
+      security:
+      - bearer: []
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OperationStatus'
+          headers:
+            Cache-Control:
+              schema:
+                const: no-store
+              description: Sensitive responses are never cached.
+        '400':
+          $ref: '#/components/responses/Error'
+        '401':
+          $ref: '#/components/responses/Error'
+        '403':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+        '429':
+          $ref: '#/components/responses/Error'
+        '503':
+          $ref: '#/components/responses/Error'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OperationRequest'
+  /auth/recovery/prepare:
+    post:
+      operationId: recoveryPrepare
+      description: Idempotent immutable prepared package. Same operation with changed
+        bytes conflicts. Plain serviceVaultKey is permitted only for setup and service
+        recovery; never persisted. Local recovery and password change retain the existing
+        service copy. The kind must match the server-authorized operation; service
+        unlock permanently selects RECOVERY_SERVICE for that operation.
+      security:
+      - recoveryCookie: []
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OperationStatus'
+          headers:
+            Cache-Control:
+              schema:
+                const: no-store
+              description: Sensitive responses are never cached.
+        '400':
+          $ref: '#/components/responses/Error'
+        '401':
+          $ref: '#/components/responses/Error'
+        '403':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+        '429':
+          $ref: '#/components/responses/Error'
+        '503':
+          $ref: '#/components/responses/Error'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              allOf:
+              - $ref: '#/components/schemas/PrepareKeyPackage'
+              - properties:
+                  kind:
+                    enum:
+                    - RECOVERY_LOCAL
+                    - RECOVERY_SERVICE
+      parameters:
+      - $ref: '#/components/parameters/Csrf'
+  /auth/recovery/commit:
+    post:
+      operationId: recoveryCommit
+      description: Atomic expected-version activation. Completed repeats return the
+        same result; no key release. Expired/cancelled/newer credential versions reject
+        all writes.
+      security:
+      - recoveryCookie: []
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OperationStatus'
+          headers:
+            Cache-Control:
+              schema:
+                const: no-store
+              description: Sensitive responses are never cached.
+        '400':
+          $ref: '#/components/responses/Error'
+        '401':
+          $ref: '#/components/responses/Error'
+        '403':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+        '429':
+          $ref: '#/components/responses/Error'
+        '503':
+          $ref: '#/components/responses/Error'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OperationRequest'
+      parameters:
+      - $ref: '#/components/parameters/Csrf'
+  /auth/recovery/login:
+    post:
+      operationId: recoveryLogin
+      description: One purpose-bound email-verification handoff after completion.
+        Checks the new derived login secret and current result versions, then consumes
+        the handoff atomically with session creation. Repeats must use normal login;
+        the recovery cookie otherwise remains status-only until original expiry.
+      security:
+      - recoveryCookie: []
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResult'
+          headers:
+            Cache-Control:
+              schema:
+                const: no-store
+              description: Sensitive responses are never cached.
+        '400':
+          $ref: '#/components/responses/Error'
+        '401':
+          $ref: '#/components/responses/Error'
+        '403':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+        '429':
+          $ref: '#/components/responses/Error'
+        '503':
+          $ref: '#/components/responses/Error'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      parameters:
+      - $ref: '#/components/parameters/Csrf'
+  /auth/recovery/status:
+    get:
+      operationId: recoveryStatus
+      description: Reload resumes this cookie-bound operation; completed cookie is
+        status-only until its original expiry.
+      security:
+      - recoveryCookie: []
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OperationStatus'
+          headers:
+            Cache-Control:
+              schema:
+                const: no-store
+              description: Sensitive responses are never cached.
+        '400':
+          $ref: '#/components/responses/Error'
+        '401':
+          $ref: '#/components/responses/Error'
+        '403':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+        '429':
+          $ref: '#/components/responses/Error'
+        '503':
+          $ref: '#/components/responses/Error'
+  /auth/recovery/unlock:
+    post:
+      operationId: recoveryUnlock
+      description: Server selects account, Transit key and stored service copy. Always
+        selects RECOVERY_SERVICE, requiring new identity and vault key. Never accepts
+        arbitrary ciphertext or userId. No access after completion.
+      security:
+      - recoveryCookie: []
+      responses:
+        '200':
+          description: Authorized transient vault-key release to this recovery session
+            only.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RecoveryUnlock'
+          headers:
+            Cache-Control:
+              schema:
+                const: no-store
+              description: Sensitive responses are never cached.
+        '400':
+          $ref: '#/components/responses/Error'
+        '401':
+          $ref: '#/components/responses/Error'
+        '403':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+        '429':
+          $ref: '#/components/responses/Error'
+        '503':
+          $ref: '#/components/responses/Error'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OperationRequest'
+      parameters:
+      - $ref: '#/components/parameters/Csrf'
+  /keys/me:
+    get:
+      operationId: ownVault
+      description: ''
+      security:
+      - bearer: []
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VaultBundle'
+          headers:
+            Cache-Control:
+              schema:
+                const: no-store
+              description: Sensitive responses are never cached.
+        '400':
+          $ref: '#/components/responses/Error'
+        '401':
+          $ref: '#/components/responses/Error'
+        '403':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+        '429':
+          $ref: '#/components/responses/Error'
+        '503':
+          $ref: '#/components/responses/Error'
+  /keys/users/{userId}:
+    get:
+      operationId: directoryIdentity
+      description: Only where messaging/contact permissions allow; public identity
+        is not a profile-write field.
+      security:
+      - bearer: []
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Identity'
+          headers:
+            Cache-Control:
+              schema:
+                const: no-store
+              description: Sensitive responses are never cached.
+        '400':
+          $ref: '#/components/responses/Error'
+        '401':
+          $ref: '#/components/responses/Error'
+        '403':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+        '429':
+          $ref: '#/components/responses/Error'
+        '503':
+          $ref: '#/components/responses/Error'
+      parameters:
+      - name: userId
+        in: path
+        required: true
+        schema:
+          $ref: '#/components/schemas/Id'
+  /chat/direct:
+    post:
+      operationId: openDirect
+      description: Unique unordered pair. Never self. Reopening retains caller history
+        cutoff; race returns winning room.
+      security:
+      - bearer: []
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Room'
+          headers:
+            Cache-Control:
+              schema:
+                const: no-store
+              description: Sensitive responses are never cached.
+        '400':
+          $ref: '#/components/responses/Error'
+        '401':
+          $ref: '#/components/responses/Error'
+        '403':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+        '429':
+          $ref: '#/components/responses/Error'
+        '503':
+          $ref: '#/components/responses/Error'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DirectRequest'
+  /chat/rooms:
+    get:
+      operationId: rooms
+      description: First page fixes a 30-second server snapshot of visible room summaries,
+        sorted room activity time descending then roomId. Opaque cursors bind account/snapshot.
+        Poll starts a new scan, completes all pages and reconciles by id. Expired
+        snapshot returns REVISION_CONFLICT and restarts scan; never discard unseen
+        rooms on incomplete scans.
+      security:
+      - bearer: []
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RoomPage'
+          headers:
+            Cache-Control:
+              schema:
+                const: no-store
+              description: Sensitive responses are never cached.
+        '400':
+          $ref: '#/components/responses/Error'
+        '401':
+          $ref: '#/components/responses/Error'
+        '403':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+        '429':
+          $ref: '#/components/responses/Error'
+        '503':
+          $ref: '#/components/responses/Error'
+      parameters:
+      - name: cursor
+        in: query
+        schema:
+          type: string
+          maxLength: 2048
+      - name: limit
+        in: query
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 100
+          default: 50
+  /chat/rooms/{roomId}/messages:
+    get:
+      operationId: history
+      description: before and after are mutually exclusive exclusive sequence bounds.
+        Default latest page. Return chronological items. nextAfter advances only through
+        emitted committed messages. Tombstones preserve sequence positions. Hide/join
+        cutoffs filter history; a key does not grant history access.
+      security:
+      - bearer: []
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HistoryPage'
+          headers:
+            Cache-Control:
+              schema:
+                const: no-store
+              description: Sensitive responses are never cached.
+        '400':
+          $ref: '#/components/responses/Error'
+        '401':
+          $ref: '#/components/responses/Error'
+        '403':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+        '429':
+          $ref: '#/components/responses/Error'
+        '503':
+          $ref: '#/components/responses/Error'
+      parameters:
+      - &id001
+        name: roomId
+        in: path
+        required: true
+        schema:
+          $ref: '#/components/schemas/Uuid'
+      - name: before
+        in: query
+        schema:
+          $ref: '#/components/schemas/Version'
+      - name: after
+        in: query
+        schema:
+          $ref: '#/components/schemas/Version'
+      - name: limit
+        in: query
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 100
+          default: 50
+    post:
+      operationId: send
+      description: Authorization -> stored operation lookup -> fingerprint match ->
+        for new operations current version/send checks and one sequence/message commit.
+        Replay precedes key freshness, obeying current result visibility. Unknown
+        network outcome requires identical operation and packet; only explicit KEY_STALE_NOT_SAVED/ROOM_KEY_PENDING
+        rejection permits a new operation.
+      security:
+      - bearer: []
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+          headers:
+            Cache-Control:
+              schema:
+                const: no-store
+              description: Sensitive responses are never cached.
+        '400':
+          $ref: '#/components/responses/Error'
+        '401':
+          $ref: '#/components/responses/Error'
+        '403':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+        '429':
+          $ref: '#/components/responses/Error'
+        '503':
+          $ref: '#/components/responses/Error'
+        '200':
+          description: Matching stored operation returned
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SendMessage'
+      parameters: &id002
+      - *id001
+  /chat/rooms/{roomId}/keys:
+    get:
+      operationId: roomKeys
+      description: ''
+      security:
+      - bearer: []
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RoomKeys'
+          headers:
+            Cache-Control:
+              schema:
+                const: no-store
+              description: Sensitive responses are never cached.
+        '400':
+          $ref: '#/components/responses/Error'
+        '401':
+          $ref: '#/components/responses/Error'
+        '403':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+        '429':
+          $ref: '#/components/responses/Error'
+        '503':
+          $ref: '#/components/responses/Error'
+      parameters: *id002
+  /chat/rooms/{roomId}/keys/activate:
+    post:
+      operationId: activateKey
+      description: Compare complete current recipient versions, membership and previous
+        room-key version. Atomically accept one winner, increment roomKey. Loser reloads
+        accepted envelopes. Historical keys retained.
+      security:
+      - bearer: []
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RoomSnapshot'
+          headers:
+            Cache-Control:
+              schema:
+                const: no-store
+              description: Sensitive responses are never cached.
+        '400':
+          $ref: '#/components/responses/Error'
+        '401':
+          $ref: '#/components/responses/Error'
+        '403':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+        '429':
+          $ref: '#/components/responses/Error'
+        '503':
+          $ref: '#/components/responses/Error'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ActivateRoomKey'
+      parameters: *id002
+  /chat/rooms/{roomId}/read:
+    put:
+      operationId: read
+      description: ''
+      security:
+      - bearer: []
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Room'
+          headers:
+            Cache-Control:
+              schema:
+                const: no-store
+              description: Sensitive responses are never cached.
+        '400':
+          $ref: '#/components/responses/Error'
+        '401':
+          $ref: '#/components/responses/Error'
+        '403':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+        '429':
+          $ref: '#/components/responses/Error'
+        '503':
+          $ref: '#/components/responses/Error'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReadRequest'
+      parameters: *id002
+  /chat/rooms/{roomId}/mute:
+    put:
+      operationId: mute
+      description: ''
+      security:
+      - bearer: []
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Room'
+          headers:
+            Cache-Control:
+              schema:
+                const: no-store
+              description: Sensitive responses are never cached.
+        '400':
+          $ref: '#/components/responses/Error'
+        '401':
+          $ref: '#/components/responses/Error'
+        '403':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+        '429':
+          $ref: '#/components/responses/Error'
+        '503':
+          $ref: '#/components/responses/Error'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Toggle'
+      parameters: *id002
+  /chat/rooms/{roomId}/hide:
+    post:
+      operationId: hide
+      description: ''
+      security:
+      - bearer: []
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HideResult'
+          headers:
+            Cache-Control:
+              schema:
+                const: no-store
+              description: Sensitive responses are never cached.
+        '400':
+          $ref: '#/components/responses/Error'
+        '401':
+          $ref: '#/components/responses/Error'
+        '403':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+        '429':
+          $ref: '#/components/responses/Error'
+        '503':
+          $ref: '#/components/responses/Error'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Empty'
+      parameters: *id002
+  /chat/blocks/{userId}:
+    put:
+      operationId: block
+      description: Own block only; direct sending denied both ways, no effect on group
+        sending or retained history.
+      security:
+      - bearer: []
+      responses:
+        '204':
+          description: Completed
+          headers:
+            Cache-Control:
+              schema:
+                const: no-store
+              description: Sensitive responses are never cached.
+        '400':
+          $ref: '#/components/responses/Error'
+        '401':
+          $ref: '#/components/responses/Error'
+        '403':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+        '429':
+          $ref: '#/components/responses/Error'
+        '503':
+          $ref: '#/components/responses/Error'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Toggle'
+      parameters:
+      - name: userId
+        in: path
+        required: true
+        schema:
+          $ref: '#/components/schemas/Id'
+  /chat/rooms/{roomId}/attachments:
+    post:
+      operationId: upload
+      description: Client-generated ID is bound to authenticated uploader/room. Identical
+        upload retries return same object, changed bytes conflict. Private staged
+        body expires after 24 hours if unbound; immutable ID/digest tombstones remain.
+        SQL Server stores private ciphertext bodies. An unsaved send may reuse its staged
+        object under a new operation in the same room. A bound object cannot be reused.
+      security:
+      - bearer: []
+      responses:
+        '201':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UploadResult'
+          headers:
+            Cache-Control:
+              schema:
+                const: no-store
+              description: Sensitive responses are never cached.
+        '400':
+          $ref: '#/components/responses/Error'
+        '401':
+          $ref: '#/components/responses/Error'
+        '403':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+        '429':
+          $ref: '#/components/responses/Error'
+        '503':
+          $ref: '#/components/responses/Error'
+      parameters:
+      - *id001
+      - name: X-Attachment-Id
+        in: header
+        required: true
+        schema:
+          $ref: '#/components/schemas/Uuid'
+      requestBody:
+        required: true
+        content:
+          application/octet-stream:
+            schema:
+              type: string
+              format: binary
+              maxLength: 5242896
+  /chat/attachments/{attachmentId}:
+    get:
+      operationId: download
+      description: Bearer-authorized current history/membership check. Return ciphertext
+        only; client decrypts and validates, renders blob URL.
+      security:
+      - bearer: []
+      responses:
+        '200':
+          description: Encrypted file
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+                maxLength: 5242896
+        '404':
+          $ref: '#/components/responses/Error'
+        '401':
+          $ref: '#/components/responses/Error'
+      parameters:
+      - name: attachmentId
+        in: path
+        required: true
+        schema:
+          $ref: '#/components/schemas/Uuid'
+  /users/{userId}:
+    get:
+      operationId: ownIdentityProfile
+      description: M1 owner-only identity header; foreign accounts return NOT_FOUND.
+        This does not expose registry or authentication state.
+      security:
+      - bearer: []
+      parameters:
+      - name: userId
+        in: path
+        required: true
+        schema:
+          $ref: '#/components/schemas/Id'
+      responses:
+        '200':
+          description: Minimal own profile
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OwnIdentityProfile'
+        '401':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+components:
+  securitySchemes:
+    bearer:
+      type: http
+      scheme: bearer
+      description: Opaque 32-byte random access credential, memory only; 10-minute
+        lifetime; server checks revocation/version every request.
+    refreshCookie:
+      type: apiKey
+      in: cookie
+      name: __Host-plk-refresh
+      description: Secure HttpOnly SameSite=Lax Path=/; 7-day idle / 30-day absolute;
+        rotation coordinated across tabs. Identical previous-refresh retry returns
+        the same encrypted replay result for 10 seconds; it never creates another
+        family or extends the absolute lifetime.
+    recoveryCookie:
+      type: apiKey
+      in: cookie
+      name: __Host-plk-recovery
+      description: Secure HttpOnly SameSite=Lax Path=/; 30 minutes from verification,
+        purpose/operation/version bound.
+    challengeCookie:
+      type: apiKey
+      in: cookie
+      name: __Host-plk-challenge
+      description: Secure HttpOnly SameSite=Lax Path=/ browser binding for EMAIL_VERIFY/LOGIN
+        challenges; renews for 10 minutes on successful resend. Stores random proof
+        only; no password-derived material.
+  parameters:
+    Csrf:
+      name: X-CSRF-Token
+      in: header
+      required: true
+      schema:
+        type: string
+        minLength: 32
+        maxLength: 128
+      description: For mutating cookie-auth requests, echo the __Host-plk-refresh-csrf
+        cookie in X-CSRF-Token. It is a random session-bound value whose hash is stored
+        by the server, separate from the HttpOnly refresh credential. All mutating
+        requests, including login and verification, require an allowed Origin. Recovery
+        has a separate cookie/CSRF context when implemented.
+  responses:
+    Error:
+      description: Safe error; no secret values. saveOutcome=not_saved only when the
+        original competing request has resolved and no operation was committed. Retry-After
+        accompanies rate/service limits.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+  schemas:
+    Id:
+      type: string
+      pattern: ^[1-9][0-9]{0,9}$
+      maxLength: 10
+    Version:
+      type: string
+      pattern: ^(0|[1-9][0-9]{0,18})$
+      maxLength: 19
+    Uuid:
+      type: string
+      format: uuid
+      maxLength: 36
+    Time:
+      type: string
+      format: date-time
+      pattern: Z$
+    Email:
+      type: string
+      format: email
+      maxLength: 255
+    Secret:
+      type: string
+      pattern: ^[A-Za-z0-9_-]{43}$
+      minLength: 43
+      maxLength: 43
+      writeOnly: true
+    B64:
+      type: string
+      pattern: ^[A-Za-z0-9_-]+$
+      maxLength: 1398123
+    Nonce:
+      type: string
+      pattern: ^[A-Za-z0-9_-]{32}$
+      minLength: 32
+      maxLength: 32
+    Versions:
+      type: object
+      additionalProperties: false
+      properties:
+        credential:
+          $ref: '#/components/schemas/Version'
+        vaultKey:
+          $ref: '#/components/schemas/Version'
+        vaultRevision:
+          $ref: '#/components/schemas/Version'
+        identity:
+          $ref: '#/components/schemas/Version'
+      required:
+      - credential
+      - vaultKey
+      - vaultRevision
+      - identity
+    RoomVersions:
+      type: object
+      additionalProperties: false
+      properties:
+        membership:
+          $ref: '#/components/schemas/Version'
+        roomKey:
+          $ref: '#/components/schemas/Version'
+      required:
+      - membership
+      - roomKey
+    Derivation:
+      type: object
+      additionalProperties: false
+      properties:
+        scheme:
+          const: PLK1
+        salt:
+          type: string
+          pattern: ^[A-Za-z0-9_-]{22}$
+        opsLimit:
+          type: integer
+          minimum: 2
+          maximum: 4
+        memoryBytes:
+          type: integer
+          minimum: 67108864
+          maximum: 268435456
+      required:
+      - scheme
+      - salt
+      - opsLimit
+      - memoryBytes
+    EmailRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        email:
+          $ref: '#/components/schemas/Email'
+      required:
+      - email
+    LoginRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        email:
+          $ref: '#/components/schemas/Email'
+        loginSecret:
+          $ref: '#/components/schemas/Secret'
+        scheme:
+          const: PLK1
+      required:
+      - email
+      - loginSecret
+      - scheme
+    RegistrationRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        email:
+          $ref: '#/components/schemas/Email'
+        firstName:
+          type: string
+          minLength: 1
+          maxLength: 100
+        lastName:
+          type: string
+          minLength: 1
+          maxLength: 100
+        loginSecret:
+          $ref: '#/components/schemas/Secret'
+        derivation:
+          $ref: '#/components/schemas/Derivation'
+        role:
+          type: string
+          enum:
+          - graduate
+          - lecturer
+      required:
+      - email
+      - firstName
+      - lastName
+      - loginSecret
+      - derivation
+      - role
+    Challenge:
+      type: object
+      additionalProperties: false
+      properties:
+        challengeId:
+          $ref: '#/components/schemas/Uuid'
+        expiresAt:
+          $ref: '#/components/schemas/Time'
+        resendAfter:
+          $ref: '#/components/schemas/Time'
+      required:
+      - challengeId
+      - expiresAt
+      - resendAfter
+    CodeProof:
+      type: object
+      additionalProperties: false
+      properties:
+        challengeId:
+          $ref: '#/components/schemas/Uuid'
+        code:
+          type: string
+          pattern: ^[0-9]{6}$
+      required:
+      - challengeId
+      - code
+    ResendRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        challengeId:
+          $ref: '#/components/schemas/Uuid'
+      required:
+      - challengeId
+    User:
+      type: object
+      additionalProperties: false
+      properties:
+        id:
+          $ref: '#/components/schemas/Id'
+        firstName:
+          type: string
+        lastName:
+          type: string
+        role:
+          type: string
+          enum:
+          - graduate
+          - lecturer
+        admission:
+          type: string
+          enum:
+          - PENDING
+          - ADMITTED
+          - DEACTIVATED
+        emailVerified:
+          type: boolean
+        emailFactorEnabled:
+          type: boolean
+        email:
+          $ref: '#/components/schemas/Email'
+        onboardingComplete:
+          type: boolean
+          description: M1 minimal identity enrollment is complete; academic-profile
+            editing remains separate.
+      required:
+      - id
+      - firstName
+      - lastName
+      - role
+      - admission
+      - emailVerified
+      - emailFactorEnabled
+      - email
+      - onboardingComplete
+    Session:
+      type: object
+      additionalProperties: false
+      properties:
+        user:
+          $ref: '#/components/schemas/User'
+        familyId:
+          $ref: '#/components/schemas/Uuid'
+        versions:
+          $ref: '#/components/schemas/Versions'
+        keySetupRequired:
+          type: boolean
+      required:
+      - user
+      - familyId
+      - versions
+      - keySetupRequired
+    Authenticated:
+      type: object
+      additionalProperties: false
+      properties:
+        status:
+          const: authenticated
+        accessToken:
+          type: string
+          pattern: ^[A-Za-z0-9_-]{43}$
+          minLength: 43
+          maxLength: 43
+          writeOnly: false
+        expiresAt:
+          $ref: '#/components/schemas/Time'
+        session:
+          $ref: '#/components/schemas/Session'
+      required:
+      - status
+      - accessToken
+      - expiresAt
+      - session
+    LoginChallenge:
+      type: object
+      additionalProperties: false
+      properties:
+        status:
+          const: challenge
+        challenge:
+          $ref: '#/components/schemas/Challenge'
+      required:
+      - status
+      - challenge
+    LoginResult:
+      oneOf:
+      - $ref: '#/components/schemas/Authenticated'
+      - $ref: '#/components/schemas/LoginChallenge'
+    Error:
+      type: object
+      additionalProperties: false
+      properties:
+        code:
+          type: string
+          enum:
+          - VALIDATION
+          - UNAUTHORIZED
+          - FORBIDDEN
+          - NOT_FOUND
+          - RATE_LIMITED
+          - REVISION_CONFLICT
+          - KEY_STALE_NOT_SAVED
+          - ATTACHMENT_UNAVAILABLE_NOT_SAVED
+          - ROOM_KEY_PENDING
+          - OPERATION_PAYLOAD_CONFLICT
+          - RECOVERY_EXPIRED
+          - RECOVERY_CANCELLED
+          - SERVICE_UNAVAILABLE
+          - DATA_INTEGRITY
+        message:
+          type: string
+          maxLength: 500
+        retryAfterSeconds:
+          type: integer
+          minimum: 0
+        saveOutcome:
+          type: string
+          enum:
+          - not_saved
+          - unknown
+      required:
+      - code
+      - message
+      allOf:
+      - if:
+          properties:
+            code:
+              enum:
+              - KEY_STALE_NOT_SAVED
+              - ROOM_KEY_PENDING
+        then:
+          required:
+          - saveOutcome
+          properties:
+            saveOutcome:
+              const: not_saved
+        else:
+          properties:
+            saveOutcome:
+              const: unknown
+    CipherPacket:
+      type: object
+      additionalProperties: false
+      properties:
+        scheme:
+          const: PLK1
+        nonce:
+          $ref: '#/components/schemas/Nonce'
+        ciphertext:
+          $ref: '#/components/schemas/B64'
+      required:
+      - scheme
+      - nonce
+      - ciphertext
+    PasswordCopy:
+      type: object
+      additionalProperties: false
+      properties:
+        scheme:
+          const: PLK1
+        nonce:
+          $ref: '#/components/schemas/Nonce'
+        ciphertext:
+          type: string
+          pattern: ^[A-Za-z0-9_-]{64}$
+          minLength: 64
+          maxLength: 64
+      required:
+      - scheme
+      - nonce
+      - ciphertext
+    Identity:
+      type: object
+      additionalProperties: false
+      properties:
+        userId:
+          $ref: '#/components/schemas/Id'
+        version:
+          $ref: '#/components/schemas/Version'
+        publicKey:
+          type: string
+          pattern: ^[A-Za-z0-9_-]{43}$
+          minLength: 43
+          maxLength: 43
+      required:
+      - userId
+      - version
+      - publicKey
+    VaultBundle:
+      type: object
+      additionalProperties: false
+      properties:
+        versions:
+          $ref: '#/components/schemas/Versions'
+        vault:
+          $ref: '#/components/schemas/CipherPacket'
+        passwordCopy:
+          $ref: '#/components/schemas/PasswordCopy'
+        identity:
+          $ref: '#/components/schemas/Identity'
+      required:
+      - versions
+      - vault
+      - passwordCopy
+      - identity
+    PrepareKeyPackage:
+      type: object
+      additionalProperties: false
+      properties:
+        operationId:
+          $ref: '#/components/schemas/Uuid'
+        expected:
+          $ref: '#/components/schemas/Versions'
+        derivation:
+          $ref: '#/components/schemas/Derivation'
+        loginSecret:
+          $ref: '#/components/schemas/Secret'
+        vault:
+          $ref: '#/components/schemas/CipherPacket'
+        passwordCopy:
+          $ref: '#/components/schemas/PasswordCopy'
+        identity:
+          $ref: '#/components/schemas/Identity'
+        serviceVaultKey:
+          $ref: '#/components/schemas/Secret'
+        kind:
+          type: string
+          enum:
+          - SETUP
+          - PASSWORD_CHANGE
+          - RECOVERY_LOCAL
+          - RECOVERY_SERVICE
+      required:
+      - operationId
+      - expected
+      - derivation
+      - loginSecret
+      - vault
+      - passwordCopy
+      - identity
+      - kind
+      allOf:
+      - if:
+          properties:
+            kind:
+              enum:
+              - SETUP
+              - RECOVERY_SERVICE
+        then:
+          required:
+          - serviceVaultKey
+        else:
+          not:
+            required:
+            - serviceVaultKey
+    OperationRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        operationId:
+          $ref: '#/components/schemas/Uuid'
+      required:
+      - operationId
+    OperationStatus:
+      type: object
+      additionalProperties: false
+      properties:
+        operationId:
+          $ref: '#/components/schemas/Uuid'
+        kind:
+          type: string
+          enum:
+          - SETUP
+          - PASSWORD_CHANGE
+          - RECOVERY_LOCAL
+          - RECOVERY_SERVICE
+        state:
+          type: string
+          enum:
+          - VERIFIED
+          - PREPARING
+          - WAITING_SERVICE
+          - READY
+          - COMPLETED
+          - CANCELLED
+          - EXPIRED
+        expiresAt:
+          $ref: '#/components/schemas/Time'
+        baseVersions:
+          $ref: '#/components/schemas/Versions'
+        resultVersions:
+          $ref: '#/components/schemas/Versions'
+        userId:
+          $ref: '#/components/schemas/Id'
+        email:
+          type: string
+          format: email
+          maxLength: 255
+        packagePrepared:
+          type: boolean
+      required:
+      - operationId
+      - kind
+      - state
+      - expiresAt
+      - baseVersions
+      allOf:
+      - if:
+          properties:
+            state:
+              const: COMPLETED
+        then:
+          required:
+          - resultVersions
+    RecoveryVerified:
+      type: object
+      additionalProperties: false
+      properties:
+        operation:
+          $ref: '#/components/schemas/OperationStatus'
+      required:
+      - operation
+    RecoveryUnlock:
+      type: object
+      additionalProperties: false
+      properties:
+        operationId:
+          $ref: '#/components/schemas/Uuid'
+        vaultKey:
+          type: string
+          pattern: ^[A-Za-z0-9_-]{43}$
+          minLength: 43
+          maxLength: 43
+          writeOnly: false
+        bundle:
+          $ref: '#/components/schemas/VaultBundle'
+      required:
+      - operationId
+      - vaultKey
+      - bundle
+    DirectRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        userId:
+          $ref: '#/components/schemas/Id'
+      required:
+      - userId
+    Author:
+      type: object
+      additionalProperties: false
+      properties:
+        id:
+          $ref: '#/components/schemas/Id'
+        name:
+          type: string
+          maxLength: 201
+        avatar:
+          anyOf:
+          - type: string
+            maxLength: 500
+          - type: 'null'
+      required:
+      - id
+      - name
+      - avatar
+    Recipient:
+      type: object
+      additionalProperties: false
+      properties:
+        userId:
+          $ref: '#/components/schemas/Id'
+        identityVersion:
+          $ref: '#/components/schemas/Version'
+        publicKey:
+          anyOf:
+          - type: string
+            pattern: ^[A-Za-z0-9_-]{43}$
+          - type: 'null'
+      required:
+      - userId
+      - identityVersion
+      - publicKey
+    RoomSnapshot:
+      type: object
+      additionalProperties: false
+      properties:
+        roomId:
+          $ref: '#/components/schemas/Uuid'
+        versions:
+          $ref: '#/components/schemas/RoomVersions'
+        recipients:
+          type: array
+          items:
+            $ref: '#/components/schemas/Recipient'
+          minItems: 1
+        keyState:
+          type: string
+          enum:
+          - missing
+          - stale
+          - ready
+          - recipient_unconfigured
+      required:
+      - roomId
+      - versions
+      - recipients
+      - keyState
+    Envelope:
+      type: object
+      additionalProperties: false
+      properties:
+        userId:
+          $ref: '#/components/schemas/Id'
+        identityVersion:
+          $ref: '#/components/schemas/Version'
+        sealedPacket:
+          type: string
+          pattern: ^[A-Za-z0-9_-]+$
+          minLength: 64
+          maxLength: 1366
+      required:
+      - userId
+      - identityVersion
+      - sealedPacket
+    ActivateRoomKey:
+      type: object
+      additionalProperties: false
+      properties:
+        expected:
+          $ref: '#/components/schemas/RoomSnapshot'
+        newKeyVersion:
+          $ref: '#/components/schemas/Version'
+        envelopes:
+          type: array
+          items:
+            $ref: '#/components/schemas/Envelope'
+          minItems: 1
+      required:
+      - expected
+      - newKeyVersion
+      - envelopes
+    HistoricalEnvelope:
+      type: object
+      additionalProperties: false
+      properties:
+        keyVersion:
+          $ref: '#/components/schemas/Version'
+        membershipVersion:
+          $ref: '#/components/schemas/Version'
+        envelope:
+          $ref: '#/components/schemas/Envelope'
+      required:
+      - keyVersion
+      - membershipVersion
+      - envelope
+    RoomKeys:
+      type: object
+      additionalProperties: false
+      properties:
+        snapshot:
+          $ref: '#/components/schemas/RoomSnapshot'
+        envelopes:
+          type: array
+          items:
+            $ref: '#/components/schemas/HistoricalEnvelope'
+      required:
+      - snapshot
+      - envelopes
+    RecipientVersion:
+      type: object
+      additionalProperties: false
+      properties:
+        userId:
+          $ref: '#/components/schemas/Id'
+        identityVersion:
+          $ref: '#/components/schemas/Version'
+      required:
+      - userId
+      - identityVersion
+    SendMessage:
+      type: object
+      additionalProperties: false
+      properties:
+        operationId:
+          $ref: '#/components/schemas/Uuid'
+        expected:
+          $ref: '#/components/schemas/RoomVersions'
+        recipientVersions:
+          type: array
+          items:
+            $ref: '#/components/schemas/RecipientVersion'
+          minItems: 1
+        packet:
+          type: object
+          additionalProperties: false
+          properties:
+            scheme:
+              const: PLK1
+            nonce:
+              $ref: '#/components/schemas/Nonce'
+            ciphertext:
+              $ref: '#/components/schemas/B64'
+              maxLength: 43712
+          required:
+          - scheme
+          - nonce
+          - ciphertext
+        attachmentId:
+          anyOf:
+          - $ref: '#/components/schemas/Uuid'
+          - type: 'null'
+      required:
+      - operationId
+      - expected
+      - recipientVersions
+      - packet
+    Message:
+      type: object
+      additionalProperties: false
+      properties:
+        id:
+          $ref: '#/components/schemas/Uuid'
+        roomId:
+          $ref: '#/components/schemas/Uuid'
+        sequence:
+          $ref: '#/components/schemas/Version'
+        sender:
+          anyOf:
+          - $ref: '#/components/schemas/Author'
+          - type: 'null'
+        operationId:
+          $ref: '#/components/schemas/Uuid'
+        keyVersion:
+          $ref: '#/components/schemas/Version'
+        membershipVersion:
+          $ref: '#/components/schemas/Version'
+        createdAt:
+          $ref: '#/components/schemas/Time'
+        deleted:
+          type: boolean
+        packet:
+          anyOf:
+          - $ref: '#/components/schemas/CipherPacket'
+          - type: 'null'
+        attachmentId:
+          anyOf:
+          - $ref: '#/components/schemas/Uuid'
+          - type: 'null'
+      required:
+      - id
+      - roomId
+      - sequence
+      - sender
+      - operationId
+      - keyVersion
+      - membershipVersion
+      - createdAt
+      - deleted
+      - packet
+      - attachmentId
+    HistoryPage:
+      type: object
+      additionalProperties: false
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Message'
+          maxItems: 100
+        nextBefore:
+          anyOf:
+          - $ref: '#/components/schemas/Version'
+          - type: 'null'
+        nextAfter:
+          $ref: '#/components/schemas/Version'
+        hasMore:
+          type: boolean
+      required:
+      - items
+      - nextBefore
+      - nextAfter
+      - hasMore
+    Room:
+      type: object
+      additionalProperties: false
+      properties:
+        ownerId:
+          anyOf:
+          - $ref: '#/components/schemas/Id'
+          - type: 'null'
+        metadataVersion:
+          $ref: '#/components/schemas/Version'
+        canManage:
+          type: boolean
+        id:
+          $ref: '#/components/schemas/Uuid'
+        isGroup:
+          type: boolean
+        name:
+          type: string
+          maxLength: 255
+        participants:
+          type: array
+          items:
+            $ref: '#/components/schemas/Author'
+        blocked:
+          description: Caller-owned direct block only; canSend also enforces peer blocks without disclosing them.
+          type: boolean
+        closed:
+          type: boolean
+        canSend:
+          type: boolean
+        muted:
+          type: boolean
+        unreadCount:
+          $ref: '#/components/schemas/Version'
+        historyCutoff:
+          $ref: '#/components/schemas/Version'
+        lastReadSequence:
+          $ref: '#/components/schemas/Version'
+        lastSequence:
+          $ref: '#/components/schemas/Version'
+        keySnapshot:
+          $ref: '#/components/schemas/RoomSnapshot'
+        lastMessage:
+          anyOf:
+          - $ref: '#/components/schemas/Message'
+          - type: 'null'
+      required:
+      - ownerId
+      - metadataVersion
+      - canManage
+      - id
+      - isGroup
+      - name
+      - participants
+      - blocked
+      - closed
+      - canSend
+      - muted
+      - unreadCount
+      - historyCutoff
+      - lastReadSequence
+      - lastSequence
+      - keySnapshot
+      - lastMessage
+    RoomPage:
+      type: object
+      additionalProperties: false
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Room'
+          maxItems: 100
+        nextCursor:
+          anyOf:
+          - type: string
+            maxLength: 2048
+          - type: 'null'
+        snapshotExpiresAt:
+          $ref: '#/components/schemas/Time'
+      required:
+      - items
+      - nextCursor
+      - snapshotExpiresAt
+    ReadRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        throughSequence:
+          $ref: '#/components/schemas/Version'
+      required:
+      - throughSequence
+    Toggle:
+      type: object
+      additionalProperties: false
+      properties:
+        enabled:
+          type: boolean
+      required:
+      - enabled
+    HideResult:
+      type: object
+      additionalProperties: false
+      properties:
+        historyCutoff:
+          $ref: '#/components/schemas/Version'
+      required:
+      - historyCutoff
+    UploadResult:
+      type: object
+      additionalProperties: false
+      properties:
+        attachmentId:
+          $ref: '#/components/schemas/Uuid'
+        ciphertextBytes:
+          type: integer
+          minimum: 17
+          maximum: 5242896
+        expiresAt:
+          $ref: '#/components/schemas/Time'
+      required:
+      - attachmentId
+      - ciphertextBytes
+      - expiresAt
+    Empty:
+      type: object
+      additionalProperties: false
+      properties: {}
+      required: []
+    OwnIdentityProfile:
+      type: object
+      additionalProperties: false
+      properties:
+        id:
+          $ref: '#/components/schemas/Id'
+        firstName:
+          type: string
+        lastName:
+          type: string
+        role:
+          type: string
+          enum:
+          - graduate
+          - lecturer
+        admission:
+          type: string
+          enum:
+          - PENDING
+          - ADMITTED
+          - DEACTIVATED
+        emailVerified:
+          type: boolean
+        emailFactorEnabled:
+          type: boolean
+        email:
+          $ref: '#/components/schemas/Email'
+        onboardingComplete:
+          type: boolean
+          description: M1 minimal identity enrollment is complete; academic-profile
+            editing remains separate.
+        jobTitle:
+          type: string
+        description:
+          type: string
+        avatar:
+          type: string
+        cover:
+          type: string
+        education:
+          type: array
+          maxItems: 0
+          items: {}
+        licenses:
+          type: array
+          maxItems: 0
+          items: {}
+      required:
+      - id
+      - firstName
+      - lastName
+      - role
+      - admission
+      - emailVerified
+      - emailFactorEnabled
+      - email
+      - onboardingComplete
+      - jobTitle
+      - description
+      - avatar
+      - cover
+      - education
+      - licenses
+      description: M1 owner-only minimal identity/profile header. Other profile sections
+        are outside this milestone.
+    GroupPrepare:
+      type: object
+      additionalProperties: false
+      properties:
+        roomId: &m6schema001
+          type: string
+          format: uuid
+        userIds:
+          type: array
+          items: &m6schema002
+            type: string
+            pattern: ^[1-9][0-9]{0,18}$
+          minItems: 1
+          maxItems: 100
+          uniqueItems: true
+      required:
+      - roomId
+      - userIds
+    GroupCreate:
+      type: object
+      additionalProperties: false
+      properties:
+        operationId: *m6schema001
+        roomId: *m6schema001
+        name:
+          type: string
+          minLength: 1
+          maxLength: 100
+        activation:
+          $ref: '#/components/schemas/ActivateRoomKey'
+      required:
+      - operationId
+      - roomId
+      - name
+      - activation
+    GroupChange:
+      type: object
+      additionalProperties: false
+      properties:
+        operationId: *m6schema001
+        expectedMembership: *m6schema002
+        expectedMetadata: *m6schema002
+        userId: *m6schema002
+        name:
+          type: string
+          minLength: 1
+          maxLength: 100
+        activation:
+          $ref: '#/components/schemas/ActivateRoomKey'
+      required:
+      - operationId
+      - expectedMembership
+      - expectedMetadata
+    GroupResult:
+      type: object
+      additionalProperties: false
+      properties:
+        roomId: *m6schema001
+        membershipVersion: *m6schema002
+        metadataVersion: *m6schema002
+        closed:
+          type: boolean
+      required:
+      - roomId
+      - membershipVersion
+      - metadataVersion
+      - closed
+    LifecycleRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        expectedCredential:
+          $ref: '#/components/schemas/Version'
+        loginSecret:
+          type: string
+          pattern: ^[A-Za-z0-9_-]{43}$
+      required:
+      - expectedCredential
+      - loginSecret
+    LifecycleResult:
+      type: object
+      additionalProperties: false
+      properties:
+        status:
+          const: completed
+      required:
+      - status
+    OwnMessagePage:
+      type: object
+      additionalProperties: false
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Message'
+          maxItems: 100
+        nextCursor:
+          type:
+          - string
+          - 'null'
+          maxLength: 80
+      required:
+      - items
+      - nextCursor

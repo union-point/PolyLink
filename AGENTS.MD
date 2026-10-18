@@ -27,3 +27,9 @@ Rules for message body:
 
 ---
 
+## 2. Setup Documentation & Local Database
+
+- Keep the root `README.md` setup instructions clear, concise, and easy to follow on both Linux and macOS.
+- Cover all steps needed to set up and run the project except database setup. Keep the common workflow simple; include OS-specific steps only where necessary and avoid duplicate instructions or unnecessary clutter.
+- Treat `db/` as local to the specific machine. Do not include its setup in the shared README or commit machine-specific database contents/configuration as shared project infrastructure.
+

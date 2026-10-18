@@ -1,0 +1,23 @@
+name: polylink-security
+services:
+  openbao:
+    image: openbao/openbao:2.7.1@sha256:6d2b93856e3fcf7b18ad855a0b51eaba474dc8b79cf554379ea32034797d2acf
+    command: server -config=/openbao/config/openbao.hcl
+    ports:
+      - "127.0.0.1:18200:8200"
+    volumes:
+      - ./openbao.hcl:/openbao/config/openbao.hcl:ro
+      - ./tls:/openbao/tls:ro
+      - openbao-data:/openbao/data
+    environment:
+      BAO_ADDR: https://localhost:8200
+      BAO_CACERT: /openbao/tls/server.crt
+    restart: unless-stopped
+  mailpit:
+    image: axllent/mailpit:v1.31.6
+    profiles: [local-mail]
+    ports:
+      - "127.0.0.1:1025:1025"
+      - "127.0.0.1:8025:8025"
+volumes:
+  openbao-data:

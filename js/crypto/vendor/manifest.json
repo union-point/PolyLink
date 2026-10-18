@@ -1,0 +1,13 @@
+{
+  "version": "0.8.4",
+  "files": {
+    "libsodium-wrappers": {
+      "sourceSha256": "40de1ef7cb8f2caae02c2a8f04809151904fa28cb9364cadedc57af89a6c9284",
+      "vendoredSha256": "5f8560f2d9822d138ca4ff1a63cbb1c378115140f2905438d7458b514cb9f608"
+    },
+    "libsodium-sumo": {
+      "sourceSha256": "4c94708f7e78eac7a32b29e2ce0ff96f4bd599d78c129f27bf8a061e20776c8c",
+      "vendoredSha256": "4c94708f7e78eac7a32b29e2ce0ff96f4bd599d78c129f27bf8a061e20776c8c"
+    }
+  }
+}

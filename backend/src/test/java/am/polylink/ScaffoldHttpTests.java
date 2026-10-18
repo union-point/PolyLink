@@ -12,10 +12,13 @@ import org.springframework.boot.test.web.server.LocalServerPort;
 
 @SpringBootTest(
         webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
-        properties =
-                "spring.autoconfigure.exclude="
-                        + "org.springframework.boot.jdbc.autoconfigure.DataSourceAutoConfiguration,"
-                        + "org.springframework.boot.hibernate.autoconfigure.HibernateJpaAutoConfiguration")
+        properties = {
+            // This scaffold exercises the database-free, identity-disabled security boundary.
+            "polylink.identity.enabled=false",
+            "spring.autoconfigure.exclude="
+                    + "org.springframework.boot.jdbc.autoconfigure.DataSourceAutoConfiguration,"
+                    + "org.springframework.boot.hibernate.autoconfigure.HibernateJpaAutoConfiguration"
+        })
 class ScaffoldHttpTests {
 
     @LocalServerPort private int port;
@@ -29,7 +32,7 @@ class ScaffoldHttpTests {
     }
 
     @Test
-    void deniesOtherEndpointsUntilAuthenticationIsDesigned() throws Exception {
+    void deniesOtherEndpointsWhenIdentityIsDisabled() throws Exception {
         assertThat(get("/api/probe").statusCode()).isEqualTo(403);
         assertThat(get("/actuator/env").statusCode()).isEqualTo(403);
     }

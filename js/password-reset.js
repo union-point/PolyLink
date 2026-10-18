@@ -1,7 +1,8 @@
+import { config } from './config.js';
 import { auth } from './services/index.js';
 import { requireChallenge, clearWorkflow } from './services/workflow.js';
 import { start, bootstrap, pending, showError } from './shared/ui.js';
-import { initializePasswordControls, passwordsMatch } from './shared/auth-ui.js';
+import { initializePasswordControls, passwordsMatch, finishLogin, inlineCode } from './shared/auth-ui.js';
 import { DataError } from './data/errors.js';
 
 start(async () => {
@@ -9,7 +10,7 @@ start(async () => {
   initializePasswordControls('new-password');
   const form = document.getElementById('reset-form');
   let context;
-  try { context = requireChallenge('recovery'); if (!context.recoveryToken) throw new DataError('VALIDATION', 'Նախ հաստատեք վերականգնման կոդը։'); }
+  try { if(config.dataMode==='http'){const operation=await auth.recoveryStatus();context={email:operation.email};if(operation.packagePrepared||operation.state==='COMPLETED'){const notice=document.createElement('p');notice.setAttribute('role','status');notice.textContent='Enter the same new password you chose earlier to finish recovery.';form.prepend(notice);}}else{context = requireChallenge('recovery'); if (!context.recoveryToken) throw new DataError('VALIDATION', 'Նախ հաստատեք վերականգնման կոդը։');} }
   catch (error) { showError(form, error); form.querySelector('[type="submit"]').disabled = true; return; }
   document.getElementById('confirm-password').name = 'confirmPassword';
   form.onsubmit = event => {
@@ -17,8 +18,11 @@ start(async () => {
     pending(form.querySelector('[type="submit"]'), form, async () => {
       const password = document.getElementById('new-password').value;
       passwordsMatch(password, document.getElementById('confirm-password').value);
-      await auth.resetPassword({ recoveryToken: context.recoveryToken, email: context.email, code: context.code, newPassword: password });
-      clearWorkflow(); location.href = 'login.html';
+      let result = await auth.resetPassword({ recoveryToken: context.recoveryToken, email: context.email, code: context.code, newPassword: password });
+      clearWorkflow();
+      if(config.dataMode==='http'){if(result.status==='challenge')result=await inlineCode(auth,result,'LOGIN',form);finishLogin(result);}
+      else location.href='login.html';
     });
   };
+  form.querySelectorAll('input[type=password],[type=submit]').forEach(input=>{input.disabled=false;});
 });

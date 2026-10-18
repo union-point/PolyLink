@@ -5,14 +5,14 @@
 <meta charset="utf-8"/>
 <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
 <title>Նամակագրություն</title>
-<link href="./css/message.css" rel="stylesheet"/>
 <link href="./css/style.css" rel="stylesheet"/>
+<link href="./css/message.css" rel="stylesheet"/>
 </head>
-<body>
+<body class="messenger-page">
 <header class="header">
 <div class="header-container">
 <div class="logo-container">
-<img alt="Logo" class="logo-img" src="./image/logo.png"/>
+<img alt="PolyLink" class="logo-img" src="./image/logo.png"/>
 <h3 class="logo-text">PolyLink</h3>
 </div>
 <nav>
@@ -27,7 +27,12 @@
 <div class="dropdown-container">
 <button class="dropdown-btn">☰</button>
 <ul class="dropdown-menu">
-<li><a href="help.html">Help</a></li>
+<li class="mobile-nav"><a href="profile.html">Անձնական էջ</a></li>
+<li class="mobile-nav"><a href="events.html">Իրադարձություններ</a></li>
+<li class="mobile-nav"><a href="forum.html">Ֆոռում</a></li>
+<li class="mobile-nav"><a href="message.html">Նամակագրություն</a></li>
+<li class="mobile-nav"><a href="search.html">Որոնում</a></li>
+<li><a href="help.html">Օգնություն</a></li>
 <li><a href="settings.html">Կարգավորումներ</a></li>
 <li><a href="login.html">Դուրս գալ</a></li>
 </ul>
@@ -35,31 +40,33 @@
 </nav>
 </div>
 </header>
-<section class="chat-container">
+<main class="chat-container" aria-label="Նամակագրություն">
 <div class="container">
 <div class="sidebar">
 <div class="sidebar-header">
+<div class="sidebar-title"><h1>Նամակագրություն</h1></div>
 <div class="search-box">
-<input placeholder="Փնտրել" type="text"/>
+<input placeholder="Որոնել զրույցներում" type="text"/>
 </div>
 </div>
-<div class="chat-list"></div>
+<div class="chat-list" aria-label="Զրույցներ"></div>
+<div class="sidebar-footer">Ձեր զրույցները՝ մեկ տեղում</div>
 </div>
 <div class="chat-area">
 <div class="chat-header-main">
-<div class="contact-info">
-<div class="avatar">Վ</div>
-<div class="contact-details">
-<div class="contact-name"></div>
-<div class="contact-status"></div>
-</div>
-</div>
+<button class="contact-info" type="button" disabled>
+<span class="avatar"></span>
+<span class="contact-details">
+<span class="contact-name"></span>
+<span class="contact-status"></span>
+</span>
+</button>
 <div class="chat-actions">
 <button class="action-icon" type="button">🔍</button>
 <button class="action-icon menu-btn" type="button">⋮</button>
 </div>
 </div>
-<div class="messages"></div>
+<div class="messages" role="region" aria-label="Հաղորդագրություններ" tabindex="0"></div>
 <div class="message-input">
 <button class="input-icon emoji-btn" type="button">😊</button>
 <input placeholder="Գրել հաղորդագրություն..." type="text"/>
@@ -68,7 +75,7 @@
 </div>
 </div>
 </div>
-</section>
+</main>
 <script src="./js/chat.js" type="module"></script>
 </body>
 </html>

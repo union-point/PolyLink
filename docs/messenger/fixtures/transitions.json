@@ -1,0 +1,66 @@
+{
+  "recovery": {
+    "VERIFIED": [
+      "PREPARING",
+      "WAITING_SERVICE",
+      "CANCELLED",
+      "EXPIRED"
+    ],
+    "PREPARING": [
+      "WAITING_SERVICE",
+      "READY",
+      "CANCELLED",
+      "EXPIRED"
+    ],
+    "WAITING_SERVICE": [
+      "PREPARING",
+      "READY",
+      "CANCELLED",
+      "EXPIRED"
+    ],
+    "READY": [
+      "COMPLETED",
+      "CANCELLED",
+      "EXPIRED"
+    ],
+    "COMPLETED": [],
+    "CANCELLED": [],
+    "EXPIRED": []
+  },
+  "sendScenarios": [
+    {
+      "name": "lost-response-after-key-rotation",
+      "events": [
+        "commit(original)",
+        "rotate",
+        "retry(original)"
+      ],
+      "result": "same_message"
+    },
+    {
+      "name": "unknown-outcome",
+      "events": [
+        "timeout(original)",
+        "retry(original)"
+      ],
+      "result": "same_operation_same_bytes"
+    },
+    {
+      "name": "stale-unsaved",
+      "events": [
+        "reject_not_saved(original)",
+        "refresh_versions",
+        "send(new_operation_new_nonce)"
+      ],
+      "result": "one_message"
+    },
+    {
+      "name": "same-operation-different-bytes",
+      "events": [
+        "commit(original)",
+        "retry(changed)"
+      ],
+      "result": "OPERATION_PAYLOAD_CONFLICT"
+    }
+  ]
+}

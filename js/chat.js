@@ -1,132 +1,178 @@
+import { icon } from './chat/icons.js';
+import { groupControls } from './chat/groups.js';
 import { chat } from './services/index.js';
-import { bootstrap, start, pending, stateMessage, showError, confirmAction, notify } from './shared/ui.js';
+import { bootstrap, start, pending, stateMessage, showError, confirmAction } from './shared/ui.js';
 import { validateImage } from './data/validation.js';
 import { renderConversation, renderMessage } from './chat/render.js';
+import { mergeMessages, pollDelay, messageShown } from './chat/history.js';
 
-start(async () => {
-  const user = await bootstrap(); if (!user) return;
-  const area = document.querySelector('.chat-area'), list = document.querySelector('.chat-list'), history = document.querySelector('.messages');
-  const input = document.querySelector('.message-input input'), contactSearch = document.querySelector('.search-box input');
-  const send = document.querySelector('.send-icon'), attach = document.querySelector('.attachment-btn'), emoji = document.querySelector('.emoji-btn');
-  const menuButton = document.querySelector('.menu-btn'), searchButton = document.querySelector('.chat-actions .action-icon:not(.menu-btn)');
-  const inputRow = document.querySelector('.message-input');
-  let rooms = [], selected = null, records = [], selectionGeneration = 0, refreshGeneration = 0, saving = false;
-  const drafts = new Map(), attachments = new Map();
-  function iconButton(element, label) { element.setAttribute('aria-label', label); element.style.border = '0'; element.style.background = 'transparent'; element.style.padding = '0'; element.type = 'button'; }
-  iconButton(send, 'Ուղարկել հաղորդագրությունը'); iconButton(attach, 'Կցել պատկեր'); iconButton(emoji, 'Ընտրել էմոջի'); iconButton(menuButton, 'Նամակագրության գործողություններ'); iconButton(searchButton, 'Որոնել նամակագրության մեջ');
-  input.setAttribute('aria-label', 'Հաղորդագրություն'); input.maxLength = 5000; contactSearch.setAttribute('aria-label', 'Փնտրել զրուցակից');
-  const attachmentStatus = document.createElement('div'); attachmentStatus.style.cssText = 'padding:4px 16px;font-size:13px'; inputRow.before(attachmentStatus);
-  const messageSearch = document.createElement('input'); messageSearch.type = 'search'; messageSearch.placeholder = 'Որոնել հաղորդագրություններում...'; messageSearch.setAttribute('aria-label', 'Որոնել հաղորդագրություններում');
-  messageSearch.style.cssText = 'display:none;width:100%;box-sizing:border-box;padding:10px;border:1px solid var(--border-color);background:var(--card-background);color:var(--font-color-primary)'; history.before(messageSearch);
-  searchButton.onclick = () => { const visible = messageSearch.style.display === 'none'; messageSearch.style.display = visible ? 'block' : 'none'; if (visible) messageSearch.focus(); else { messageSearch.value = ''; renderHistory(); } };
-  function renderHistory() {
-    const filtered = records.filter(record => !messageSearch.value || record.text.toLowerCase().includes(messageSearch.value.toLowerCase()));
-    if (!filtered.length) stateMessage(history, messageSearch.value ? 'Հաղորդագրություններ չեն գտնվել' : 'Հաղորդագրություններ չկան');
-    else history.innerHTML = filtered.map(record => renderMessage(record, user.id, selected?.isGroup)).join('');
-    history.scrollTop = history.scrollHeight;
+start(async()=>{
+  const user=await bootstrap();if(!user)return;
+  const area=document.querySelector('.chat-area'),list=document.querySelector('.chat-list'),history=document.querySelector('.messages');
+  const input=document.querySelector('.message-input input'),contactSearch=document.querySelector('.search-box input'),row=document.querySelector('.message-input');
+  const send=document.querySelector('.send-icon'),attach=document.querySelector('.attachment-btn'),emoji=document.querySelector('.emoji-btn'),menuButton=document.querySelector('.menu-btn'),searchButton=document.querySelector('.chat-actions .action-icon:not(.menu-btn)');
+  let rooms=[],selected=null,state=null,generation=0,saving=false,polling=false,pollAgain=false,timer,failures=0,stopped=false,ackTimer;
+  const drafts=new Map(),attachments=new Map();
+  const groups=groupControls({user,getContacts:()=>[...new Map(rooms.filter(room=>!room.isGroup&&!room.closed).flatMap(room=>room.participants).filter(person=>person.id!==user.id).map(person=>[person.id,person])).values()],onChange:room=>{if(room){if(selected)drafts.set(selected.id,input.value);cancel();generation++;selected=null;window.history.replaceState(null,'',`message.html?room=${encodeURIComponent(room)}`);}schedule(0);}});
+  const createGroup=document.createElement('button');createGroup.type='button';createGroup.className='create-group';createGroup.innerHTML=icon('plus');createGroup.setAttribute('aria-label','Ստեղծել խումբ');createGroup.title='Ստեղծել խումբ';createGroup.onclick=()=>groups.create();document.querySelector('.sidebar-title').append(createGroup);
+  function button(element,label,symbol){element.type='button';element.setAttribute('aria-label',label);element.title=label;element.innerHTML=icon(symbol);}
+  button(send,'Ուղարկել հաղորդագրությունը','send');button(attach,'Կցել պատկեր','attach');button(emoji,'Ընտրել էմոջի','smile');button(menuButton,'Նամակագրության գործողություններ','more');button(searchButton,'Որոնել բեռնված հաղորդագրություններում','search');
+  input.maxLength=5000;input.setAttribute('aria-label','Հաղորդագրություն');contactSearch.setAttribute('aria-label','Որոնել զրույցներում');document.querySelector('.search-box').insertAdjacentHTML('afterbegin',icon('search'));
+  const composer=document.createElement('div');composer.className='composer';row.before(composer);composer.append(row);
+  const fileStatus=document.createElement('div');fileStatus.className='attachment-preview';composer.prepend(fileStatus);let previewUrl;
+  const searchWrap=document.createElement('div');searchWrap.className='chat-search';const search=document.createElement('input');search.type='search';search.placeholder='Որոնել հաղորդագրություն';search.setAttribute('aria-label','Որոնել միայն բեռնված հաղորդագրություններում');search.title='Որոնել միայն բեռնված հաղորդագրություններում';search.id='chat-search';search.disabled=true;searchWrap.append(search);searchButton.before(searchWrap);searchButton.setAttribute('aria-controls','chat-search');searchButton.setAttribute('aria-expanded','false');
+  const back=document.createElement('button');back.className='action-icon mobile-back';button(back,'Վերադառնալ զրույցներին','back');document.querySelector('.chat-header-main').prepend(back);back.onclick=()=>{document.querySelector('.chat-container').classList.remove('has-selection');contactSearch.focus();};
+  const contactInfo=document.querySelector('.contact-info');contactInfo.onclick=()=>{if(selected?.isGroup)pending(null,area,()=>groups.manage(selected.id));};
+  const earlier=document.createElement('button');earlier.type='button';earlier.textContent='Բեռնել նախորդ հաղորդագրությունները';earlier.dataset.loadEarlier='';earlier.hidden=true;history.before(earlier);
+  const incoming=document.createElement('button');incoming.type='button';incoming.textContent='Նոր հաղորդագրություններ ↓';incoming.dataset.newMessages='';incoming.hidden=true;history.after(incoming);
+  const pollStatus=document.createElement('p');pollStatus.setAttribute('role','status');pollStatus.dataset.pollStatus='';history.after(pollStatus);
+  const valid=s=>state===s&&!s.abort.signal.aborted;
+  const bottom=()=>history.scrollHeight-history.scrollTop-history.clientHeight<40;
+  function renderList(){const visible=rooms.filter(room=>room.name.toLowerCase().includes(contactSearch.value.toLowerCase()));if(!visible.length)stateMessage(list,'Նամակագրություններ չեն գտնվել');else list.innerHTML=visible.map(room=>renderConversation(room,selected?.id)).join('');}
+  function renderHistory(s,{initial=false}={}){
+    if(!valid(s))return;
+    const wasBottom=bottom(),box=history.getBoundingClientRect();
+    const anchor=[...history.querySelectorAll('.message')].find(node=>node.getBoundingClientRect().bottom>box.top);
+    const anchorId=anchor?.dataset.messageId,offset=anchor?anchor.getBoundingClientRect().top-box.top:0,oldTop=history.scrollTop;
+    const visible=s.records.filter(record=>!search.value||(record.text||'').toLowerCase().includes(search.value.toLowerCase()));
+    if(!visible.length)stateMessage(history,search.value?'Բեռնված հաղորդագրություններում ոչինչ չի գտնվել':'Հաղորդագրություններ չկան');
+    else history.innerHTML=visible.map(record=>renderMessage(record,user.id,selected?.isGroup)).join('');
+    earlier.hidden=!s.hasMore;earlier.disabled=s.loading>0;
+    if(initial||wasBottom&&!search.value){history.scrollTop=history.scrollHeight;incoming.hidden=true;}
+    else{
+      const next=[...history.querySelectorAll('.message')].find(node=>node.dataset.messageId===anchorId);
+      history.scrollTop=next?oldTop+next.getBoundingClientRect().top-history.getBoundingClientRect().top-offset:oldTop;
+    }
+    earlier.hidden=!s.hasMore;earlier.disabled=s.loading>0;
+    scheduleAck();
   }
-  messageSearch.oninput = renderHistory;
-  function renderList() {
-    const filtered = rooms.filter(room => room.name.toLowerCase().includes(contactSearch.value.toLowerCase()));
-    if (!filtered.length) stateMessage(list, 'Նամակագրություններ չեն գտնվել');
-    else list.innerHTML = filtered.map(room => renderConversation(room, selected?.id)).join('');
+  function updateFile(){
+    fileStatus.replaceChildren();if(previewUrl){URL.revokeObjectURL(previewUrl);previewUrl=null;}
+    const file=selected&&attachments.get(selected.id);if(!file)return;
+    const preview=document.createElement('img');previewUrl=URL.createObjectURL(file);preview.src=previewUrl;preview.alt='Կցված պատկերի նախադիտում';
+    const label=document.createElement('span');label.className='attachment-name';label.textContent=file.name;
+    const remove=document.createElement('button');remove.className='icon-button';button(remove,'Հեռացնել կցված պատկերը','close');remove.onclick=()=>{attachments.delete(selected.id);updateFile();};fileStatus.append(preview,label,remove);
   }
-  contactSearch.oninput = renderList;
-  function updateAttachment() {
-    attachmentStatus.replaceChildren();
-    const file = selected && attachments.get(selected.id); if (!file) return;
-    const text = document.createElement('span'); text.textContent = `📎 ${file.name}`;
-    const remove = document.createElement('button'); remove.textContent = 'Հեռացնել'; remove.onclick = () => { attachments.delete(selected.id); updateAttachment(); };
-    attachmentStatus.append(text, remove);
+  function header(){
+    document.querySelector('.contact-name').textContent=selected?.name||'Ընտրեք նամակագրություն';const avatar=document.querySelector('.contact-info .avatar');if(selected?.isGroup)avatar.innerHTML=icon('group');else avatar.textContent=selected?selected.name.slice(0,1):'';
+    contactInfo.disabled=!selected?.isGroup;contactInfo.setAttribute('aria-label',selected?.isGroup?`Խմբի մասին՝ ${selected.name}`:'Զրուցակցի տվյալներ');
+    document.querySelector('.contact-status').textContent=!selected?'':selected.closed?'Նամակագրությունն ավարտված է':selected.blocked?'Արգելափակված է':selected.canSend===false?'Հաղորդագրություն ուղարկելն անհասանելի է':selected.keySnapshot?.keyState!=='ready'&&selected.keySnapshot?'Թարմացվում են գաղտնագրման բանալիները…':selected.isGroup?'Խմբային նամակագրություն':'Անձնական նամակագրություն';
+    input.disabled=!selected||selected.canSend===false||selected.closed||saving;send.disabled=input.disabled;attach.disabled=input.disabled;emoji.disabled=input.disabled;searchButton.disabled=!selected;renderMenu();
   }
-  function setHeader() {
-    document.querySelector('.contact-name').textContent = selected?.name || 'Ընտրեք նամակագրություն';
-    document.querySelector('.contact-info .avatar').textContent = selected ? selected.isGroup ? '👥' : selected.name.slice(0, 1) : '';
-    document.querySelector('.contact-status').textContent = selected ? selected.closed ? 'Նամակագրությունն ավարտված է' : selected.blocked ? 'Արգելափակված է' : selected.isGroup ? 'Խմբային նամակագրություն' : 'Անձնական նամակագրություն' : '';
-    input.disabled = !selected || selected.blocked || selected.closed || saving; send.disabled = !selected || selected.blocked || selected.closed || saving; attach.disabled = !selected || selected.blocked || selected.closed || saving; menuButton.disabled = !selected;
-    renderMenu();
+  function cancel(){if(state){state.abort.abort();chat.release(state.id).catch(()=>{});}state=null;clearTimeout(ackTimer);incoming.hidden=true;}
+  async function getPage(s,params){
+    s.loading++;earlier.disabled=true;
+    const request=s.chain.catch(()=>{}).then(()=>{if(!valid(s))throw new DOMException('Selection changed','AbortError');return chat.page(s.id,{...params,signal:s.abort.signal});});s.chain=request;
+    try{return await request;}finally{s.loading--;if(valid(s))earlier.disabled=s.loading>0;else if(selected?.id!==s.id)chat.release(s.id).catch(()=>{});}
   }
-  async function selectRoom(room) {
-    if (selected) drafts.set(selected.id, input.value);
-    const current = ++selectionGeneration; selected = room; records = []; input.value = drafts.get(room.id) || ''; messageSearch.value = '';
-    window.history.replaceState(null, '', `message.html?room=${encodeURIComponent(room.id)}`);
-    setHeader(); updateAttachment(); renderList(); stateMessage(history, 'Բեռնվում է...');
-    try {
-      const messages = await chat.messages(room.id); if (current !== selectionGeneration) return;
-      records = messages; renderHistory();
-      await chat.read(room.id); room.unreadCount = 0; renderList();
-    } catch (error) { if (current === selectionGeneration) stateMessage(history, error.message, { retry: () => selectRoom(room) }); }
+  function merge(s,page,{initial=false,older=false}={}){
+    if(!valid(s))return;
+    const previousRecords=s.records,previous=s.records.length,previousLast=s.records.at(-1)?.sequence,atBottom=bottom();
+    s.records=mergeMessages(s.records,page.items);
+    if(initial||older){s.before=page.nextBefore;s.hasMore=page.hasMore;}
+    if(!older&&page.nextAfter!=null)s.after=page.nextAfter;
+    // An unchanged poll does not rebuild the DOM or disturb selection/scroll.
+    if(initial||s.records.length!==previous||s.records.some((record,index)=>record!==previousRecords[index]))renderHistory(s,{initial});
+    if(!initial&&!older&&s.records.at(-1)?.sequence!==previousLast&&!atBottom)incoming.hidden=false;
   }
-  async function refresh() {
-    const current = ++refreshGeneration;
-    try {
-      const latest = await chat.list(); if (current !== refreshGeneration) return;
-      rooms = latest; renderList();
-      const id = selected?.id || new URLSearchParams(location.search).get('room');
-      const target = rooms.find(room => room.id === id) || (!selected && !id ? rooms[0] : null);
-      if (!target) { selected = null; records = []; input.value = ''; setHeader(); updateAttachment(); stateMessage(history, id ? 'Նամակագրությունը հասանելի չէ։ Ընտրեք այլ զրուցակից։' : 'Ընտրեք նամակագրություն'); return; }
-      if (!selected || selected.id !== target.id) await selectRoom(target);
-      else {
-        const previousGeneration = selectionGeneration;
-        const messages = await chat.messages(target.id);
-        if (previousGeneration !== selectionGeneration || current !== refreshGeneration) return;
-        selected = target; records = messages; renderHistory(); setHeader();
-        if (document.visibilityState !== 'hidden') { await chat.read(target.id); target.unreadCount = 0; renderList(); }
+  async function selectRoom(room){
+    if(selected)drafts.set(selected.id,input.value);cancel();const current=++generation;selected=room;
+    const s=state={id:room.id,generation:current,records:[],after:'0',before:null,hasMore:false,loading:0,chain:Promise.resolve(),abort:new AbortController(),ack:BigInt(room.lastReadSequence||'0')};
+    input.value=drafts.get(room.id)||'';search.value='';closeSearch();closeMenu();closePicker();document.querySelector('.chat-container').classList.add('has-selection');window.history.replaceState(null,'',`message.html?room=${encodeURIComponent(room.id)}`);header();updateFile();renderList();stateMessage(history,'Բեռնվում է...');earlier.hidden=true;
+    try{if(!drafts.has(room.id)){const draft=await chat.loadDraft(room.id);if(valid(s)&&!drafts.has(room.id)){drafts.set(room.id,draft);input.value=draft;}}const page=await getPage(s,{});merge(s,page,{initial:true});}
+    catch(error){if(valid(s))stateMessage(history,error.message,{retry:()=>selectRoom(room)});}
+  }
+  async function loadEarlier(){const s=state;if(!s||!s.hasMore||s.loading)return;try{merge(s,await getPage(s,{before:s.before}),{older:true});}catch(error){if(valid(s))showError(area,error);}}
+  earlier.onclick=loadEarlier;
+  function scheduleAck(){clearTimeout(ackTimer);ackTimer=setTimeout(acknowledge,150);}
+  async function acknowledge(){
+    const s=state;if(!s||!valid(s)||document.visibilityState!=='visible'||s.acking)return;
+    const box=history.getBoundingClientRect();let sequence=s.ack;
+    for(const node of history.querySelectorAll('.message')){
+      const rect=node.getBoundingClientRect(),image=node.querySelector('img');
+      if(messageShown(rect,box)&&(!image||(image.complete&&image.naturalWidth)))sequence=BigInt(node.dataset.sequence)>sequence?BigInt(node.dataset.sequence):sequence;
+    }
+    if(sequence<=s.ack)return;s.acking=true;
+    try{const result=await chat.read(s.id,sequence.toString());s.ack=BigInt(result?.lastReadSequence||sequence);const room=rooms.find(r=>r.id===s.id);if(room){room.unreadCount=result?.unreadCount??room.unreadCount;room.lastReadSequence=s.ack.toString();renderList();}}
+    catch(error){if(valid(s))pollStatus.textContent=error.message;}
+    finally{s.acking=false;}
+  }
+  history.addEventListener('scroll',()=>{if(bottom())incoming.hidden=true;scheduleAck();if(history.scrollTop<50)loadEarlier();});
+  history.addEventListener('load',scheduleAck,true);incoming.onclick=()=>{history.scrollTop=history.scrollHeight;incoming.hidden=true;scheduleAck();};
+  function closeSearch(){searchWrap.classList.remove('is-open');search.disabled=true;searchButton.setAttribute('aria-expanded','false');search.value='';}
+  search.oninput=()=>state&&renderHistory(state);searchButton.onclick=()=>{const open=searchWrap.classList.toggle('is-open');search.disabled=!open;searchButton.setAttribute('aria-expanded',String(open));if(open){closeMenu();search.focus();}else{search.value='';if(state)renderHistory(state);}};
+  search.onkeydown=event=>{if(event.key==='Escape'){event.stopPropagation();closeSearch();if(state)renderHistory(state);searchButton.focus();}};
+  contactSearch.oninput=renderList;
+  async function refresh(){
+    if(stopped||document.visibilityState==='hidden')return;if(polling){pollAgain=true;return;}polling=true;const startGeneration=generation;
+    try{
+      const latest=await chat.list();if(stopped)return;rooms=latest;renderList();
+      if(startGeneration!==generation)return;
+      const id=selected?.id||new URLSearchParams(location.search).get('room'),target=rooms.find(r=>r.id===id)||(!selected&&!id?rooms[0]:null);
+      if(!target){if(selected)drafts.set(selected.id,input.value);cancel();selected=null;header();updateFile();stateMessage(history,id?'Նամակագրությունը հասանելի չէ։':'Ընտրեք նամակագրություն');earlier.hidden=true;return;}
+      if(!selected||selected.id!==target.id||BigInt(target.historyCutoff||'0')>BigInt(selected.historyCutoff||'0'))await selectRoom(target);
+      else{
+        const membershipChanged=selected.keySnapshot?.versions.membership!==target.keySnapshot?.versions.membership||selected.closed!==target.closed;
+        selected=target;header();const s=state;if(s&&!s.loading){
+          if(membershipChanged){
+            await chat.release(s.id);let after=s.records.length?(BigInt(s.records[0].sequence)-1n).toString():'0';
+            do{const page=await getPage(s,{after,limit:100});if(!valid(s))return;merge(s,page);if(!page.hasMore)break;if(BigInt(page.nextAfter)<=BigInt(after))throw new Error('Չհաջողվեց բեռնել հաղորդագրությունների հաջորդ էջը։');after=page.nextAfter;}while(valid(s));
+          }
+          do{const after=s.after,page=await getPage(s,{after});if(!valid(s))return;merge(s,page);if(!page.hasMore)break;if(BigInt(s.after)<=BigInt(after))throw new Error('Չհաջողվեց բեռնել հաղորդագրությունների հաջորդ էջը։');}while(valid(s));
+        }
       }
-    } catch (error) { stateMessage(list, error.message, { retry: refresh }); }
+      failures=0;pollStatus.textContent='';
+    }catch(error){failures++;pollStatus.textContent=`${error.message} Կրկին փորձ է կատարվում…`;if(!rooms.length)stateMessage(list,error.message,{retry:()=>schedule(0)});}
+    finally{polling=false;if(!stopped)schedule(pollAgain?0:pollDelay(failures));pollAgain=false;}
   }
-  list.onclick = event => { const item = event.target.closest('.chat-item'); if (item) selectRoom(rooms.find(room => room.id === item.dataset.roomId)); };
-  list.onkeydown = event => { if (event.key === 'Enter' || event.key === ' ') { const item = event.target.closest('.chat-item'); if (item) { event.preventDefault(); item.click(); } } };
-  send.onclick = async () => {
-    if (!selected || saving) return;
-    const roomId = selected.id, text = input.value, file = attachments.get(roomId);
-    saving = true;
-    // pending() owns the send button; freeze composer edits during the request.
-    input.disabled = true; attach.disabled = true;
-    const saved = await pending(send, area, async () => { await chat.send(roomId, { text, file }); });
-    saving = false;
-    if (saved) { drafts.delete(roomId); attachments.delete(roomId); if (selected?.id === roomId) input.value = ''; }
-    setHeader(); updateAttachment(); await refresh();
+  function schedule(delay=0){clearTimeout(timer);if(!stopped&&document.visibilityState!=='hidden')timer=setTimeout(refresh,delay);}
+  list.onclick=event=>{const item=event.target.closest('.chat-item'),room=item&&rooms.find(r=>r.id===item.dataset.roomId);if(room)selectRoom(room);};list.onkeydown=event=>{if(['Enter',' '].includes(event.key)){const item=event.target.closest('.chat-item');if(item){event.preventDefault();item.click();}}};
+  send.onclick=async()=>{
+    if(!selected||saving||selected.canSend===false)return;const id=selected.id,text=input.value,file=attachments.get(id);saving=true;input.disabled=true;attach.disabled=true;
+    const saved=await pending(send,area,()=>chat.send(id,{text,file}));saving=false;
+    if(saved){drafts.delete(id);attachments.delete(id);await chat.saveDraft(id,'').catch(()=>{});if(selected?.id===id)input.value='';}
+    header();updateFile();schedule(0);
   };
-  input.onkeydown = event => { if (event.key === 'Enter') { event.preventDefault(); send.click(); } };
-  const fileInput = document.createElement('input'); fileInput.type = 'file'; fileInput.accept = 'image/png,image/jpeg,image/webp,image/gif'; fileInput.hidden = true; document.body.appendChild(fileInput);
-  attach.onclick = () => fileInput.click();
-  fileInput.onchange = () => {
-    if (!selected || !fileInput.files[0]) return;
-    try { validateImage(fileInput.files[0]); attachments.set(selected.id, fileInput.files[0]); updateAttachment(); }
-    catch (error) { showError(area, error); }
-    fileInput.value = '';
-  };
-  const emojiPicker = document.createElement('div'); emojiPicker.style.cssText = 'display:none;position:absolute;bottom:60px;left:20px;background:var(--card-background);border:1px solid var(--border-color);border-radius:8px;padding:10px;grid-template-columns:repeat(5,1fr);gap:5px;z-index:100';
-  ['😀','😂','😍','🥺','😎','😭','😡','👍','👎','🎉','❤️','🔥','✅','❌'].forEach(value => { const button = document.createElement('button'); button.textContent = value; button.type = 'button'; button.style.cssText = 'background:transparent;border:0;cursor:pointer;font-size:1.2rem'; button.onclick = () => { if (!input.disabled) { input.value += value; input.focus(); } }; emojiPicker.appendChild(button); });
-  inputRow.style.position = 'relative'; inputRow.appendChild(emojiPicker); emoji.onclick = () => { emojiPicker.style.display = emojiPicker.style.display === 'none' ? 'grid' : 'none'; };
-  const dropdown = document.createElement('div'); dropdown.className = 'chat-dropdown'; dropdown.style.cssText = 'display:none;position:absolute;top:110%;right:0;background:var(--card-background);border:1px solid var(--border-color);border-radius:8px;box-shadow:0 10px 25px rgba(0,0,0,.15);z-index:100;min-width:180px';
-  const closeMenu = () => { dropdown.style.display = 'none'; menuButton.setAttribute('aria-expanded', 'false'); };
-  menuButton.setAttribute('aria-expanded', 'false');
-  document.querySelector('.chat-actions').style.position = 'relative'; document.querySelector('.chat-actions').appendChild(dropdown);
-  function renderMenu() {
-    dropdown.replaceChildren(); if (!selected) return;
-    const room = selected, peer = room.participants.find(person => person.id !== user.id);
-    const actions = [
-      ['🗑️', 'Ջնջել նամակագրությունը', async () => { if (!await confirmAction('Հեռացնե՞լ ձեր տեսանելի նամակագրությունը։')) return; await chat.hide(room.id); drafts.delete(room.id); attachments.delete(room.id); selected = null; window.history.replaceState(null, '', 'message.html'); await refresh(); }],
-      ['🚫', room.blocked ? 'Ապաարգելափակել' : 'Արգելափակել', async () => { await chat.block(peer.id, !room.blocked); await refresh(); }, room.isGroup || !peer],
-      ['👤', 'Դիտել էջը', () => { location.href = `user.html?id=${encodeURIComponent(peer.id)}`; }, room.isGroup || !peer],
-      [room.muted ? '🔔' : '🔕', room.muted ? 'Միացնել ծանուցումները' : 'Անջատել ծանուցումները', async () => { await chat.mute(room.id, !room.muted); await refresh(); }],
+  input.oninput=()=>{if(selected){const id=selected.id,text=input.value;drafts.set(id,text);chat.saveDraft(id,text).catch(error=>{if(selected?.id===id)pollStatus.textContent='Սևագիրը պահպանված է այս էջում։ '+error.message;});}};input.onkeydown=event=>{if(event.key==='Enter'){event.preventDefault();send.click();}};
+  const fileInput=document.createElement('input');fileInput.type='file';fileInput.accept='image/png,image/jpeg,image/gif,image/webp';fileInput.hidden=true;document.body.append(fileInput);attach.onclick=()=>fileInput.click();fileInput.onchange=()=>{if(!selected||!fileInput.files[0])return;try{validateImage(fileInput.files[0]);attachments.set(selected.id,fileInput.files[0]);updateFile();}catch(error){showError(area,error);}fileInput.value='';};
+  const picker=document.createElement('div');picker.className='emoji-picker';picker.id='emoji-picker';picker.hidden=true;picker.setAttribute('role','dialog');picker.setAttribute('aria-label','Ընտրել էմոջի');composer.append(picker);emoji.setAttribute('aria-controls',picker.id);emoji.setAttribute('aria-expanded','false');
+  const pickerHeading=document.createElement('div');pickerHeading.className='popover-heading';pickerHeading.textContent='Էմոջիներ';const pickerClose=document.createElement('button');pickerClose.className='icon-button';button(pickerClose,'Փակել էմոջիները','close');pickerHeading.append(pickerClose);picker.append(pickerHeading);
+  const tabs=document.createElement('div');tabs.className='emoji-tabs';tabs.setAttribute('role','tablist');tabs.setAttribute('aria-label','Էմոջիների բաժիններ');picker.append(tabs);
+  const grid=document.createElement('div');grid.className='emoji-grid';grid.id='emoji-grid';grid.setAttribute('role','tabpanel');picker.append(grid);
+  const emojiCategories=[
+    ['Դեմքեր',[['😀','Ժպիտ'],['😃','Ուրախ'],['😄','Ծիծաղ'],['😁','Լայն ժպիտ'],['😊','Ամաչկոտ ժպիտ'],['😂','Ծիծաղի արցունքներ'],['🤣','Բարձր ծիծաղ'],['😍','Սիրահարված'],['🥰','Սիրալիր'],['😘','Համբույր'],['😎','Զով'],['🤔','Մտածող'],['🥺','Խնդրող'],['😢','Տխուր'],['😭','Լաց'],['😅','Անհարմար ժպիտ'],['🙃','Շրջված ժպիտ'],['😉','Աչքով անել'],['😴','Քնած'],['😮','Զարմացած'],['🤗','Գրկախառնություն'],['🤩','Հիացած'],['😇','Անմեղ'],['🤭','Զսպված ծիծաղ']]],
+    ['Ժեստեր',[['👍','Հավանել'],['👎','Չհավանել'],['👏','Ծափահարել'],['🙌','Ողջունել'],['👋','Բարև'],['🤝','Ձեռքսեղմում'],['✌️','Հաղթանակ'],['👌','Լավ է'],['🙏','Շնորհակալություն'],['💪','Ուժ'],['🤞','Հաջողություն'],['🫶','Սեր']]],
+    ['Նշաններ',[['❤️','Սիրտ'],['💙','Կապույտ սիրտ'],['💜','Մանուշակագույն սիրտ'],['💚','Կանաչ սիրտ'],['🎉','Տոն'],['🎊','Տոնական զարդեր'],['🔥','Կրակ'],['✨','Փայլ'],['⭐','Աստղ'],['✅','Հաստատում'],['💯','Հարյուր'],['🎓','Ավարտական գլխարկ'],['📚','Գրքեր'],['💡','Գաղափար'],['☕','Սուրճ'],['🌸','Ծաղիկ'],['🎂','Տորթ'],['🎁','Նվեր']]]
+  ];
+  function showEmojis(index){
+    [...tabs.children].forEach((tab,i)=>{tab.setAttribute('aria-selected',String(i===index));tab.tabIndex=i===index?0:-1;});grid.setAttribute('aria-labelledby',`emoji-tab-${index}`);grid.replaceChildren();
+    for(const [value,label]of emojiCategories[index][1]){const b=document.createElement('button');b.type='button';b.textContent=value;b.setAttribute('aria-label',label);b.title=label;b.onclick=()=>{if(!input.disabled&&input.value.length+value.length<=5000){const start=input.selectionStart??input.value.length,end=input.selectionEnd??start;input.setRangeText(value,start,end,'end');input.dispatchEvent(new Event('input'));input.focus();}};grid.append(b);}
+  }
+  emojiCategories.forEach(([label],index)=>{const tab=document.createElement('button');tab.type='button';tab.id=`emoji-tab-${index}`;tab.textContent=label;tab.setAttribute('role','tab');tab.setAttribute('aria-controls',grid.id);tab.onclick=()=>showEmojis(index);tab.onkeydown=event=>{if(['ArrowLeft','ArrowRight','Home','End'].includes(event.key)){event.preventDefault();const next=event.key==='Home'?0:event.key==='End'?emojiCategories.length-1:(index+(event.key==='ArrowRight'?1:-1)+emojiCategories.length)%emojiCategories.length;showEmojis(next);tabs.children[next].focus();}};tabs.append(tab);});showEmojis(0);
+  function closePicker(){picker.hidden=true;emoji.setAttribute('aria-expanded','false');}
+  pickerClose.onclick=()=>{closePicker();emoji.focus();};emoji.onclick=()=>{picker.hidden=!picker.hidden;emoji.setAttribute('aria-expanded',String(!picker.hidden));if(!picker.hidden){closeMenu();tabs.querySelector('[aria-selected=true]').focus();}};
+  const dropdown=document.createElement('div');dropdown.className='chat-dropdown';dropdown.id='chat-dropdown';dropdown.hidden=true;dropdown.setAttribute('role','menu');dropdown.setAttribute('aria-label','Նամակագրության գործողություններ');document.querySelector('.chat-actions').append(dropdown);menuButton.setAttribute('aria-controls',dropdown.id);menuButton.setAttribute('aria-haspopup','menu');menuButton.setAttribute('aria-expanded','false');
+  function closeMenu(){dropdown.hidden=true;menuButton.setAttribute('aria-expanded','false');}
+  function renderMenu(){
+    const focused=document.activeElement?.dataset.menuAction;dropdown.replaceChildren();if(!selected){menuButton.hidden=true;closeMenu();return;}const room=selected,peer=room.participants.find(p=>p.id!==user.id);
+    const actions=room.isGroup?room.ownerId!==user.id&&!room.closed?[
+      ['leave','Լքել խումբը',async()=>{if(!await confirmAction('Լքե՞լ այս խումբը։'))return;await chat.leaveGroup(room.id);schedule(0);},false,true]
+    ]:[]:[
+      ['trash','Ջնջել նամակագրությունը',async()=>{if(!await confirmAction('Հեռացնե՞լ ձեր տեսանելի նամակագրությունը։'))return;await chat.hide(room.id);drafts.delete(room.id);attachments.delete(room.id);cancel();generation++;selected=null;input.value='';window.history.replaceState(null,'','message.html');header();updateFile();stateMessage(history,'Ընտրեք նամակագրություն');schedule(0);},false,true],
+      ['block',room.blocked?'Ապաարգելափակել':'Արգելափակել',async()=>{await chat.block(peer.id,!room.blocked);schedule(0);},!peer],
+      ['person','Դիտել էջը',()=>{location.href=`user.html?id=${encodeURIComponent(peer.id)}`;},!peer],
+      ['bell',room.muted?'Միացնել ծանուցումները':'Անջատել ծանուցումները',async()=>{await chat.mute(room.id,!room.muted);schedule(0);}]
     ];
-    actions.forEach(([icon, name, action, disabled]) => { const button = document.createElement('button'); button.className = 'chat-dropdown-item'; button.textContent = `${icon} ${name}`; button.disabled = Boolean(disabled); button.style.cssText = 'width:100%;border:0;background:transparent;text-align:left;font-family:inherit'; button.onclick = async () => { const done = await pending(button, area, action); if (done) closeMenu(); }; dropdown.appendChild(button); });
+    menuButton.hidden=!actions.length;menuButton.disabled=!actions.length;if(!actions.length)closeMenu();
+    for(const [symbol,label,action,disabled,danger]of actions){const b=document.createElement('button');b.type='button';b.className=`chat-dropdown-item${danger?' danger':''}`;b.innerHTML=icon(symbol);b.append(document.createTextNode(label));b.disabled=!!disabled;b.dataset.menuAction=symbol;b.setAttribute('role','menuitem');b.onclick=async()=>{if(await pending(b,area,action))closeMenu();};dropdown.append(b);if(!dropdown.hidden&&focused===symbol)b.focus();}
   }
-  menuButton.onclick = () => { dropdown.style.display = dropdown.style.display === 'none' ? 'block' : 'none'; menuButton.setAttribute('aria-expanded', String(dropdown.style.display === 'block')); };
-  document.addEventListener('click', event => { if (!event.target.closest('.message-input')) emojiPicker.style.display = 'none'; if (!event.target.closest('.chat-actions')) closeMenu(); });
-  document.addEventListener('keydown', event => { if (event.key === 'Escape') { closeMenu(); emojiPicker.style.display = 'none'; } });
-  history.onclick = event => {
-    const button = event.target.closest('.copy-btn'); if (!button) return;
-    const message = records.find(record => record.id === button.closest('.message').dataset.messageId);
-    pending(button, area, async () => { await navigator.clipboard.writeText(message.text); button.textContent = '✓'; setTimeout(() => { button.textContent = '📋'; }, 1000); });
-  };
-  setHeader();
-  const unsubscribe = await chat.subscribe(event => {
-    if (['chat.send','chat.incoming','chat.mute','chat.hide','chat.block','reset'].includes(event.operation)) refresh().catch(error => showError(area, error));
-  });
-  window.addEventListener('pagehide', event => { if (!event.persisted) unsubscribe(); });
-  await refresh();
+  menuButton.onclick=()=>{dropdown.hidden=!dropdown.hidden;menuButton.setAttribute('aria-expanded',String(!dropdown.hidden));if(!dropdown.hidden){closePicker();dropdown.querySelector('button:not(:disabled)')?.focus();}};
+  dropdown.onkeydown=event=>{if(['ArrowDown','ArrowUp','Home','End'].includes(event.key)){event.preventDefault();const items=[...dropdown.querySelectorAll('button:not(:disabled)')],index=items.indexOf(document.activeElement),next=event.key==='Home'?0:event.key==='End'?items.length-1:(index+(event.key==='ArrowDown'?1:-1)+items.length)%items.length;items[next]?.focus();}};
+  document.addEventListener('click',event=>{if(!event.target.closest('.chat-actions'))closeMenu();if(!picker.contains(event.target)&&!emoji.contains(event.target))closePicker();});
+  document.addEventListener('keydown',event=>{if(event.key==='Escape'){if(!dropdown.hidden){closeMenu();menuButton.focus();}if(!picker.hidden){closePicker();emoji.focus();}}});
+  history.onclick=event=>{const b=event.target.closest('.copy-btn');if(!b)return;const message=state?.records.find(r=>r.id===b.closest('.message').dataset.messageId);if(message)pending(b,area,async()=>{await navigator.clipboard.writeText(message.text);b.innerHTML=icon('check');setTimeout(()=>{b.innerHTML=icon('copy');},1000);});};
+  const unsubscribe=await chat.subscribe(event=>{if(['chat.send','chat.incoming','chat.read','chat.mute','chat.hide','chat.block','reset'].includes(event.operation))schedule(0);});
+  const visibility=()=>{if(document.visibilityState==='hidden')clearTimeout(timer);else{schedule(0);scheduleAck();}};document.addEventListener('visibilitychange',visibility);
+  window.addEventListener('pagehide',event=>{stopped=true;clearTimeout(timer);cancel();if(previewUrl){URL.revokeObjectURL(previewUrl);previewUrl=null;}if(!event.persisted)unsubscribe();});window.addEventListener('pageshow',event=>{if(event.persisted){stopped=false;selected=null;generation++;schedule(0);}});
+  header();await refresh();
 });

@@ -1,0 +1,44 @@
+name: Local setup
+
+on:
+  pull_request:
+    paths: ["tools/local/**", "infra/openbao/**", ".github/workflows/local-setup.yml"]
+  push:
+    paths: ["tools/local/**", "infra/openbao/**", ".github/workflows/local-setup.yml"]
+
+permissions:
+  contents: read
+
+jobs:
+  portable-setup:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: "25"
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+      - name: Check portable configuration and truststore setup
+        run: python3 -m unittest discover -s tools/local -p 'test_*.py' -v
+
+  local-openbao:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: "25"
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+      - name: Verify generated Compose and local provisioning in isolation
+        run: python3 tools/local/test_infrastructure.py

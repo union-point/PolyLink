@@ -1,0 +1,213 @@
+[
+  {
+    "name": "login-derived-secret",
+    "schema": "LoginRequest",
+    "valid": true,
+    "value": {
+      "email": "student@example.invalid",
+      "loginSecret": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+      "scheme": "PLK1"
+    }
+  },
+  {
+    "name": "raw-password-rejected",
+    "schema": "LoginRequest",
+    "valid": false,
+    "value": {
+      "email": "student@example.invalid",
+      "password": "NeverSendThis!"
+    }
+  },
+  {
+    "name": "unexpected-password-rejected",
+    "schema": "LoginRequest",
+    "valid": false,
+    "value": {
+      "email": "student@example.invalid",
+      "loginSecret": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+      "scheme": "PLK1",
+      "password": "NeverSendThis!"
+    }
+  },
+  {
+    "name": "independent-versions",
+    "schema": "Versions",
+    "valid": true,
+    "value": {
+      "credential": "7",
+      "vaultKey": "2",
+      "vaultRevision": "14",
+      "identity": "3"
+    }
+  },
+  {
+    "name": "negative-sequence",
+    "schema": "ReadRequest",
+    "valid": false,
+    "value": {
+      "throughSequence": "-1"
+    }
+  },
+  {
+    "name": "unsafe-json-number",
+    "schema": "ReadRequest",
+    "valid": false,
+    "value": {
+      "throughSequence": 9007199254740993
+    }
+  },
+  {
+    "name": "large-safe-string",
+    "schema": "ReadRequest",
+    "valid": true,
+    "value": {
+      "throughSequence": "9007199254740993"
+    }
+  },
+  {
+    "name": "unknown-send-outcome",
+    "schema": "Error",
+    "valid": true,
+    "value": {
+      "code": "SERVICE_UNAVAILABLE",
+      "message": "Retry original operation",
+      "saveOutcome": "unknown"
+    }
+  },
+  {
+    "name": "stale-send-unsaved",
+    "schema": "Error",
+    "valid": true,
+    "value": {
+      "code": "KEY_STALE_NOT_SAVED",
+      "message": "Reload versions",
+      "saveOutcome": "not_saved"
+    }
+  },
+  {
+    "name": "invalid-nonce",
+    "schema": "CipherPacket",
+    "valid": false,
+    "value": {
+      "scheme": "PLK1",
+      "nonce": "abc",
+      "ciphertext": "AAAA"
+    }
+  },
+  {
+    "name": "recovery-no-arbitrary-ciphertext",
+    "schema": "OperationRequest",
+    "valid": false,
+    "value": {
+      "operationId": "00000000-0000-4000-8000-000000000001",
+      "userId": "2",
+      "ciphertext": "AAAA"
+    }
+  },
+  {
+    "name": "argon-memory-too-small",
+    "schema": "Derivation",
+    "valid": false,
+    "value": {
+      "scheme": "PLK1",
+      "salt": "AAAAAAAAAAAAAAAAAAAAAA",
+      "opsLimit": 2,
+      "memoryBytes": 1024
+    }
+  },
+  {
+    "name": "stale-without-definitive-outcome",
+    "schema": "Error",
+    "valid": false,
+    "value": {
+      "code": "KEY_STALE_NOT_SAVED",
+      "message": "Versions changed"
+    }
+  },
+  {
+    "name": "timeout-cannot-assert-unsaved",
+    "schema": "Error",
+    "valid": false,
+    "value": {
+      "code": "SERVICE_UNAVAILABLE",
+      "message": "Try later",
+      "saveOutcome": "not_saved"
+    }
+  },
+  {
+    "name": "valid-recovery-code",
+    "schema": "CodeProof",
+    "valid": true,
+    "value": {
+      "challengeId": "00000000-0000-4000-8000-000000000001",
+      "code": "123456"
+    }
+  },
+  {
+    "name": "recovery-secret-not-in-localstorage-dto",
+    "schema": "OperationRequest",
+    "valid": false,
+    "value": {
+      "operationId": "00000000-0000-4000-8000-000000000001",
+      "recoveryToken": "not-a-DTO-field"
+    }
+  },
+  {
+    "name": "group change",
+    "schema": "GroupChange",
+    "value": {
+      "operationId": "dcfbb740-36dd-4e92-a51d-e974a25f41c9",
+      "expectedMembership": "1",
+      "expectedMetadata": "1"
+    },
+    "valid": true
+  },
+  {
+    "name": "stale numeric revision",
+    "schema": "GroupChange",
+    "value": {
+      "operationId": "dcfbb740-36dd-4e92-a51d-e974a25f41c9",
+      "expectedMembership": 1,
+      "expectedMetadata": "1"
+    },
+    "valid": false
+  },
+  {
+    "name": "missing metadata revision",
+    "schema": "GroupChange",
+    "value": {
+      "operationId": "dcfbb740-36dd-4e92-a51d-e974a25f41c9",
+      "expectedMembership": "1"
+    },
+    "valid": false
+  },
+  {
+    "name": "unknown permission flag",
+    "schema": "GroupChange",
+    "value": {
+      "operationId": "dcfbb740-36dd-4e92-a51d-e974a25f41c9",
+      "expectedMembership": "1",
+      "expectedMetadata": "1",
+      "owner": true
+    },
+    "valid": false
+  },
+  {
+    "name": "lifecycle derived secret",
+    "schema": "LifecycleRequest",
+    "value": {
+      "expectedCredential": "1",
+      "loginSecret": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+    },
+    "valid": true
+  },
+  {
+    "name": "lifecycle rejects raw password",
+    "schema": "LifecycleRequest",
+    "value": {
+      "expectedCredential": "1",
+      "password": "raw secret"
+    },
+    "valid": false
+  }
+]

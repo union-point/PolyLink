@@ -1,0 +1,18 @@
+{
+  "DB_HOST": "localhost",
+  "DB_PORT": "1433",
+  "DB_NAME": "polylink",
+  "DB_USERNAME": "sa",
+  "DB_PASSWORD": "",
+  "DB_TRUST_SERVER_CERTIFICATE": "true",
+  "IDENTITY_ENABLED": "true",
+  "MESSENGER_ENABLED": "true",
+  "FRONTEND_ORIGINS": "http://localhost:8001",
+  "SERVER_PORT": "3004",
+  "AUTH_HMAC_KEY": "",
+  "AUTH_REPLAY_KEY": "",
+  "OPENBAO_URL": "https://localhost:18200",
+  "SMTP_HOST": "localhost",
+  "SMTP_PORT": "1025",
+  "MAIL_FROM": "no-reply@polylink.invalid"
+}

@@ -1,0 +1,160 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:polylink:plk1:client-payloads",
+  "$defs": {
+    "Attachment": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 255
+        },
+        "type": {
+          "enum": [
+            "image/png",
+            "image/jpeg",
+            "image/webp",
+            "image/gif"
+          ]
+        },
+        "size": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 5242880
+        },
+        "key": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9_-]{43}$",
+          "minLength": 43,
+          "maxLength": 43
+        },
+        "nonce": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9_-]{32}$"
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "type",
+        "size",
+        "key",
+        "nonce"
+      ]
+    },
+    "MessagePlaintext": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "text": {
+          "type": "string",
+          "maxLength": 5000,
+          "description": "Additionally enforce <=5000 UTF-16 code units after JavaScript trim; JSON Schema maxLength counts Unicode codepoints."
+        },
+        "attachment": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Attachment"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "text",
+        "attachment"
+      ],
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "attachment": {
+                "type": "null"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "text": {
+                "minLength": 1
+              }
+            }
+          }
+        }
+      ]
+    },
+    "VaultPlaintext": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "scheme": {
+          "const": "PLK1"
+        },
+        "userId": {
+          "type": "string",
+          "pattern": "^[1-9][0-9]{0,9}$"
+        },
+        "vaultKeyVersion": {
+          "type": "string",
+          "pattern": "^[1-9][0-9]{0,18}$"
+        },
+        "vaultRevision": {
+          "type": "string",
+          "pattern": "^[1-9][0-9]{0,18}$"
+        },
+        "currentIdentityVersion": {
+          "type": "string",
+          "pattern": "^[1-9][0-9]{0,18}$"
+        },
+        "identities": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "version": {
+                "type": "string",
+                "pattern": "^[1-9][0-9]{0,18}$"
+              },
+              "publicKey": {
+                "type": "string",
+                "pattern": "^[A-Za-z0-9_-]{43}$",
+                "minLength": 43,
+                "maxLength": 43
+              },
+              "privateKey": {
+                "type": "string",
+                "pattern": "^[A-Za-z0-9_-]{43}$",
+                "minLength": 43,
+                "maxLength": 43
+              }
+            },
+            "required": [
+              "version",
+              "publicKey",
+              "privateKey"
+            ]
+          },
+          "minItems": 1
+        }
+      },
+      "required": [
+        "scheme",
+        "userId",
+        "vaultKeyVersion",
+        "vaultRevision",
+        "currentIdentityVersion",
+        "identities"
+      ]
+    }
+  },
+  "description": "Client-only decrypted payloads. Never submit these plaintext objects as an HTTP request."
+}

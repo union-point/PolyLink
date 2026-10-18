@@ -2,9 +2,9 @@ name: Backend
 
 on:
   pull_request:
-    paths: ["backend/**", "db/**", ".github/workflows/backend.yml"]
+    paths: ["backend/**", "db/**", "infra/openbao/**", "js/**", "docs/messenger/**", "tools/contracts/**", "tools/m1/**", "tools/m2/**", "tools/m3/**", "tools/m4/**", "tools/m5/**", ".github/workflows/backend.yml"]
   push:
-    paths: ["backend/**", "db/**", ".github/workflows/backend.yml"]
+    paths: ["backend/**", "db/**", "infra/openbao/**", "js/**", "docs/messenger/**", "tools/contracts/**", "tools/m1/**", "tools/m2/**", "tools/m3/**", "tools/m4/**", "tools/m5/**", ".github/workflows/backend.yml"]
 
 permissions:
   contents: read
@@ -12,7 +12,7 @@ permissions:
 jobs:
   verify:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
     defaults:
       run:
         working-directory: backend
@@ -20,6 +20,7 @@ jobs:
       # Disposable CI container credentials; never used outside this job.
       MSSQL_SA_PASSWORD: CIOnly_PolyLink_7f925!
       DB_PASSWORD: CIOnly_PolyLink_7f925!
+      DB_TEST_ADMIN_PASSWORD: CIOnly_PolyLink_7f925!
       DB_NAME: polylink_ci
     steps:
       - uses: actions/checkout@v7
@@ -29,6 +30,11 @@ jobs:
           java-version: "25"
           cache: maven
           cache-dependency-path: backend/pom.xml
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: tools/m1/package-lock.json
       - name: Start SQL Server
         working-directory: db
         run: docker compose up -d --wait --wait-timeout 180 sqlserver
@@ -36,9 +42,43 @@ jobs:
         working-directory: db
         run: |
           docker compose exec -T sqlserver sh -c 'SQLCMDPASSWORD="$MSSQL_SA_PASSWORD" exec /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -C -b -Q "CREATE DATABASE [polylink_ci]"'
-      - name: Verify formatting, HTTP security, and SQL Server connectivity
-        run: ./mvnw -B -Pdatabase-tests verify
+      - name: Install browser acceptance dependencies
+        working-directory: .
+        run: |
+          npm ci --prefix tools/m1 --ignore-scripts
+          npx --prefix tools/m1 playwright install --with-deps chromium
+      - name: Verify migrations, identity, messenger, session continuity, password, recovery, images, personal state, groups and lifecycle flows
+        working-directory: .
+        run: python3 tools/m1/verify.py --groups
       - name: Stop SQL Server
         working-directory: db
         if: always()
         run: docker compose down
+
+  contracts:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+          cache: pip
+          cache-dependency-path: tools/contracts/requirements.txt
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: tools/contracts/package-lock.json
+      - name: Validate OpenAPI and transition fixtures
+        run: |
+          python -m pip install -r tools/contracts/requirements.txt
+          python tools/contracts/validate.py
+      - name: Validate pinned crypto vectors
+        run: |
+          npm ci --prefix tools/contracts --ignore-scripts
+          npm test --prefix tools/contracts
+      - name: Verify vendored browser crypto matches the pinned source
+        run: |
+          node tools/contracts/vendor-sodium.mjs
+          git diff --exit-code -- js/crypto/vendor
