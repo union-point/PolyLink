@@ -96,7 +96,8 @@ def valid_jdk(path):
     try:
         for executable in ("java", "javac"):
             result = subprocess.run([str(path / "bin" / executable), "-version"], capture_output=True, timeout=10)
-            if result.returncode or not re.search(rb'\b(?:version\s+\")?25(?:[.\s\"+]|$)', result.stdout + result.stderr):
+            pattern = rb'(?:openjdk|java) version "25(?:[.+"]|$)' if executable == "java" else rb'(?m)^javac 25(?:[.+\s]|$)'
+            if result.returncode or not re.search(pattern, result.stdout + result.stderr):
                 return False
         return True
     except (OSError, subprocess.TimeoutExpired):
@@ -278,6 +279,9 @@ def java_options():
 
 
 def main():
+    if sys.version_info < (3, 10):
+        print("Local setup requires Python 3.10 or newer.", file=sys.stderr)
+        return 1
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--config-dir", type=Path, default=Path(os.environ.get("POLYLINK_LOCAL_DIR", "~/.config/polylink")).expanduser())
     parser.add_argument("--no-discovery", action="store_true", help="Do not inspect/reuse the existing Docker OpenBao service")

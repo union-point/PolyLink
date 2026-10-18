@@ -44,7 +44,7 @@ class LocalSetupTests(unittest.TestCase):
                 (root / name / "lib/security/cacerts").touch()
                 for tool in ("java", "javac", "keytool"):
                     path = root / name / "bin" / tool
-                    path.write_text('#!/bin/sh\nprintf \'javac 25.0.1\\n\'\n')
+                    path.write_text('#!/bin/sh\nprintf \'openjdk version \"25.0.1\"\\n\'\n' if tool == 'java' else '#!/bin/sh\nprintf \'javac 25.0.1\\n\'\n')
                     path.chmod(0o755)
             (root / "runtime/bin/javac").unlink()
             with patch.dict(os.environ, {"JAVA_HOME": str(root / "runtime")}), patch.object(setup.glob, "glob", return_value=[str(root / "jdk")]), patch.object(setup.shutil, "which", return_value=None):
@@ -88,6 +88,43 @@ class LocalSetupTests(unittest.TestCase):
             with self.assertRaises(setup.SetupError):
                 setup.ensure_tls(tls)
             self.assertEqual((tls / "server.key").read_text(), "preserve-this")
+
+    def test_adopted_state_remains_usable_after_the_old_worktree_is_removed(self):
+        java = setup.find_jdk()
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            old, new, state = root / "old", root / "new", root / "state"
+            tls = old / "infra/openbao/tls"
+            setup.private_dir(tls)
+            setup.ensure_tls(tls)
+            setup.private_dir(old / "backend/secrets")
+            setup.write(old / "backend/secrets/openbao.token", "synthetic-existing-token")
+            (old / "backend/config").mkdir()
+            (old / "backend/config/application-local.properties").write_text("DB_PASSWORD=synthetic-existing-password\nDB_NAME=existing_database\n")
+            (new / "infra/openbao").mkdir(parents=True)
+            for name in ("openbao.hcl", "backend-policy.hcl"):
+                shutil.copyfile(setup.ROOT / "infra/openbao" / name, new / "infra/openbao" / name)
+            with patch.object(setup, "discover", return_value={"tls": tls, "checkout": old}), patch.dict(os.environ, {"DB_PASSWORD": "", "AUTH_HMAC_KEY": "", "AUTH_REPLAY_KEY": ""}):
+                first = setup.setup(state, java)
+            self.assertEqual(first["DB_NAME"], "existing_database")
+            self.assertEqual(first["DB_PASSWORD"], "synthetic-existing-password")
+            self.assertEqual(Path(first["OPENBAO_TOKEN_FILE"]).read_text(), "synthetic-existing-token")
+            shutil.rmtree(old)
+            with patch.object(setup, "ROOT", new):
+                second = setup.setup(state, java, discovery=False)
+            self.assertEqual(first, second)
+
+    def test_invalid_existing_secret_is_not_silently_rotated(self):
+        with tempfile.TemporaryDirectory() as directory:
+            state = Path(directory)
+            path = state / "local.env"
+            setup.write(path, "export AUTH_HMAC_KEY=invalid\n")
+            before = path.read_bytes()
+            with self.assertRaises(setup.SetupError):
+                setup.setup(state, setup.find_jdk(), discovery=False)
+            self.assertEqual(before, path.read_bytes())
+            with self.assertRaises(setup.SetupError):
+                setup.env_text({"DB_PASSWORD": "a\nb"})
 
     def test_macos_java_home_is_a_supported_discovery_path(self):
         with patch.object(setup.sys, "platform", "darwin"), patch.object(setup.Path, "exists", return_value=True), patch.object(setup.subprocess, "run", return_value=subprocess.CompletedProcess([], 0, "/fixture/mac-jdk\n", "")), patch.object(setup, "valid_jdk", side_effect=lambda p: p == "/fixture/mac-jdk"), patch.object(setup.shutil, "which", return_value=None), patch.object(setup.glob, "glob", return_value=[]):
