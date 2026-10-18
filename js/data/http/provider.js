@@ -18,7 +18,9 @@ export function createHttpProvider(transportPromise = loadTransport()) {
       if (operation.startsWith('auth.')) {
         const client = await identityClient(), method = operation.slice(5);
         if (typeof client[method] !== 'function') throw new DataError('UNSUPPORTED', 'This authentication operation is not available yet.');
-        return client[method](...args);
+        const result=await client[method](...args);
+        if(method==='resetPassword'&&result?.status==='authenticated')chatClient().then(chat=>chat.resumeRotation()).catch(()=>{});
+        return result;
       }
       if (!routes[operation]) throw new DataError('UNSUPPORTED', 'Այս գործառույթի backend պայմանագիրը դեռ սահմանված չէ։');
       const api = await transport;

@@ -8,7 +8,7 @@ const versionList=snapshot=>snapshot.recipients.map(({userId,identityVersion})=>
 export function createEncryptedChat(api,identity,store=outboxStore){
   const call=(name,...args)=>api.request(routes[`chat.${name}`](...args));
   const roomLocks=new Map(),rotating=new Map();
-  let rotationTimer;
+  let rotationTimer,priorityRoom;
   const rotate=(room,context)=>{
     if(!rotating.has(room))rotating.set(room,ready(room,context).finally(()=>rotating.delete(room)));
     return rotating.get(room);
@@ -16,11 +16,11 @@ export function createEncryptedChat(api,identity,store=outboxStore){
   const rotateLater=rooms=>{
     clearTimeout(rotationTimer);
     rotationTimer=setTimeout(async()=>{
-      for(const room of rooms){
+      for(const room of [...rooms].sort((a,b)=>(b===priorityRoom)-(a===priorityRoom))){
         try{await identity.withKeys(context=>rotate(room,context));}
         catch{/* Polling/refocus retries against a fresh session and recipient snapshot. */}
       }
-    },0);
+    },100);
   };
   async function locked(room,work){
     if(globalThis.navigator?.locks)return navigator.locks.request(`polylink-outbox:${room}`,work);
@@ -92,6 +92,11 @@ export function createEncryptedChat(api,identity,store=outboxStore){
     }
   }
   return {
+    async resumeRotation(){return identity.withKeys(async()=>{
+      let cursor=null;const rooms=[];
+      do{const page=await call('list',{...(cursor?{cursor}:{}),limit:100});rooms.push(...page.items);cursor=page.nextCursor;}while(cursor);
+      rotateLater(rooms.filter(room=>room.canSend&&room.keySnapshot?.keyState!=='ready').map(room=>room.id));
+    });},
     async list(){return identity.withKeys(async context=>{
       let cursor=null;const rooms=[];
       do{const page=await call('list',{...(cursor?{cursor}:{}),limit:100});rooms.push(...page.items);cursor=page.nextCursor;}while(cursor);
@@ -103,7 +108,7 @@ export function createEncryptedChat(api,identity,store=outboxStore){
       return rooms;
     });},
     openDirect:target=>identity.withKeys(()=>call('openDirect',typeof target==='object'?target.id:target)),
-    async messages(room){return locked(room,()=>identity.withKeys(async context=>{
+    async messages(room){priorityRoom=room;return locked(room,()=>identity.withKeys(async context=>{
       let operation;try{operation=await pending(context,room);}catch(error){if(error.code!=='STORAGE_UNAVAILABLE')throw error;}if(operation)await flush(context,room,operation);
       const bundle=await call('keys',room);
       // Start the open room immediately; historical envelopes remain readable during rotation.

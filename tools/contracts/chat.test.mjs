@@ -53,3 +53,16 @@ test('blocked outbox storage permits authenticated password-based reads and prev
   assert.equal((await client.messages(room))[0].text,'Password access remains available');
   await assert.rejects(client.send(room,{text:'Requires durable outbox'}),error=>error.code==='STORAGE_UNAVAILABLE');assert.equal(posts,0);
 });
+test('recovery reconciliation activates complete recipient envelopes without sending messages',async()=>{
+  const f=fixture();f.bundle.snapshot.keyState='stale';let activation;
+  const client=createEncryptedChat({request:async request=>{
+    if(request.url==='/chat/rooms')return {items:[{id:room,canSend:true,keySnapshot:f.bundle.snapshot}],nextCursor:null};
+    if(request.url.endsWith('/keys'))return structuredClone(f.bundle);
+    if(request.url.endsWith('/keys/activate')){activation=request.data;f.bundle.snapshot.keyState='ready';return f.bundle.snapshot;}
+    throw new Error('Rotation must not send or alter message history');
+  }},f.identity,f.store);
+  await client.resumeRotation();
+  for(let i=0;i<30&&!activation;i++)await new Promise(resolve=>setTimeout(resolve,10));
+  assert(activation);assert.equal(activation.newKeyVersion,'2');assert.equal(activation.envelopes.length,2);
+  assert.deepEqual(activation.envelopes.map(e=>e.userId),['1','2']);assert.equal(f.records.size,0);
+});
