@@ -143,7 +143,7 @@ else:
         'SMTP_PORT': '1025',
         'MAIL_FROM': 'no-reply@polylink.invalid',
     }
-    with path.open('x', opener=lambda name, flags: os.open(name, flags, 0o600)) as output:
+    with open(path, 'x', opener=lambda name, flags: os.open(name, flags, 0o600)) as output:
         output.write(''.join(f'export {key}={shlex.quote(value)}\n' for key, value in values.items()))
     print(f'Created {path}; edit the SQL settings before continuing.')
 PY
