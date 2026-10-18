@@ -43,7 +43,7 @@ test('maximum-sized image upload and send retries retain exact encrypted bytes a
 });
 test('receiver rejects authenticated invalid plaintext and unexpected image bindings',async()=>{
   const f=fixture();
-  for(const payload of [{text:'x'.repeat(5001),attachment:null},{text:' ',attachment:null},{text:'',attachment:null}]){
+  for(const payload of [{text:'x'.repeat(5001),attachment:null},{text:' ',attachment:null},{text:'',attachment:null},{text:'ignored extra field',attachment:null,html:'<b>must reject</b>'}]){
     const operationId=crypto.randomUUID(),packet=await seal(JSON.stringify(payload),f.key,aad('message',room,'1',operationId,'1','1'));
     const api={request:async r=>r.url.endsWith('/keys')?f.bundle:{items:[{id:'bad',roomId:room,sequence:'1',operationId,keyVersion:'1',membershipVersion:'1',sender:{id:'1'},packet}],nextAfter:'1',hasMore:false}};
     await assert.rejects(createEncryptedChat(api,f.identity,f.store).messages(room),e=>e.code==='DATA_INTEGRITY');
@@ -66,4 +66,18 @@ test('viewport acknowledgement excludes unseen arrivals and handles a message ta
   assert(!messageShown({top:610,bottom:760,height:150},viewport));
   assert(messageShown({top:-500,bottom:590,height:1090},viewport));
   assert(!messageShown({top:-100,bottom:700,height:800},viewport));
+});
+
+test('a disposed selection cannot create a late plaintext image URL',async()=>{
+  const f=fixture(),prepared=await encryptImage(file(),room,'1'),operationId=crypto.randomUUID();
+  const packet=await seal(JSON.stringify({text:'',attachment:prepared.attachment}),f.key,aad('message',room,'1',operationId,'1','1'));
+  let release,started;const downloading=new Promise(resolve=>{started=resolve;}),body=new Promise(resolve=>{release=resolve;});
+  const api={request:async request=>{
+    if(request.url.endsWith('/keys'))return f.bundle;
+    if(request.url.startsWith('/chat/attachments/')){started();return body;}
+    return {items:[{id:'late',roomId:room,sequence:'1',operationId,keyVersion:'1',membershipVersion:'1',sender:{id:'1'},attachmentId:prepared.attachment.id,packet}],nextAfter:'1',hasMore:false};
+  }};
+  const original=URL.createObjectURL;let urls=0;URL.createObjectURL=(...args)=>{urls++;return original(...args);};
+  try{const abort=new AbortController(),request=createEncryptedChat(api,f.identity,f.store).page(room,{signal:abort.signal});await downloading;abort.abort();release(s.from_base64(prepared.upload.ciphertext,s.base64_variants.URLSAFE_NO_PADDING).buffer);await assert.rejects(request);assert.equal(urls,0);}
+  finally{URL.createObjectURL=original;}
 });

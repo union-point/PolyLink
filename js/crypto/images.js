@@ -3,7 +3,7 @@ import { DataError } from '../data/errors.js';
 export const imageLimit=5*1024*1024;
 const types=new Set(['image/png','image/jpeg','image/gif','image/webp']);
 export function imageMetadata(value){
-  if(!value||!types.has(value.type)||!Number.isInteger(value.size)||value.size<1||value.size>imageLimit||typeof value.name!=='string'||value.name.length>255||!/^[-\w]{43}$/.test(value.key)||!/^[-\w]{32}$/.test(value.nonce)||!(/^[0-9a-f]{8}(-[0-9a-f]{4}){3}-[0-9a-f]{12}$/).test(value.id))throw new DataError('DATA_INTEGRITY','Invalid encrypted image metadata.');
+  if(!value||Object.keys(value).sort().join(',')!=='id,key,name,nonce,size,type'||!types.has(value.type)||!Number.isInteger(value.size)||value.size<1||value.size>imageLimit||typeof value.name!=='string'||value.name.length>255||!/^[-\w]{43}$/.test(value.key)||!/^[-\w]{32}$/.test(value.nonce)||!(/^[0-9a-f]{8}(-[0-9a-f]{4}){3}-[0-9a-f]{12}$/).test(value.id))throw new DataError('DATA_INTEGRITY','Invalid encrypted image metadata.');
   return value;
 }
 export async function validateImageBytes(bytes,type,size=bytes.length){

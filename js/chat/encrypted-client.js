@@ -63,7 +63,7 @@ export function createEncryptedChat(api,identity,store=outboxStore){
     }
     throw new DataError('REVISION_CONFLICT','Conversation keys changed. Please retry.');
   }
-  async function decrypt(message,bundle,context,loadImage=true){
+  async function decrypt(message,bundle,context,loadImage=true,signal){
     scope(context);
     if(message.deleted)return {...message,sender:message.sender||{id:'',name:''},text:'Message deleted',attachment:null};
     let key,plain;
@@ -72,7 +72,7 @@ export function createEncryptedChat(api,identity,store=outboxStore){
       plain=await open(message.packet,key,aad('message',message.roomId,message.sender.id,message.operationId,message.keyVersion,message.membershipVersion));
       if(plain.length>32768)throw new Error();
       const content=JSON.parse(decoder.decode(plain));
-      if(typeof content.text!=='string'||content.text!==content.text.trim()||content.text.length>5000||(!content.text&&!content.attachment))throw new Error();
+      if(Object.keys(content).sort().join(',')!=='attachment,text'||typeof content.text!=='string'||content.text!==content.text.trim()||content.text.length>5000||(!content.text&&!content.attachment))throw new Error();
       let attachment=null;
       if(content.attachment){
         const meta=imageMetadata(content.attachment);if(meta.id!==message.attachmentId)throw new Error();
@@ -82,8 +82,9 @@ export function createEncryptedChat(api,identity,store=outboxStore){
           if(cached&&(cached.fingerprint!==fingerprint||cached.room!==message.roomId||cached.owner!==message.sender.id))throw new Error();
           if(cached)attachment.url=cached.url;
           else{
-            const bytes=new Uint8Array(await call('download',meta.id));
+            const bytes=new Uint8Array(await api.request({...routes['chat.download'](meta.id),signal}));
             const blob=await decryptImage(bytes,meta,message.roomId,message.sender.id);
+            if(signal?.aborted)throw new DOMException('Selection changed','AbortError');
             const url=URL.createObjectURL(blob);images.set(meta.id,{url,room:message.roomId,owner:message.sender.id,fingerprint});attachment.url=url;
           }
         }
@@ -128,7 +129,7 @@ export function createEncryptedChat(api,identity,store=outboxStore){
     const {signal,...query}=params;
     if(signal?.aborted)throw new DOMException('Selection changed','AbortError');
     const response=await api.request({...routes['chat.messages'](room,{...query,limit:query.limit??50}),signal});
-    const items=[];for(const message of response.items){if(signal?.aborted)throw new DOMException('Selection changed','AbortError');items.push(await decrypt(message,bundle,context));}
+    const items=[];for(const message of response.items){if(signal?.aborted)throw new DOMException('Selection changed','AbortError');items.push(await decrypt(message,bundle,context,true,signal));}
     return {...response,items};
   }));}
   return {

@@ -94,7 +94,7 @@ start(async()=>{
       if(startGeneration!==generation)return;
       const id=selected?.id||new URLSearchParams(location.search).get('room'),target=rooms.find(r=>r.id===id)||(!selected&&!id?rooms[0]:null);
       if(!target){if(selected)drafts.set(selected.id,input.value);cancel();selected=null;header();updateFile();stateMessage(history,id?'Նամակագրությունը հասանելի չէ։':'Ընտրեք նամակագրություն');earlier.hidden=true;return;}
-      if(!selected||selected.id!==target.id)await selectRoom(target);
+      if(!selected||selected.id!==target.id||BigInt(target.historyCutoff||'0')>BigInt(selected.historyCutoff||'0'))await selectRoom(target);
       else{
         selected=target;header();const s=state;if(s&&!s.loading){
           do{const after=s.after,page=await getPage(s,{after});if(!valid(s))return;merge(s,page);if(!page.hasMore)break;if(BigInt(s.after)<=BigInt(after))throw new Error('History cursor did not advance.');}while(valid(s));
