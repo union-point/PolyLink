@@ -4,6 +4,8 @@ Planning baseline: 17 October 2026. Java, Spring, Microsoft SQL Server running l
 
 Scaffold status, 17 October 2026: the application, Maven Wrapper, formatter, and tests are in `backend/`; optional Linux Compose/restore tooling is in `db/`, and the CI workflow is in `.github/workflows/backend.yml`. The populated May backup was restored on the Linux PC. See [backend setup for Linux and macOS](../backend/README.md) and [local Linux database instructions](../db/README.md). Domain mappings and a reviewed Flyway baseline remain future work.
 
+Messenger follow-up, 18 October 2026: the [agreed messenger specification](messenger_spec.md) now defines its authentication, session, encryption and trusted recovery requirements. The [messenger implementation plan](messenger_implementation_plan.md) maps those decisions to contracts, migrations, working slices and acceptance checks. Where the historical open-decision notes below overlap those subjects, use the newer messenger documents.
+
 ## Architecture
 
 Start with one Spring Boot application, one Maven module, and one SQL Server database per environment. Organize code by business capability as those capabilities become clear, with controllers, services, persistence, and DTOs inside each capability. Keep shared infrastructure small. This gives three developers clear boundaries while retaining one build and one deployment.

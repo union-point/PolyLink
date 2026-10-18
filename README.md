@@ -24,7 +24,9 @@ Implemented mock flows include registration/onboarding/login/recovery/2FA, owner
 
 ## Documentation
 
-- [Agreed messenger specification: E2EE, keys, and history recovery](docs/messenger_spec.md)
+- [Agreed messenger specification: client encryption, keys, and trusted history recovery](docs/messenger_spec.md)
+- [Messenger implementation plan, milestones, and acceptance checks](docs/messenger_implementation_plan.md)
+- [M0 API/crypto contracts, schema baseline, and validation evidence](docs/messenger/README.md)
 - [Backend setup and tests on Linux and macOS](backend/README.md)
 - [Local Linux database, backups, restoration, and persistence](db/README.md)
 - [Java/Spring backend foundation plan and cross-platform team workflow](docs/backend_plan.md)
