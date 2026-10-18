@@ -8,7 +8,7 @@ import { unwrap, list, normalizeUser, normalizePost, normalizeComment, normalize
 export function createHttpProvider(transportPromise = loadTransport()) {
   // Prevent an unhandled rejection when a CDN fails before the first operation.
   const transport = Promise.resolve(transportPromise); transport.catch(() => {});
-  let identityPromise,chatPromise;
+  let identityPromise,chatPromise,rotationSession;
   const chatClient=()=>chatPromise ||= Promise.all([transport,identityClient()]).then(([api,identity])=>createEncryptedChat(api,identity));
   const identityClient = () => identityPromise ||= transport.then(api => createIdentityClient(api));
   return {
@@ -19,7 +19,8 @@ export function createHttpProvider(transportPromise = loadTransport()) {
         const client = await identityClient(), method = operation.slice(5);
         if (typeof client[method] !== 'function') throw new DataError('UNSUPPORTED', 'This authentication operation is not available yet.');
         const result=await client[method](...args);
-        if(method==='resetPassword'&&result?.status==='authenticated')chatClient().then(chat=>chat.resumeRotation()).catch(()=>{});
+        const current=method==='me'?result:method==='resetPassword'&&result?.status==='authenticated'?result.user:null;
+        if(current&&!current.cryptoLocked&&current.sessionVersion!==rotationSession){rotationSession=current.sessionVersion;chatClient().then(chat=>chat.resumeRotation()).catch(()=>{});}
         return result;
       }
       if (!routes[operation]) throw new DataError('UNSUPPORTED', 'Այս գործառույթի backend պայմանագիրը դեռ սահմանված չէ։');
