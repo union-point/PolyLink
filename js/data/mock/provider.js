@@ -354,7 +354,7 @@ export function createMockProvider() {
     if (result instanceof DataError) throw result;
     if (write) { const event = { operation, at: now() }; notify(event); channel?.postMessage(event); }
     if (operation === 'settings.export') {
-      const media = await transaction(state => state.media.filter(item => item.userId === me(state).id&&result.messages.some(message=>message.attachment?.url===`media:${item.id}`)));
+      const media = await transaction(state => state.media.filter(item => item.userId === me(state).id&&(result.messages.some(message=>message.attachment?.url===`media:${item.id}`)||!state.messages.some(message=>message.attachment?.url===`media:${item.id}`))));
       const assets = await Promise.all(media.map(item => new Promise((resolve, reject) => {
         const reader = new FileReader(); reader.onload = () => resolve({ id: item.id, type: item.blob.type, dataUrl: reader.result }); reader.onerror = () => reject(new DataError('STORAGE', 'Չհաջողվեց արտահանել պատկերները։')); reader.readAsDataURL(item.blob);
       })));
