@@ -1,9 +1,9 @@
 openapi: 3.1.1
 info:
   title: PolyLink messenger
-  version: 0.3.0
+  version: 0.4.0
   description: M0 wire formats with M1 invitation enrollment, real sessions and backed-up
-    key setup. M1–M4 identity, direct text, password lifecycle and recovery are implemented; later features retain
+    key setup. M1–M5 identity, recovery, encrypted messaging/images and personal state are implemented; later features retain
     their milestone scope. Original passwords never enter HTTP DTOs.
 servers:
 - url: http://localhost:3004
@@ -1036,7 +1036,7 @@ paths:
       security:
       - bearer: []
       responses:
-        '201':
+        '200':
           description: Success
           content:
             application/json:
@@ -1312,7 +1312,8 @@ paths:
       operationId: upload
       description: Client-generated ID is bound to authenticated uploader/room. Identical
         upload retries return same object, changed bytes conflict. Private staged
-        object expires after 24 hours if unbound. An unsaved send may reuse its staged
+        body expires after 24 hours if unbound; immutable ID/digest tombstones remain.
+        SQL Server stores private ciphertext bodies. An unsaved send may reuse its staged
         object under a new operation in the same room. A bound object cannot be reused.
       security:
       - bearer: []
@@ -1738,6 +1739,7 @@ components:
           - RATE_LIMITED
           - REVISION_CONFLICT
           - KEY_STALE_NOT_SAVED
+          - ATTACHMENT_UNAVAILABLE_NOT_SAVED
           - ROOM_KEY_PENDING
           - OPERATION_PAYLOAD_CONFLICT
           - RECOVERY_EXPIRED
@@ -2234,6 +2236,7 @@ components:
           items:
             $ref: '#/components/schemas/Author'
         blocked:
+          description: Caller-owned direct block only; canSend also enforces peer blocks without disclosing them.
           type: boolean
         closed:
           type: boolean

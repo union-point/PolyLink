@@ -82,3 +82,5 @@ CI runs the same profile with an ephemeral SQL Server. The local restored databa
 Migration semantics follow the official [Flyway baseline](https://documentation.red-gate.com/flyway/reference/commands/baseline) and [SQL Server support](https://documentation.red-gate.com/flyway/reference/database-driver-reference/sql-server-database) documentation: baseline skips migrations through that version; fresh install executes V1, restored upgrade explicitly records V1 before V2.
 
 V5 adds hashed, purpose-limited recovery authorizations and email-address snapshots on new challenges. Existing vaults, identities, sessions and chat data are retained. Older in-flight recovery codes without an email snapshot must be requested again. See [M4](m4.md).
+
+V6 adds `messaging.AttachmentBodies` for private binary ciphertext storage. Expired unbound bodies are removed while attachment UUID/digest tombstones remain immutable. Bound objects share message transactions and SQL backup coverage. Existing messages, identities and personal cutoffs are retained. See [M5](m5.md).

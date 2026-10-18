@@ -12,6 +12,8 @@ M3 follow-up: [session continuity and ordinary password lifecycle](messenger/m3.
 
 M4 follow-up: [atomic recovery and automatic room-key rotation](messenger/m4.md) adds purpose-limited email recovery, local/Transit paths, durable prepare/status/commit and post-recovery login. Later milestones retain their stated scope.
 
+M5 follow-up: [encrypted images, personal state and paginated messenger UI](messenger/m5.md) adds V6 private ciphertext bodies, immutable staged uploads, sequence-based read/hide, mute/direct blocks and visible-page history reconciliation.
+
 ## 1. Starting point and delivery strategy
 
 The repository has a Java 25 / Spring Boot 4.1.1 scaffold, Maven verification and optional SQL Server integration tests. Security currently permits health only; Flyway is disabled pending reconciliation of the restored database. There are no domain entities, authentication APIs or messenger APIs.
