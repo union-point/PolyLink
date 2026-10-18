@@ -8,6 +8,8 @@ M1 follow-up: [implementation and deployment](messenger/m1.md) uses the approved
 
 M2 follow-up: [encrypted direct text implementation and verification](messenger/m2.md) adds opt-in messaging, backed-up participant envelopes, sequenced sends/history, encrypted persistent retries and browser polling. Later milestones retain their stated scope.
 
+M3 follow-up: [session continuity and ordinary password lifecycle](messenger/m3.md) adds V4 independent access credentials, atomic password-copy/verifier replacement, cross-page/tab validation and storage-failure acceptance. Forgotten-password recovery remains M4.
+
 ## 1. Starting point and delivery strategy
 
 The repository has a Java 25 / Spring Boot 4.1.1 scaffold, Maven verification and optional SQL Server integration tests. Security currently permits health only; Flyway is disabled pending reconciliation of the restored database. There are no domain entities, authentication APIs or messenger APIs.

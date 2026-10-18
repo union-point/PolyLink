@@ -28,7 +28,7 @@ Neither a `Users` row, its role nor `TwoFactorEnabled` proves active admission o
 | Logical state | Physical model / boundary |
 | --- | --- |
 | Principal, verifier and credential epoch | `auth.AccountSecurity`, one per legacy user; explicit admission, verified email, client derivation and separate server verifier. |
-| Session family/revocation | `auth.Sessions`, hashed random credentials, credential version, access/idle/absolute expiry. Expiry formulas and family/version checks also belong in services. |
+| Session family/revocation | `auth.Sessions` plus V4 `auth.AccessTokens`, hashed random credentials, credential version, independent access expiry and session idle/absolute expiry. Expiry formulas and family/version checks also belong in services. |
 | Purpose-bound code/rate limits | `auth.EmailChallenges`, `auth.RateLimits`; code MAC secret and scope-hashing secrets stay outside SQL. Unknown-account challenge may have no UserId. |
 | Historical public identities | `keyvault.Identities`, composite owner/version key; private keys exist only inside vault ciphertext. |
 | Active vault/copies | `keyvault.Vaults`, independent vault-key version/content revision and current identity FK; JSON packets serialized as UTF-8 bytes. Transit ciphertext/context are retained separately. |

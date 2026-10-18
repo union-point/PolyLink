@@ -2,7 +2,7 @@ import os,pathlib,socket,subprocess,time,urllib.request
 
 def free_port():
     with socket.socket() as sock:sock.bind(('127.0.0.1',0));return sock.getsockname()[1]
-def run(root,env,admin_sql,bao_request,root_token,messenger=False):
+def run(root,env,admin_sql,bao_request,root_token,messenger=False,continuity=False):
     api_port=free_port();frontend_port=free_port();child=env.copy()
     child.update(MESSENGER_ENABLED='true' if messenger else 'false',IDENTITY_ENABLED='true',DB_USERNAME=env['MIGRATION_DB_USERNAME'],DB_PASSWORD=env['MIGRATION_DB_PASSWORD'],SERVER_PORT=str(api_port),FRONTEND_ORIGINS=f'http://localhost:{frontend_port}',M1_API=f'http://localhost:{api_port}',M1_FRONTEND=f'http://localhost:{frontend_port}',M1_ARTIFACT_DIR=str(pathlib.Path(env['OPENBAO_TOKEN_FILE']).parent))
     email='browser-'+env['M1_DB_NAME'].removeprefix('polylink_m1_')+'@example.invalid';child['M1_BROWSER_EMAIL']=email
@@ -36,6 +36,12 @@ def run(root,env,admin_sql,bao_request,root_token,messenger=False):
             try:
                 subprocess.run(['node',str(root/'tools/m1/browser.mjs'),'resume'],cwd=root,env=child,check=True)
                 subprocess.run(['node',str(root/'tools/m1/browser.mjs'),'factor'],cwd=root,env=child,check=True)
+                if continuity:
+                    for phase in ['continuity','restart']:
+                        subprocess.run(['node',str(root/'tools/m3/browser.mjs'),phase],cwd=root,env=child,check=True)
+                    m3email=email.replace('browser-','m2-1-')
+                    admin_sql(f"USE [{env['M1_DB_NAME']}]; UPDATE auth.AccountSecurity SET EmailFactorEnabled=1 WHERE UserId=(SELECT UserId FROM dbo.Users WHERE Email=N'{m3email}');")
+                    subprocess.run(['node',str(root/'tools/m3/browser.mjs'),'password'],cwd=root,env=child,check=True)
             finally:bao_request('sys/unseal',{'key':admin['keys_base64'][0]})
         finally:
             backend.terminate();static.terminate()

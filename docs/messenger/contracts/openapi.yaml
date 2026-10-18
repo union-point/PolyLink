@@ -474,8 +474,10 @@ paths:
     post:
       operationId: setupCommit
       description: Atomic expected-version activation. Completed repeats return the
-        same result; no key release. Expired/cancelled/newer credential versions reject
-        all writes.
+        same result; no key release. An original unexpired access credential may replay
+        only its own completed PASSWORD_CHANGE result, bound to its initiating family
+        and operation expiry; revocation still denies every other capability.
+        Expired/cancelled/newer credential versions reject all writes.
       security:
       - bearer: []
       responses:
