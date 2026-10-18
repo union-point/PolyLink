@@ -90,6 +90,11 @@ public class Sessions {
                             now.plusDays(7),
                             now.plusDays(30),
                             Secrets.hash(csrf));
+                    db.update(
+                            "INSERT auth.AccessTokens VALUES (?,?,?)",
+                            Secrets.hash(access),
+                            family,
+                            now.plusMinutes(10));
                     return issued(account, family, access, refresh, csrf, now);
                 });
     }
@@ -101,12 +106,14 @@ public class Sessions {
         Secrets.decode(token, 32);
         var rows =
                 Rows.query(
-                        db, "SELECT * FROM auth.Sessions WHERE AccessHash=?", Secrets.hash(token));
+                        db,
+                        "SELECT s.*,t.ExpiresAt AS TokenExpiresAt FROM auth.AccessTokens t JOIN auth.Sessions s ON s.SessionId=t.SessionId WHERE t.AccessHash=?",
+                        Secrets.hash(token));
         if (rows.isEmpty()) throw AuthFailure.denied();
         var row = rows.getFirst();
         var account = accounts.get(((Number) row.get("UserId")).intValue());
         validate(row, account);
-        if (!((OffsetDateTime) row.get("AccessExpiresAt")).isAfter(OffsetDateTime.now(clock)))
+        if (!((OffsetDateTime) row.get("TokenExpiresAt")).isAfter(OffsetDateTime.now(clock)))
             throw AuthFailure.denied();
         return new Principal(account, UUID.fromString(row.get("FamilyId").toString()));
     }
@@ -164,6 +171,11 @@ public class Sessions {
                             now.plusSeconds(10),
                             secrets.encryptReplay(mapper.writeValueAsBytes(issued)),
                             first.get("SessionId"));
+                    db.update(
+                            "INSERT auth.AccessTokens VALUES (?,?,?)",
+                            Secrets.hash(issued.access()),
+                            first.get("SessionId"),
+                            now.plusMinutes(10));
                     return issued;
                 });
     }
@@ -181,13 +193,57 @@ public class Sessions {
                         hash,
                         hash);
         if (rows.isEmpty()) throw AuthFailure.denied();
+        tx.executeWithoutResult(
+                status -> {
+                    accounts.lock(((Number) rows.getFirst().get("UserId")).intValue());
+                    var current =
+                            Rows.query(
+                                            db,
+                                            "SELECT * FROM auth.Sessions WITH(UPDLOCK,HOLDLOCK) WHERE SessionId=?",
+                                            rows.getFirst().get("SessionId"))
+                                    .getFirst();
+                    if (!Secrets.equal((byte[]) current.get("CsrfHash"), Secrets.hash(csrf)))
+                        throw AuthFailure.denied();
+                    db.update(
+                            "UPDATE auth.Sessions SET RevokedAt=?,ReplayPacket=NULL WHERE SessionId=?",
+                            OffsetDateTime.now(clock),
+                            current.get("SessionId"));
+                });
+    }
+
+    /** Call while holding the account lock before committing an authorized mutation. */
+    public void requireCurrent(Principal principal) {
+        var row =
+                Rows.query(
+                        db,
+                        "SELECT * FROM auth.Sessions WHERE FamilyId=? AND UserId=?",
+                        principal.familyId(),
+                        principal.account().id());
+        if (row.isEmpty()) throw AuthFailure.denied();
+        var current = accounts.get(principal.account().id());
+        validate(row.getFirst(), current);
+        if (current.credential() != principal.account().credential()) throw AuthFailure.denied();
+    }
+
+    /**
+     * Revoked access is accepted only as a reference to its own completed password-change result.
+     */
+    public Principal passwordResultCaller(HttpServletRequest request) {
+        String header = request.getHeader("Authorization");
+        if (header == null || !header.startsWith("Bearer ")) throw AuthFailure.denied();
+        String token = header.substring(7);
+        Secrets.decode(token, 32);
+        var rows =
+                Rows.query(
+                        db,
+                        "SELECT s.UserId,s.FamilyId FROM auth.AccessTokens t JOIN auth.Sessions s ON s.SessionId=t.SessionId WHERE t.AccessHash=? AND t.ExpiresAt>?",
+                        Secrets.hash(token),
+                        OffsetDateTime.now(clock));
+        if (rows.isEmpty()) throw AuthFailure.denied();
         var row = rows.getFirst();
-        if (!Secrets.equal((byte[]) row.get("CsrfHash"), Secrets.hash(csrf)))
-            throw AuthFailure.denied();
-        db.update(
-                "UPDATE auth.Sessions SET RevokedAt=?,ReplayPacket=NULL WHERE SessionId=?",
-                OffsetDateTime.now(clock),
-                row.get("SessionId"));
+        var account = accounts.get(((Number) row.get("UserId")).intValue());
+        account.requireAdmitted();
+        return new Principal(account, UUID.fromString(row.get("FamilyId").toString()));
     }
 
     private void validate(Map<String, Object> row, Accounts.Account account) {

@@ -53,6 +53,8 @@ public class SecurityConfiguration {
                                         "/auth/challenges/resend",
                                         "/auth/refresh",
                                         "/auth/logout",
+                                        "/auth/password-change/prepare",
+                                        "/auth/password-change/commit",
                                         "/keys/setup/prepare",
                                         "/keys/setup/commit")
                                 .permitAll();

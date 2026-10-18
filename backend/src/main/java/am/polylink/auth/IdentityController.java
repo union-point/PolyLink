@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 @IdentityEnabled
 public class IdentityController {
+    private final PasswordChanges passwords;
     private final EnrollmentService enrollment;
     private final Challenges challenges;
     private final Sessions sessions;
@@ -18,6 +19,7 @@ public class IdentityController {
     private final org.springframework.jdbc.core.JdbcTemplate db;
 
     public IdentityController(
+            PasswordChanges passwords,
             EnrollmentService enrollment,
             Challenges challenges,
             Sessions sessions,
@@ -25,6 +27,7 @@ public class IdentityController {
             Secrets secrets,
             RateLimiter limits,
             org.springframework.jdbc.core.JdbcTemplate db) {
+        this.passwords = passwords;
         this.enrollment = enrollment;
         this.challenges = challenges;
         this.sessions = sessions;
@@ -127,6 +130,27 @@ public class IdentityController {
         if (!input.isEmpty()) throw AuthFailure.invalid();
         sessions.logout(request);
         sessions.clear(response);
+    }
+
+    @PostMapping("/auth/password-change/prepare")
+    public Map<String, Object> passwordPrepare(
+            @Valid @RequestBody AuthDtos.PasswordChange input, HttpServletRequest request) {
+        var caller = sessions.require(request);
+        limits.consume("PASSWORD_CHANGE", "" + caller.account().id(), 10, 900);
+        return passwords.prepare(caller, input);
+    }
+
+    @PostMapping("/auth/password-change/commit")
+    public Map<String, Object> passwordCommit(
+            @Valid @RequestBody AuthDtos.OperationId input, HttpServletRequest request) {
+        Sessions.Principal caller;
+        try {
+            caller = sessions.require(request);
+        } catch (AuthFailure e) {
+            if (e.status != 401) throw e;
+            return passwords.completed(sessions.passwordResultCaller(request), input.operationId());
+        }
+        return passwords.commit(caller, input.operationId());
     }
 
     @GetMapping("/auth/me")

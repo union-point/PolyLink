@@ -82,4 +82,19 @@ public final class AuthDtos {
             return "Setup[redacted]";
         }
     }
+
+    public record PasswordChange(
+            @NotNull @Pattern(regexp = "PASSWORD_CHANGE") String kind,
+            @NotNull UUID operationId,
+            @NotNull @Valid Versions expected,
+            @NotNull @Valid Derivation derivation,
+            @NotNull @Pattern(regexp = "[A-Za-z0-9_-]{43}") String loginSecret,
+            @NotNull @Valid Packet vault,
+            @NotNull @Valid Packet passwordCopy,
+            @NotNull @Valid Identity identity) {
+        @Override
+        public String toString() {
+            return "PasswordChange[redacted]";
+        }
+    }
 }
