@@ -67,3 +67,10 @@ test('an inaccessible saved send cannot wedge history after rejoining a new inte
   }};
   assert.equal((await createEncryptedChat(api,f.identity,f.store).page(room)).items.length,0);assert.equal(f.records.size,0);assert.equal(sent,1);assert.equal(reads,1);
 });
+test('membership reconciliation replaces deleted bodies and refreshed image URLs without duplicating positions',async()=>{
+  const {mergeMessages}=await import('../../js/chat/history.js');const old={id:'one',sequence:'1',text:'old body',attachment:{url:'blob:revoked'}},image={...old,attachment:{url:'blob:current'}};
+  assert.equal(mergeMessages([old],[image])[0].attachment.url,'blob:current');const deleted={id:'one',sequence:'1',text:'Message deleted',deleted:true,attachment:null};assert.deepEqual(mergeMessages([image],[deleted]),[deleted]);
+});
+test('unavailable draft storage does not prevent opening readable history',async()=>{
+  const f=fixture();f.store.get=f.store.put=async()=>{throw new Error('IndexedDB blocked');};const client=createEncryptedChat({request:async()=>{throw new Error('Draft reads need no network');}},f.identity,f.store);assert.equal(await client.loadDraft(crypto.randomUUID()),'');await assert.rejects(client.saveDraft(crypto.randomUUID(),'Must remain encrypted'));
+});

@@ -110,7 +110,7 @@ class DatabaseMigrationIT {
                             .migrate();
                     try (var statement = connection.createStatement()) {
                         statement.execute(
-                                "INSERT dbo.Languages(Code,Name) VALUES (N'en',N'English')");
+                                "IF NOT EXISTS(SELECT 1 FROM dbo.Languages WHERE Code=N'en') INSERT dbo.Languages(Code,Name) VALUES (N'en',N'English')");
                         statement.execute(
                                 """
                     INSERT dbo.Users(FirstName,LastName,Email,PasswordHash,RoleId,LanguageId)

@@ -513,4 +513,58 @@ class GroupIT {
                                 a.id()))
                 .isEqualTo(1);
     }
+
+    @Test
+    void simultaneousRemovalSendAndServiceRecoveryRespectTheSameMembershipBoundary()
+            throws Exception {
+        var a = fixture.configured();
+        var b = fixture.configured();
+        var c = fixture.configured();
+        var create = creation(a, b);
+        String room = create.get("roomId").toString(), path = "/chat/rooms/" + room;
+        json(a, "POST", "/chat/groups", create);
+        add(a, room, c);
+        var snapshot = summary(a, room).path("keySnapshot");
+        var recovery = new RecoveryIT();
+        recovery.port = port;
+        recovery.db = db;
+        recovery.mapper = mapper;
+        recovery.init();
+        var browser = recovery.fixture.new Browser();
+        var operation = recovery.verify(c, browser);
+        var id = Map.of("operationId", operation.path("operationId").asText());
+        assertThat(browser.post("/auth/recovery/unlock", id).statusCode()).isEqualTo(200);
+        var candidate = recovery.candidate(c, operation, true);
+        assertThat(browser.post("/auth/recovery/prepare", candidate).statusCode()).isEqualTo(200);
+        var remove = change(a, room);
+        var packet = fixture.packet(snapshot);
+        try (var pool = Executors.newFixedThreadPool(3)) {
+            var removed =
+                    pool.submit(
+                            () ->
+                                    a.browser()
+                                            .call(
+                                                    "DELETE",
+                                                    path + "/participants/" + b.id(),
+                                                    remove));
+            var sent = pool.submit(() -> b.browser().post(path + "/messages", packet));
+            var recovered = pool.submit(() -> browser.post("/auth/recovery/commit", id));
+            assertThat(removed.get().statusCode()).isEqualTo(200);
+            assertThat(recovered.get().statusCode()).isEqualTo(200);
+            assertThat(sent.get().statusCode()).isIn(200, 404, 409);
+        }
+        assertThat(b.browser().get(path + "/keys").statusCode()).isEqualTo(404);
+        assertThat(a.browser().post(path + "/keys/activate", activation(snapshot)).statusCode())
+                .isEqualTo(409);
+        var rotated = rotate(a, room);
+        assertThat(rotated.path("versions").path("membership").asText()).isEqualTo("3");
+        assertThat(rotated.path("recipients"))
+                .anySatisfy(
+                        recipient -> {
+                            assertThat(recipient.path("userId").asText()).isEqualTo("" + c.id());
+                            assertThat(recipient.path("identityVersion").asText()).isEqualTo("2");
+                        });
+        assertThat(a.browser().post(path + "/messages", fixture.packet(rotated)).statusCode())
+                .isEqualTo(200);
+    }
 }

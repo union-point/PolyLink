@@ -57,6 +57,18 @@ public class AccountLifecycle {
      * route.
      */
     public void replayDeletion(int caller) {
+        // A supported backup can predate registration or security enrollment.
+        if (chat.db.queryForObject(
+                        "SELECT COUNT(*) FROM dbo.Users WHERE UserId=?", Integer.class, caller)
+                == 0) return;
+        if (chat.db.queryForObject(
+                        "SELECT COUNT(*) FROM auth.AccountSecurity WHERE UserId=?",
+                        Integer.class,
+                        caller)
+                == 0)
+            chat.db.update(
+                    "INSERT auth.AccountSecurity(UserId,AdmissionStatus,CredentialVersion,SchemeVersion,ClientSalt,ClientOpsLimit,ClientMemoryBytes,LoginVerifier,EmailFactorEnabled) VALUES (?,'DELETED',1,1,0x00,2,67108864,'DELETED',0)",
+                    caller);
         transition(caller, 0, true, true);
     }
 
@@ -147,6 +159,16 @@ public class AccountLifecycle {
                                 "UPDATE messaging.Messages SET Ciphertext=NULL,SenderId=NULL,DeletedAt=? WHERE SenderId=?",
                                 chat.now(),
                                 caller);
+                        chat.db.update(
+                                "UPDATE auth.AccountSecurity SET LoginVerifier='DELETED',EmailVerifiedAt=NULL,EmailFactorEnabled=0 WHERE UserId=?",
+                                caller);
+                        chat.db.update(
+                                "UPDATE auth.Invitations SET Email=?,RevokedAt=? WHERE ConsumedUserId=? OR Email=?",
+                                "deleted-" + caller + "@deleted.invalid",
+                                chat.now(),
+                                caller,
+                                account.email());
+                        chat.db.update("DELETE auth.EmailChallenges WHERE UserId=?", caller);
                         chat.db.update("DELETE keyvault.Vaults WHERE UserId=?", caller);
                         chat.db.update(
                                 "DELETE a FROM auth.RecoveryAuthorizations a JOIN keyvault.Operations o ON o.OperationId=a.OperationId WHERE o.UserId=?",

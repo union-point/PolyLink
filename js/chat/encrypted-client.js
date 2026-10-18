@@ -186,7 +186,7 @@ export function createEncryptedChat(api,identity,store=outboxStore){
       return rooms;
     });},
     saveDraft:(room,text)=>locked(`draft:${room}`,()=>identity.withKeys(async context=>{if(text){await persist(context,`draft:${room}`,{text,request:{operationId:crypto.randomUUID()}});}else await store.remove(outboxId(context,`draft:${room}`));})),
-    loadDraft:room=>identity.withKeys(async context=>(await pending(context,`draft:${room}`))?.text||''),
+    loadDraft:room=>identity.withKeys(async context=>{try{return (await pending(context,`draft:${room}`))?.text||'';}catch(error){if(error.code==='STORAGE_UNAVAILABLE')return '';throw error;}}),
     createGroup:({name,userIds})=>groupMutation('create',null,{name,userIds}),
     participants:room=>identity.withKeys(()=>call('participants',room)),
     addParticipant:(room,userId)=>groupMutation('add',room,{userId:String(userId)}),
