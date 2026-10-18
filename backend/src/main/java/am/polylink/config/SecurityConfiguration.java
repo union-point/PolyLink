@@ -21,6 +21,7 @@ public class SecurityConfiguration {
     SecurityFilterChain securityFilterChain(
             HttpSecurity http,
             @Value("${polylink.identity.enabled:false}") boolean enabled,
+            @Value("${polylink.messenger.enabled:false}") boolean messenger,
             @Value("${polylink.frontend-origins:http://localhost:8001}") String allowedOrigins)
             throws Exception {
         var origins = Set.copyOf(Arrays.asList(allowedOrigins.split(",")));
@@ -57,6 +58,22 @@ public class SecurityConfiguration {
                                 .permitAll();
                         authorize
                                 .requestMatchers(HttpMethod.GET, "/auth/me", "/keys/me", "/users/*")
+                                .permitAll();
+                    }
+                    if (enabled && messenger) {
+                        authorize
+                                .requestMatchers(
+                                        HttpMethod.GET,
+                                        "/chat/rooms",
+                                        "/chat/rooms/*/messages",
+                                        "/chat/rooms/*/keys")
+                                .permitAll();
+                        authorize
+                                .requestMatchers(
+                                        HttpMethod.POST,
+                                        "/chat/direct",
+                                        "/chat/rooms/*/messages",
+                                        "/chat/rooms/*/keys/activate")
                                 .permitAll();
                     }
                     authorize.anyRequest().denyAll();
