@@ -80,3 +80,5 @@ Read uses a monotonic accessible sequence; hide records the current committed se
 CI runs the same profile with an ephemeral SQL Server. The local restored database is inspected read-only; migration acceptance against the actual May backup is performed in a separate disposable restore, never by migrating the working `polylink` database. The [M0 status](README.md) records actual evidence and remaining M1/M6 gates.
 
 Migration semantics follow the official [Flyway baseline](https://documentation.red-gate.com/flyway/reference/commands/baseline) and [SQL Server support](https://documentation.red-gate.com/flyway/reference/database-driver-reference/sql-server-database) documentation: baseline skips migrations through that version; fresh install executes V1, restored upgrade explicitly records V1 before V2.
+
+V5 adds hashed, purpose-limited recovery authorizations and email-address snapshots on new challenges. Existing vaults, identities, sessions and chat data are retained. Older in-flight recovery codes without an email snapshot must be requested again. See [M4](m4.md).

@@ -130,5 +130,5 @@ To explore the independent mock UI without a backend, set `dataMode: 'mock'` in 
 - [Backend configuration and schema workflow](backend/README.md)
 - [OpenBao operator runbook](infra/openbao/README.md)
 - [Messenger specification](docs/messenger_spec.md) and [implementation plan](docs/messenger_implementation_plan.md)
-- [M0 contracts](docs/messenger/README.md), [M1 identity](docs/messenger/m1.md), [M2 messaging](docs/messenger/m2.md), [M3 sessions/passwords](docs/messenger/m3.md)
+- [M0 contracts](docs/messenger/README.md), [M1 identity](docs/messenger/m1.md), [M2 messaging](docs/messenger/m2.md), [M3 sessions/passwords](docs/messenger/m3.md), [M4 recovery](docs/messenger/m4.md)
 - [Frontend architecture](docs/frontend_context.md) and [profile module](js/profile/README.md)

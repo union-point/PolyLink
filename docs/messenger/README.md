@@ -42,3 +42,5 @@ Before M1 acceptance, measure Argon2id and IndexedDB `CryptoKey` behavior on the
 M2/M4 must prove actual transaction serialization, send/result authorization, recovery failpoints and concurrent activation. M6 must resolve the source timezone, explicit treatment of the 55 plaintext fixtures, retention/export/deletion and recovery from older backups. Existing group membership must be deliberately imported; no group or private-key state is manufactured from plaintext history. The legacy table copy is preserved until that reviewed migration exists.
 
 These gates do not reopen the agreed platform-trusted recovery model, six-digit email-code rules, session durations, fixed group scope or automatic rotation after service unlock.
+
+M4 implementation: [atomic recovery, browser resumption and key rotation](m4.md). Apply V5 before starting this version.

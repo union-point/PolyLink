@@ -10,6 +10,8 @@ M2 follow-up: [encrypted direct text implementation and verification](messenger/
 
 M3 follow-up: [session continuity and ordinary password lifecycle](messenger/m3.md) adds V4 independent access credentials, atomic password-copy/verifier replacement, cross-page/tab validation and storage-failure acceptance. Forgotten-password recovery remains M4.
 
+M4 follow-up: [atomic recovery and automatic room-key rotation](messenger/m4.md) adds purpose-limited email recovery, local/Transit paths, durable prepare/status/commit and post-recovery login. Later milestones retain their stated scope.
+
 ## 1. Starting point and delivery strategy
 
 The repository has a Java 25 / Spring Boot 4.1.1 scaffold, Maven verification and optional SQL Server integration tests. Security currently permits health only; Flyway is disabled pending reconciliation of the restored database. There are no domain entities, authentication APIs or messenger APIs.

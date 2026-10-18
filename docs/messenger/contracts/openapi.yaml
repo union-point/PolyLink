@@ -1,10 +1,10 @@
 openapi: 3.1.1
 info:
   title: PolyLink messenger
-  version: 0.2.0
+  version: 0.3.0
   description: M0 wire formats with M1 invitation enrollment, real sessions and backed-up
-    key setup. Only the M1 endpoints are implemented; messaging and recovery remain
-    later milestones. Original passwords never enter HTTP DTOs.
+    key setup. M1–M4 identity, direct text, password lifecycle and recovery are implemented; later features retain
+    their milestone scope. Original passwords never enter HTTP DTOs.
 servers:
 - url: http://localhost:3004
   description: Local development; deployment requires HTTPS
@@ -689,6 +689,49 @@ paths:
           application/json:
             schema:
               $ref: '#/components/schemas/OperationRequest'
+      parameters:
+      - $ref: '#/components/parameters/Csrf'
+  /auth/recovery/login:
+    post:
+      operationId: recoveryLogin
+      description: One purpose-bound email-verification handoff after completion.
+        Checks the new derived login secret and current result versions, then consumes
+        the handoff atomically with session creation. Repeats must use normal login;
+        the recovery cookie otherwise remains status-only until original expiry.
+      security:
+      - recoveryCookie: []
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResult'
+          headers:
+            Cache-Control:
+              schema:
+                const: no-store
+              description: Sensitive responses are never cached.
+        '400':
+          $ref: '#/components/responses/Error'
+        '401':
+          $ref: '#/components/responses/Error'
+        '403':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+        '429':
+          $ref: '#/components/responses/Error'
+        '503':
+          $ref: '#/components/responses/Error'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
       parameters:
       - $ref: '#/components/parameters/Csrf'
   /auth/recovery/status:
@@ -1884,6 +1927,14 @@ components:
           $ref: '#/components/schemas/Versions'
         resultVersions:
           $ref: '#/components/schemas/Versions'
+        userId:
+          $ref: '#/components/schemas/Id'
+        email:
+          type: string
+          format: email
+          maxLength: 255
+        packagePrepared:
+          type: boolean
       required:
       - operationId
       - kind
