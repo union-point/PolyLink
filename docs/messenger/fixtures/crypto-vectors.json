@@ -1,0 +1,22 @@
+{
+  "password": {
+    "password": "Synthetic PLK1 fixture only!",
+    "saltHex": "000102030405060708090a0b0c0d0e0f",
+    "masterHex": "5acac0ccd0a936a5a44ddafada4d09fde47b4b3d72789cdb13ecce1aebd28ede",
+    "loginSecretHex": "0feaa5694e3234fc688cdba2cb2a06e725229314e48fc83afea016f93199c0cd",
+    "passwordWrapHex": "4b1d71ef0d5bb000cdddf26e075df954732e6291bf2fa0cee1503ac2f961e361"
+  },
+  "message": {
+    "keyHex": "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f",
+    "nonceHex": "202122232425262728292a2b2c2d2e2f3031323334353637",
+    "aad": "[\"PLK1\",\"message\",\"00000000-0000-4000-8000-000000000001\",\"7\",\"00000000-0000-4000-8000-000000000002\",\"1\",\"1\"]",
+    "plaintext": "{\"text\":\"Synthetic բարեւ 😀\",\"attachment\":null}",
+    "ciphertextHex": "667b39ae034336b11aed29d33c2f64a55436f1e97d46a76361b4f9ff8d191a9da9c1026ee382527a33c75d23d8ff422653bdd8a780ba5acb9ddefa44ec6081d6c99e42f29713"
+  },
+  "envelope": {
+    "privateKeyHex": "83f90d9281c789bde6e77a7e405c66de2563db627544398c41f4bb8936c74f86",
+    "publicKeyHex": "4bbe6e226acfc43639d01ed291b5c65746c660d046071ca76eacc518bdae0819",
+    "plaintext": "[\"PLK1\",\"room-key\",\"00000000-0000-4000-8000-000000000001\",\"7\",\"3\",\"1\",\"1\",\"AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8\"]",
+    "ciphertextHex": "cf27f8fdd4d41122c888632be5e94c3efd8e0fd202a128afb37ced4ec90539590dda1efb0a368f0e741056d44cfd0379b44761aa5a7f73710f24f0b55c23c653168190f1a27017462847ee8d9d04a97c23c5100ab9756630749fea519ed567c24512f226cd66c8325af78a198791e65bcc82229943ea08a197923a411d980a261796fb5078e7d63cfd428d1a3b21e1e270150a5d7437c8e82fd06fd96cb598d9cb3024d6a50ea7fd"
+  }
+}

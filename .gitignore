@@ -84,3 +84,6 @@ docs/verification/
 # OS-specific
 Thumbs.db
 Desktop.ini
+
+# Contract verification dependencies
+/tools/contracts/node_modules/

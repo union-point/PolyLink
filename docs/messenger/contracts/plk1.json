@@ -1,0 +1,12 @@
+{
+  "scheme": "PLK1",
+  "libsodiumJs": "0.8.4",
+  "encoding": "UTF-8, unpadded base64url for binary HTTP fields, decimal strings for counters",
+  "password": {"algorithm": "Argon2id13", "masterBytes": 32, "saltBytes": 16, "opsLimit": 2, "memoryBytes": 67108864, "acceptedOps": [2,4], "acceptedMemoryBytes": [67108864,268435456]},
+  "kdf": {"algorithm": "crypto_kdf_derive_from_key", "subkeyBytes": 32, "login": {"id":1,"context":"PLK1AUTH"}, "passwordWrap": {"id":1,"context":"PLK1WRAP"}},
+  "aead": {"algorithm":"XChaCha20-Poly1305-IETF", "keyBytes":32,"nonceBytes":24,"tagBytes":16},
+  "envelope": {"algorithm":"crypto_box_seal", "publicKeyBytes":32,"privateKeyBytes":32,"overheadBytes":48},
+  "device": {"algorithm":"AES-256-GCM", "keyBytes":32,"ivBytes":12,"extractable":false,"storage":"IndexedDB CryptoKey"},
+  "limits": {"messagePlaintextBytes":32768,"vaultPlaintextBytes":1048576,"imagePlaintextBytes":5242880,"envelopePlaintextBytes":976},
+  "versions": ["credential","vaultKey","vaultRevision","identity","membership","roomKey"]
+}
