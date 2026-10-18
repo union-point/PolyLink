@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { sodium,seal,aad } from '../../js/crypto/sodium.js';
 import { encryptImage,decryptImage,imageLimit,validateImageBytes } from '../../js/crypto/images.js';
 import { createEncryptedChat } from '../../js/chat/encrypted-client.js';
-import { mergeMessages } from '../../js/chat/history.js';
+import { mergeMessages,messageShown } from '../../js/chat/history.js';
 import { upgradeChatState,appendMessage,hideRoom,markRead,visibleMessages,messagePage,canSend,preference } from '../../js/data/mock/chat-state.js';
 const s=await sodium(),b64=bytes=>s.to_base64(bytes,s.base64_variants.URLSAFE_NO_PADDING),room='10000000-0000-4000-8000-000000000001';
 const png=Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVQIHWP4z8DwHwAFgAI/ScLbtAAAAABJRU5ErkJggg==','base64');
@@ -58,4 +58,12 @@ test('history merges and mock personal state use BIGINT sequences rather than ti
   assert(!preference(group,'a').hidden);assert.equal(preference(group,'a').historyCutoff,'1');assert.deepEqual(visibleMessages(state,group,'a').map(m=>m.id),['2']);
   assert.throws(()=>markRead(state,group,'a','3'));markRead(state,group,'a','2');markRead(state,group,'a','0');assert.equal(preference(group,'a').lastReadSequence,'2');
   assert.equal(messagePage(visibleMessages(state,group,'a'),{after:'1'}).nextAfter,'2');assert.equal(messagePage(visibleMessages(state,group,'a'),{before:'2'}).items.length,0);
+});
+
+test('viewport acknowledgement excludes unseen arrivals and handles a message taller than the viewport',()=>{
+  const viewport={top:100,bottom:600,height:500};
+  assert(messageShown({top:200,bottom:350,height:150},viewport));
+  assert(!messageShown({top:610,bottom:760,height:150},viewport));
+  assert(messageShown({top:-500,bottom:590,height:1090},viewport));
+  assert(!messageShown({top:-100,bottom:700,height:800},viewport));
 });

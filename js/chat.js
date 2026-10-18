@@ -2,7 +2,7 @@ import { chat } from './services/index.js';
 import { bootstrap, start, pending, stateMessage, showError, confirmAction } from './shared/ui.js';
 import { validateImage } from './data/validation.js';
 import { renderConversation, renderMessage } from './chat/render.js';
-import { mergeMessages, pollDelay } from './chat/history.js';
+import { mergeMessages, pollDelay, messageShown } from './chat/history.js';
 
 start(async()=>{
   const user=await bootstrap();if(!user)return;
@@ -76,7 +76,7 @@ start(async()=>{
     const box=history.getBoundingClientRect();let sequence=s.ack;
     for(const node of history.querySelectorAll('.message')){
       const rect=node.getBoundingClientRect(),image=node.querySelector('img');
-      if(rect.top>=box.top-1&&rect.bottom<=box.bottom+1&&(!image||(image.complete&&image.naturalWidth)))sequence=BigInt(node.dataset.sequence)>sequence?BigInt(node.dataset.sequence):sequence;
+      if(messageShown(rect,box)&&(!image||(image.complete&&image.naturalWidth)))sequence=BigInt(node.dataset.sequence)>sequence?BigInt(node.dataset.sequence):sequence;
     }
     if(sequence<=s.ack)return;s.acking=true;
     try{const result=await chat.read(s.id,sequence.toString());s.ack=BigInt(result?.lastReadSequence||sequence);const room=rooms.find(r=>r.id===s.id);if(room){room.unreadCount=result?.unreadCount??room.unreadCount;room.lastReadSequence=s.ack.toString();renderList();}}

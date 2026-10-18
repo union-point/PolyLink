@@ -89,7 +89,7 @@ export function createEncryptedChat(api,identity,store=outboxStore){
         }
       }else if(message.attachmentId)throw new Error();
       return {...message,text:content.text,attachment};
-    }catch{throw new DataError('DATA_INTEGRITY','An encrypted message could not be authenticated.');}
+    }catch(error){if(error.retryable||['UNAUTHORIZED','SESSION_CHANGED','NOT_FOUND'].includes(error.code))throw error;throw new DataError('DATA_INTEGRITY','An encrypted message could not be authenticated.');}
     finally{key?.fill(0);plain?.fill(0);}
   }
   const outboxId=(context,room)=>`${context.session.user.id}:${room}`;

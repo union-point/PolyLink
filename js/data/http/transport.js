@@ -21,7 +21,10 @@ export function createTransport(axios){
   }
   function normalize(error){
     if(error instanceof DataError)return error;
-    const result=new DataError(error.response?.data?.code||(error.response?.status===401?'UNAUTHORIZED':error.response?'SERVICE_ERROR':'NETWORK'),error.response?.data?.message||'The request could not be completed.',{},!error.response||error.response.status>=500);
+    let body=error.response?.data;
+    if(body instanceof ArrayBuffer&&body.byteLength<=65536){try{body=JSON.parse(new TextDecoder().decode(body));}catch{body=null;}}
+    const codes={400:'VALIDATION',401:'UNAUTHORIZED',403:'FORBIDDEN',404:'NOT_FOUND',409:'CONFLICT',413:'VALIDATION',429:'RATE_LIMITED'};
+    const result=new DataError(body?.code||codes[error.response?.status]||(error.response?'SERVICE_ERROR':'NETWORK'),body?.message||'The request could not be completed.',{},!error.response||error.response.status>=500);
     result.response={status:error.response?.status};return result;
   }
   const refresh=async()=>{

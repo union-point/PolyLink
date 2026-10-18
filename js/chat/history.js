@@ -5,3 +5,5 @@ export function mergeMessages(existing,incoming){
   return [...byId.values()].sort((a,b)=>BigInt(a.sequence)<BigInt(b.sequence)?-1:BigInt(a.sequence)>BigInt(b.sequence)?1:0);
 }
 export const pollDelay=failures=>Math.min(30000,2500*2**Math.min(failures,4))*(0.9+Math.random()*0.2);
+
+export const messageShown=(rect,viewport)=>rect.bottom>viewport.top&&rect.bottom<=viewport.bottom+1&&(rect.top>=viewport.top-1||rect.height>viewport.height);

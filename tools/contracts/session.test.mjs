@@ -43,3 +43,8 @@ test('expired password commit keeps its original bearer for status replay and ne
   await assert.rejects(transport.request({method:'post',url:'/auth/password-change/commit',data:{operationId:'same'}}),error=>error.code==='UNAUTHORIZED'&&!JSON.stringify(error).includes('must-not-retain'));
   assert.equal(refreshes,0);
 });
+
+test('private binary download errors preserve safe server codes without retaining request data',async()=>{
+  const transport=createTransport(axiosFixture(async request=>{throw {response:{status:404,data:new TextEncoder().encode(JSON.stringify({code:'NOT_FOUND',message:'Image unavailable.'})).buffer},config:{...request,data:'must-not-retain'}};},async()=>{}));
+  await assert.rejects(transport.request({method:'get',url:'/chat/attachments/missing',responseType:'arraybuffer'}),error=>error.code==='NOT_FOUND'&&error.message==='Image unavailable.'&&!JSON.stringify(error).includes('must-not-retain'));
+});
