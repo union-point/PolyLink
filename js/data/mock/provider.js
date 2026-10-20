@@ -225,7 +225,8 @@ const operations = {
   'chat.openDirect': (state, userId) => {
     const own = me(state).id; find(state.users, userId);
     if (own === String(userId)) throw new DataError('VALIDATION', 'Ընտրեք այլ օգտատեր։');
-    if (isBlocked(state, own, String(userId)) || isBlocked(state, String(userId), own)) throw new DataError('FORBIDDEN', 'Օգտատիրոջ հետ կապ հաստատել հնարավոր չէ։');
+    if (isBlocked(state, own, String(userId))) throw new DataError('DIRECT_BLOCKED_BY_YOU', 'Դուք արգելափակել եք այս օգտատիրոջը։ Կապ հաստատելու համար ապաարգելափակեք նրան։');
+    if (isBlocked(state, String(userId), own)) throw new DataError('DIRECT_UNAVAILABLE', 'Այս օգտատիրոջ հետ հաղորդակցությունն անհասանելի է։');
     let room = state.rooms.find(room => !room.isGroup && room.participants.length === 2 && room.participants.includes(own) && room.participants.includes(String(userId)));
     if (!room) { room = { id: nextId(state, 'room'), isGroup: false, participants: [own, String(userId)], preferences: {} }; state.rooms.push(room); }
     preference(room, own).hidden = false;

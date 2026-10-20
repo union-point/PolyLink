@@ -1,5 +1,6 @@
+import { openDirectWithUnblock } from './chat/direct-contact.js';
 import { search, chat } from './services/index.js';
-import { bootstrap, start, stateMessage, pending } from './shared/ui.js';
+import { bootstrap, start, stateMessage, pending, confirmAction } from './shared/ui.js';
 import { escapeHtml as e } from './shared/content.js';
 
 start(async () => {
@@ -29,7 +30,7 @@ start(async () => {
     const button = event.target.closest('.btn-view,.btn-connect'); if (!button) return;
     const id = button.closest('.card').dataset.userId;
     if (button.classList.contains('btn-view')) location.href = `user.html?id=${encodeURIComponent(id)}`;
-    else pending(button, button.closest('.card'), async () => { const room = await chat.openDirect(id); location.href = `message.html?room=${encodeURIComponent(room.id)}`; });
+    else pending(button, button.closest('.card'), async () => { const room = await openDirectWithUnblock(chat, id, confirmAction); if (room) location.href = `message.html?room=${encodeURIComponent(room.id)}`; });
   };
   await load();
 });

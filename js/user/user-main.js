@@ -1,7 +1,8 @@
+import { openDirectWithUnblock } from '../chat/direct-contact.js';
 import { profiles, posts, chat } from '../services/index.js';
 import { selectedUserId } from '../services/navigation.js';
 import { educationEntry, certificateEntry, announcementEntry } from '../profile/profile-render.js';
-import { bootstrap, start, stateMessage, pending } from '../shared/ui.js';
+import { bootstrap, start, stateMessage, pending, confirmAction } from '../shared/ui.js';
 import { safeUrl } from '../shared/content.js';
 
 start(async () => {
@@ -35,6 +36,6 @@ start(async () => {
   }
   const contact = main.querySelector('.primary-btn');
   contact.disabled = user.id === currentUser.id;
-  contact.onclick = () => pending(contact, main.querySelector('.intro-card'), async () => { const room = await chat.openDirect(user.id); location.href = `message.html?room=${encodeURIComponent(room.id)}`; });
+  contact.onclick = () => pending(contact, main.querySelector('.intro-card'), async () => { const room = await openDirectWithUnblock(chat, user.id, confirmAction); if (room) location.href = `message.html?room=${encodeURIComponent(room.id)}`; });
   await load();
 });

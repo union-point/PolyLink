@@ -104,8 +104,21 @@ public class ChatService {
                             throw missing();
                         }
                     }
+                    if (db.queryForObject(
+                                    "SELECT COUNT(*) FROM messaging.Blocks WHERE UserId=? AND TargetId=?",
+                                    Integer.class,
+                                    caller,
+                                    peer)
+                            > 0)
+                        throw new AuthFailure(
+                                403,
+                                "DIRECT_BLOCKED_BY_YOU",
+                                "Դուք արգելափակել եք այս օգտատիրոջը։ Կապ հաստատելու համար ապաարգելափակեք նրան։");
                     if (blocked(caller, peer))
-                        throw new AuthFailure(403, "FORBIDDEN", "This action is unavailable.");
+                        throw new AuthFailure(
+                                403,
+                                "DIRECT_UNAVAILABLE",
+                                "Այս օգտատիրոջ հետ հաղորդակցությունն անհասանելի է։");
                     int lower = Math.min(caller, peer), higher = Math.max(caller, peer);
                     var existing =
                             Rows.query(

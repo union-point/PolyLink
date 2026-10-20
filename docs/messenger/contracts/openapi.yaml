@@ -1312,7 +1312,9 @@ paths:
     post:
       operationId: openDirect
       description: Unique unordered pair. Never self. Reopening retains caller history
-        cutoff; race returns winning room.
+        cutoff; race returns winning room. A caller-owned block returns DIRECT_BLOCKED_BY_YOU
+        (also for mutual blocks); otherwise a peer block returns DIRECT_UNAVAILABLE.
+        Both use HTTP 403 without changing room visibility.
       security:
       - bearer: []
       responses:
@@ -2162,6 +2164,8 @@ components:
           - VALIDATION
           - UNAUTHORIZED
           - FORBIDDEN
+          - DIRECT_BLOCKED_BY_YOU
+          - DIRECT_UNAVAILABLE
           - NOT_FOUND
           - RATE_LIMITED
           - REVISION_CONFLICT

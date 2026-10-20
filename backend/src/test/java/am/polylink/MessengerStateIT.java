@@ -191,6 +191,32 @@ class MessengerStateIT {
     }
 
     @Test
+    void hiddenDirectReportsOwnBlockBeforeGenericUnavailability() throws Exception {
+        var a = fixture.configured();
+        var b = fixture.configured();
+        String room = direct(a, b);
+        assertThat(put(a, "/chat/blocks/" + b.id(), Map.of("enabled", true))).isEqualTo(204);
+        assertThat(a.browser().post("/chat/rooms/" + room + "/hide", Map.of()).statusCode())
+                .isEqualTo(200);
+        var own = a.browser().post("/chat/direct", Map.of("userId", "" + b.id()));
+        assertThat(own.statusCode()).isEqualTo(403);
+        assertThat(a.browser().json(own).path("code").asText()).isEqualTo("DIRECT_BLOCKED_BY_YOU");
+        var peer = b.browser().post("/chat/direct", Map.of("userId", "" + a.id()));
+        assertThat(peer.statusCode()).isEqualTo(403);
+        assertThat(b.browser().json(peer).path("code").asText()).isEqualTo("DIRECT_UNAVAILABLE");
+        assertThat(put(b, "/chat/blocks/" + a.id(), Map.of("enabled", true))).isEqualTo(204);
+        var mutual = a.browser().post("/chat/direct", Map.of("userId", "" + b.id()));
+        assertThat(a.browser().json(mutual).path("code").asText())
+                .isEqualTo("DIRECT_BLOCKED_BY_YOU");
+        assertThat(put(a, "/chat/blocks/" + b.id(), Map.of("enabled", false))).isEqualTo(204);
+        var stillUnavailable = a.browser().post("/chat/direct", Map.of("userId", "" + b.id()));
+        assertThat(a.browser().json(stillUnavailable).path("code").asText())
+                .isEqualTo("DIRECT_UNAVAILABLE");
+        assertThat(put(b, "/chat/blocks/" + a.id(), Map.of("enabled", false))).isEqualTo(204);
+        assertThat(direct(a, b)).isEqualTo(room);
+    }
+
+    @Test
     void roomScanCannotReturnAHiddenPreviewFromAnEarlierSnapshot() throws Exception {
         var a = fixture.configured();
         var b = fixture.configured();
