@@ -101,7 +101,7 @@ public class EnrollmentService {
                                                 Integer.class);
                                 user =
                                         db.queryForObject(
-                                                "INSERT dbo.Users(FirstName,LastName,Email,PasswordHash,RoleId,LanguageId) OUTPUT inserted.UserId VALUES (?,?,?,N'PLK1: authentication is in auth.AccountSecurity',?,?)",
+                                                "INSERT dbo.Users(FirstName,LastName,Email,RoleId,LanguageId) OUTPUT inserted.UserId VALUES (?,?,?,?,?)",
                                                 Integer.class,
                                                 request.firstName().strip(),
                                                 request.lastName().strip(),

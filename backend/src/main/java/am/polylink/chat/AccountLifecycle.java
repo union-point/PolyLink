@@ -180,10 +180,7 @@ public class AccountLifecycle {
                                 caller,
                                 caller);
                         chat.db.update(
-                                "UPDATE dbo.ChatMessages SET EncryptedContent=N'Message deleted' WHERE SenderId=?",
-                                caller);
-                        chat.db.update(
-                                "UPDATE dbo.Users SET FirstName=N'Deleted',LastName=N'account',Email=?,PasswordHash=N'DELETED',ProfilePhotoUrl=NULL,CoverPhotoUrl=NULL,About=NULL,Specialization=NULL,IsProfilePublic=0 WHERE UserId=?",
+                                "UPDATE dbo.Users SET FirstName=N'Deleted',LastName=N'account',Email=?,ProfilePhotoUrl=NULL,CoverPhotoUrl=NULL,About=NULL,Specialization=NULL,IsProfilePublic=0 WHERE UserId=?",
                                 "deleted-" + caller + "@deleted.invalid",
                                 caller);
                         chat.db.update(

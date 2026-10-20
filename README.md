@@ -89,7 +89,7 @@ Use **`localhost` consistently**, rather than mixing it with `127.0.0.1`. Keep t
 5. Reload or restart the browser: a valid session and working secure browser storage restore access without another password. Bob can also close his browser and read Alice's later message when he returns.
 6. Try **Settings → Password**. The new password should preserve history and revoke other device sessions. A clean browser profile can open the same history with that password.
 
-Use **Messages → «Ստեղծել խումբ»** to create a group. Click the group name or avatar in the chat header to view members and manage the group as its owner. Members can leave through the three-dot menu. Settings provides own-message/image export and account deactivation/deletion; see [M6](docs/messenger/m6.md) before lifecycle or legacy-import operations. Some unrelated profile/forum/settings actions remain unavailable and fail explicitly; HTTP mode never falls back to demo data. See [LIVE_TESTING.md](LIVE_TESTING.md) for detailed checks and troubleshooting.
+Use **Messages → «Ստեղծել խումբ»** to create a group. Click the group name or avatar in the chat header to view members and manage the group as its owner. Members can leave through the three-dot menu. Settings provides own-message/image export and account deactivation/deletion; see [M6](docs/messenger/m6.md) for V8/V9 legacy-schema retirement and lifecycle operations. Some unrelated profile/forum/settings actions remain unavailable and fail explicitly; HTTP mode never falls back to demo data. See [LIVE_TESTING.md](LIVE_TESTING.md) for detailed checks and troubleshooting.
 
 ## Test automatically
 

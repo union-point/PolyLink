@@ -442,35 +442,13 @@ class GroupIT {
     }
 
     @Test
-    void explicitLegacyImportKeepsPlaintextSeparateAndDeletionReplayIsIdempotent()
-            throws Exception {
+    void deletionReplayIsIdempotentWithoutLegacyChatTables() throws Exception {
         var a = fixture.configured();
         var b = fixture.configured();
-        int legacy =
-                db.queryForObject(
-                        "INSERT dbo.ChatRooms(IsGroup) OUTPUT inserted.RoomId VALUES (1)",
-                        Integer.class);
-        db.update(
-                "INSERT dbo.ChatParticipants(RoomId,UserId) VALUES (?,?),(?,?)",
-                legacy,
-                a.id(),
-                legacy,
-                b.id());
-        db.update(
-                "INSERT dbo.ChatMessages(RoomId,SenderId,EncryptedContent) VALUES (?,?,N'Legacy canary stays plaintext')",
-                legacy,
-                a.id());
-        UUID room = groups.importLegacy(legacy, a.id(), "Reviewed import");
-        assertThat(groups.importLegacy(legacy, a.id(), "Reviewed import")).isEqualTo(room);
-        assertThat(
-                        db.queryForObject(
-                                "SELECT EncryptedContent FROM dbo.ChatMessages WHERE RoomId=?",
-                                String.class,
-                                legacy))
-                .isEqualTo("Legacy canary stays plaintext");
-        assertThat(json(a, "GET", "/chat/rooms/" + room + "/messages", null).path("items").size())
-                .isZero();
-        var snap = rotate(a, room.toString());
+        var request = creation(a, b);
+        UUID room = UUID.fromString(request.get("roomId").toString());
+        json(a, "POST", "/chat/groups", request);
+        var snap = summary(a, room.toString()).path("keySnapshot");
         json(a, "POST", "/chat/rooms/" + room + "/messages", fixture.packet(snap));
         byte[] ciphertext =
                 db.queryForObject(

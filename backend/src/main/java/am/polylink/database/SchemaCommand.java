@@ -56,7 +56,7 @@ public final class SchemaCommand {
                 throw new IllegalStateException("Fresh installation requires an empty database");
             }
         } else {
-            assertLegacySchema(connection);
+            assertSchema(connection, history ? appliedVersion(connection) : 1);
             if (!history) {
                 if (tableCount(connection) != 27) {
                     throw new IllegalStateException("Unrecognized objects: upgrade refused");
@@ -66,7 +66,9 @@ public final class SchemaCommand {
         }
         flyway.migrate();
         flyway.validate();
-        System.out.println("Schema migrated and validated; application data was not imported.");
+        assertCurrentSchema(connection);
+        System.out.println(
+                "Schema migrated and validated through V9; obsolete legacy chat and authentication fields were removed.");
     }
 
     public static String inventory(Connection connection) throws Exception {
@@ -81,8 +83,44 @@ public final class SchemaCommand {
     }
 
     public static void assertLegacySchema(Connection connection) throws Exception {
+        assertSchema(connection, 1);
+    }
+
+    public static void assertCurrentSchema(Connection connection) throws Exception {
+        assertSchema(connection, 9);
+    }
+
+    private static int appliedVersion(Connection connection) throws SQLException {
+        try (var statement = connection.createStatement();
+                var result =
+                        statement.executeQuery(
+                                "SELECT MAX(TRY_CONVERT(int,version)) FROM dbo.flyway_schema_history WHERE success=1")) {
+            result.next();
+            return result.getInt(1);
+        }
+    }
+
+    private static void assertSchema(Connection connection, int version) throws Exception {
         var mapper = JsonMapper.builder().build();
         var expected = mapper.readTree(resource("db/inventory/legacy-schema.json"));
+        if (version >= 8) {
+            var tables = (tools.jackson.databind.node.ArrayNode) expected.path("tables");
+            for (int i = tables.size() - 1; i >= 0; i--) {
+                if (java.util.Set.of("ChatMessages", "ChatParticipants", "ChatRooms")
+                        .contains(tables.get(i).path("name").asText())) tables.remove(i);
+            }
+        }
+        if (version >= 9) {
+            for (var table : expected.path("tables")) {
+                if (table.path("name").asText().equals("Users")) {
+                    var columns = (tools.jackson.databind.node.ArrayNode) table.path("columns");
+                    for (int i = columns.size() - 1; i >= 0; i--) {
+                        if (java.util.Set.of("PasswordHash", "TwoFactorEnabled")
+                                .contains(columns.get(i).path("name").asText())) columns.remove(i);
+                    }
+                }
+            }
+        }
         var actual = mapper.readTree(inventory(connection));
         if (!expected.equals(actual)) {
             throw new IllegalStateException(

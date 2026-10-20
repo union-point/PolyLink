@@ -9,7 +9,7 @@ import org.springframework.jdbc.datasource.*;
 import org.springframework.transaction.support.TransactionTemplate;
 import tools.jackson.databind.json.JsonMapper;
 
-/** Explicit operator operations; no HTTP endpoint can invoke import or deletion replay. */
+/** Explicit operator operations; no HTTP endpoint can invoke deletion replay. */
 public final class MessengerMaintenanceCommand {
     private MessengerMaintenanceCommand() {}
 
@@ -21,11 +21,10 @@ public final class MessengerMaintenanceCommand {
 
     public static void main(String[] args) throws Exception {
         if (args.length == 0
-                || !(args[0].equals("import-group") && args.length == 4
-                        || args[0].equals("export-deletions") && args.length == 1
+                || !(args[0].equals("export-deletions") && args.length == 1
                         || args[0].equals("replay-deletions") && args.length == 2))
             throw new IllegalArgumentException(
-                    "Use import-group legacyRoomId ownerId 'Name', export-deletions, or replay-deletions ledger.json");
+                    "Use export-deletions or replay-deletions ledger.json");
         var properties = new Properties();
         properties.setProperty("databaseName", required("DB_NAME"));
         properties.setProperty("user", required("MIGRATION_DB_USERNAME"));
@@ -53,10 +52,6 @@ public final class MessengerMaintenanceCommand {
                         Clock.systemUTC());
         var groups = new GroupService(chat);
         switch (args[0]) {
-            case "import-group" ->
-                    System.out.println(
-                            groups.importLegacy(
-                                    ChatDtos.user(args[1]), ChatDtos.user(args[2]), args[3]));
             case "export-deletions" ->
                     System.out.println(
                             json.writeValueAsString(

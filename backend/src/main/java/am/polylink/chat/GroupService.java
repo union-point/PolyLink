@@ -321,50 +321,6 @@ public class GroupService {
                 });
     }
 
-    /** Operator-only import of reviewed legacy membership. Never imports plaintext bodies. */
-    public UUID importLegacy(int legacy, int owner, String name) {
-        groupName(name);
-        return chat.transaction(
-                () -> {
-                    var ids =
-                            chat.db.queryForList(
-                                    "SELECT UserId FROM dbo.ChatParticipants WHERE RoomId=? ORDER BY UserId",
-                                    Integer.class,
-                                    legacy);
-                    if (ids.size() < 2 || !ids.contains(owner)) throw AuthFailure.invalid();
-                    for (int id : ids) chat.accounts.lock(id);
-                    configured(ids);
-                    var source =
-                            Rows.query(
-                                    chat.db,
-                                    "SELECT IsGroup FROM dbo.ChatRooms WITH(UPDLOCK,HOLDLOCK) WHERE RoomId=?",
-                                    legacy);
-                    if (source.isEmpty() || !Boolean.TRUE.equals(source.getFirst().get("IsGroup")))
-                        throw AuthFailure.invalid();
-                    if (!ids.equals(
-                            chat.db.queryForList(
-                                    "SELECT UserId FROM dbo.ChatParticipants WHERE RoomId=? ORDER BY UserId",
-                                    Integer.class,
-                                    legacy))) throw conflict();
-                    var existing =
-                            Rows.query(
-                                    chat.db,
-                                    "SELECT RoomId FROM messaging.Rooms WHERE LegacyRoomId=?",
-                                    legacy);
-                    if (!existing.isEmpty())
-                        return UUID.fromString(existing.getFirst().get("RoomId").toString());
-                    UUID room = UUID.randomUUID();
-                    chat.db.update(
-                            "INSERT messaging.Rooms(RoomId,IsGroup,Closed,MembershipVersion,LastSequence,LegacyRoomId,CreatedAt) VALUES (?,1,0,1,0,?,?)",
-                            room,
-                            legacy,
-                            chat.now());
-                    chat.db.update("INSERT messaging.Groups VALUES (?,?,?,1)", room, name, owner);
-                    for (int id : ids) join(room, id, 1, 1);
-                    return room;
-                });
-    }
-
     /** Caller already holds affected accounts and room locks. No crypto is needed to revoke. */
     void depart(UUID room, int user, Map<String, Object> row) {
         long next = Math.addExact(((Number) row.get("MembershipVersion")).longValue(), 1);

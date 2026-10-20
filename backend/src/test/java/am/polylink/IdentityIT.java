@@ -301,7 +301,7 @@ class IdentityIT {
                 db.queryForObject("SELECT Id FROM dbo.Languages WHERE Code=N'en'", Integer.class);
         int user =
                 db.queryForObject(
-                        "INSERT dbo.Users(FirstName,LastName,Email,PasswordHash,RoleId,LanguageId) OUTPUT inserted.UserId VALUES (N'Legacy',N'Original',?,N'legacy-fake-verifier',?,?)",
+                        "INSERT dbo.Users(FirstName,LastName,Email,RoleId,LanguageId) OUTPUT inserted.UserId VALUES (N'Legacy',N'Original',?,?,?)",
                         Integer.class,
                         email,
                         role,

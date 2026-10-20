@@ -76,7 +76,7 @@ For an existing restored database, review its inventory against the [captured ba
   -Dexec.args=upgrade
 ```
 
-The first `upgrade` checks the legacy structure before explicitly recording the V1 baseline and applying V2. Subsequent upgrades apply pending numbered migrations and validate checksums. A schema mismatch stops the command; reconcile it before retrying rather than bypassing the baseline guard. Run `upgrade` again after pulling new migrations.
+The first `upgrade` checks the legacy structure before explicitly recording the V1 baseline and applying all pending migrations. Subsequent upgrades apply pending numbered migrations and validate checksums. A schema mismatch stops the command; reconcile it before retrying rather than bypassing the baseline guard. Run `upgrade` again after pulling new migrations.
 
 For a new installation, first create an empty database, set `DB_NAME` to that database, then run:
 
@@ -86,9 +86,9 @@ For a new installation, first create an empty database, set `DB_NAME` to that da
   -Dexec.args=fresh
 ```
 
-`fresh` refuses a nonempty database. It executes V1 and V2 without seeding users, credentials or messages. Use `upgrade` for subsequent changes. Neither starting Spring Boot nor starting/restarting the SQL Server container applies migrations.
+`fresh` refuses a nonempty database. It executes all numbered migrations without seeding users, credentials or messages. Use `upgrade` for subsequent changes. Neither starting Spring Boot nor starting/restarting the SQL Server container applies migrations.
 
-To add a migration, create the next unused version under `src/main/resources/db/migration/`, for example `V3__describe_the_change.sql`. Coordinate version numbers before merging; do not edit already applied migrations. Verify with `./mvnw -Pdatabase-tests verify` using the test credentials below. See the [schema workflow](../docs/messenger/schema-and-migrations.md) for baseline details and transaction rules.
+To add a migration, create the next unused version under `src/main/resources/db/migration/`. Coordinate version numbers before merging; do not edit already applied migrations. Verify with `./mvnw -Pdatabase-tests verify` using the test credentials below. See the [schema workflow](../docs/messenger/schema-and-migrations.md) for baseline details and transaction rules.
 
 M0 migrations were verified only in disposable test databases, including a restore of the May backup. The working `polylink` database was left at its original 27-table schema. V2 adds the `auth`, `keyvault` and `messaging` structures when an explicit upgrade is run; it preserves the legacy tables and data.
 
@@ -108,4 +108,6 @@ M1 authentication and backed-up client key setup are available behind `IDENTITY_
 
 M3 requires explicit V4 migration before starting the new backend. It adds independent access-token records and atomic password changes while preserving vault/identity/service copies. Use **Settings → Password** and see [M3 session/password acceptance](../docs/messenger/m3.md). The complete disposable test run is `python3 tools/m1/verify.py --continuity` from the repository root.
 
-M6 requires explicit **V7** migration. It adds user-created groups, owner/member controls, sequence-bounded membership intervals, own-message/image export and account deactivation/deletion. Use **Messages → Create group** or **Group members**. Existing encrypted groups receive deterministic ownership; legacy plaintext stays separate. Operator-only legacy group import and deletion-ledger replay are documented in [M6 deployment and acceptance](../docs/messenger/m6.md). Run `python3 tools/m1/verify.py --groups` from the root for the complete M1–M6 regression suite, or `--groups-only` for focused M6/M5 SQL and both M6 browser providers.
+M6 requires explicit **V7** migration. It adds user-created groups, owner/member controls, sequence-bounded membership intervals, own-message/image export and account deactivation/deletion. Use **Messages → Create group** or **Group members**. Existing encrypted groups receive deterministic ownership; legacy plaintext stays separate. V8 removes the obsolete dbo chat tables, legacy-room mapping and group import; apply it with the matching backend while application access is stopped, after taking a verified backup. Deletion-ledger replay is documented in [M6 deployment and acceptance](../docs/messenger/m6.md). Run `python3 tools/m1/verify.py --groups` from the root for the complete M1–M6 regression suite, or `--groups-only` for focused M6/M5 SQL and both M6 browser providers.
+
+V9 retires `dbo.Users.PasswordHash` and `TwoFactorEnabled`. Apply it explicitly with `SchemaCommand upgrade` after a verified safety backup and with application access stopped; use the matching V9 backend afterwards. Enrollment and account deletion no longer write these fields. Current login verifiers, second-factor settings, sessions and vaults remain in `auth`/`keyvault`; legacy values are discarded without being imported. Fresh installs run V1–V9, and existing V8 databases upgrade normally. See the [schema workflow](../docs/messenger/schema-and-migrations.md).

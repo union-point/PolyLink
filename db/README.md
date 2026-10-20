@@ -114,7 +114,7 @@ cd ../backend
   -Dexec.args=upgrade
 ```
 
-Use `upgrade` for an existing restored database and subsequent numbered migrations. Use `fresh` only after creating a new empty database and selecting it through `DB_NAME`; it refuses existing tables. V2 adds the messenger schemas while preserving legacy data. New migration files belong in `backend/src/main/resources/db/migration/`, not `db/scripts/legacy/`.
+Use `upgrade` for an existing restored database and subsequent numbered migrations. Use `fresh` only after creating a new empty database and selecting it through `DB_NAME`; it refuses existing tables. V2 adds the messenger schemas; V8 subsequently removes the obsolete dbo chat tables and legacy-room mapping while retaining encrypted messenger data. Apply V8 with the matching backend while application access is stopped, after taking a verified safety backup. New migration files belong in `backend/src/main/resources/db/migration/`, not `db/scripts/legacy/`.
 
 ## Local JDK used during setup
 
@@ -130,3 +130,11 @@ This is specific to this laptop. Other developers can use their existing full JD
 ## CI
 
 The backend workflow runs Compose from `db/` on a disposable Linux runner, tests JDBC behavior and creates separate uniquely named databases for fresh/upgrade/drift migration checks. It does not use this laptop's volume or require the local backups. Explicit migration commands and the captured legacy schema are documented in the [M0 schema workflow](../docs/messenger/schema-and-migrations.md); application startup still does not migrate a database.
+
+## V8 local chat retirement
+
+On 20 October 2026, the working `polylink` database was upgraded from V7 to V8. `dbo.ChatMessages` (55 obsolete plaintext messages), `dbo.ChatParticipants`, `dbo.ChatRooms` and the `messaging.Rooms.LegacyRoomId` mapping were removed. All data in the 49 retained application tables, including 65 encrypted messages, was checked against a restored rehearsal copy; DBCC CHECKDB passed. The verified pre-upgrade COPY_ONLY/CHECKSUM backup is `backups/polylink-before-v8-20261020.bak`, copied out of Docker storage and ignored by Git. It still contains the old plaintext. Use the V8-compatible backend after this upgrade. See the [migration acceptance record](../docs/messenger/schema-and-migrations.md).
+
+## V9 local authentication-field retirement
+
+On 20 October 2026, working `polylink` was upgraded from V8 to V9 while the backend was stopped. `dbo.Users.PasswordHash` and `TwoFactorEnabled`, including the old factor default, were removed. Current `auth.AccountSecurity` verifiers, factor settings, credentials, sessions and keyvault data remain unchanged. All retained columns across 49 application tables matched a verified restored copy, including 66 encrypted messages; DBCC CHECKDB passed. The updated backend was restarted with its previous configuration; after starting its configured local Mailpit service, health returned HTTP 200 / UP. The verified offline safety backup is `backups/polylink-before-v9-offline-20261020.bak`, copied outside Docker storage and ignored by Git. Use the V9-compatible backend after upgrading.
