@@ -67,7 +67,7 @@ try{
     await ready(p,'settings.html');await p.locator('#edit-password-btn').waitFor();
     await p.locator('[data-setting="language"]').selectOption('ru');
     await p.waitForFunction(async()=>{const {settings}=await import('/js/services/index.js');return (await settings.get()).language==='ru';});
-    await p.reload();await p.locator('#edit-password-btn').waitFor();assert.equal(await p.locator('[data-setting="language"]').inputValue(),'ru');
+    await p.reload();await p.waitForFunction(()=>document.querySelector('[data-setting="language"]')?.value==='ru'&&!document.querySelector('main')?.inert);assert.equal(await p.locator('[data-setting="language"]').inputValue(),'ru');
     await p.locator('[data-setting="isProfilePublic"]').selectOption('closed');
     await p.waitForFunction(async()=>{const {settings}=await import('/js/services/index.js');return !(await settings.get()).isProfilePublic;});
     await p.locator('[data-setting="isProfilePublic"]').selectOption('open');

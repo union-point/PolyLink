@@ -61,6 +61,22 @@ class IdentityIT {
         var user = enroll("graduate");
         var peer = enroll("lecturer");
         var b = user.browser;
+        var other = new Browser();
+        assertThat(
+                        other.post(
+                                        "/auth/login",
+                                        Map.of(
+                                                "email",
+                                                user.email,
+                                                "scheme",
+                                                "PLK1",
+                                                "loginSecret",
+                                                user.secret))
+                                .statusCode())
+                .isEqualTo(200);
+        var publicProfile = peer.browser.json(peer.browser.get("/users/" + user.id));
+        assertThat(publicProfile.has("email")).isFalse();
+        assertThat(publicProfile.has("emailFactorEnabled")).isFalse();
         assertThat(b.get("/settings").statusCode()).isEqualTo(200);
         assertThat(b.call("PATCH", "/settings", Map.of("twoFactorEnabled", true)).statusCode())
                 .isEqualTo(400);
@@ -113,6 +129,7 @@ class IdentityIT {
                                 .statusCode())
                 .isEqualTo(200);
         assertThat(b.get("/auth/me").statusCode()).isEqualTo(200);
+        assertThat(other.get("/auth/me").statusCode()).isEqualTo(200);
         assertThat(
                         db.queryForObject(
                                 "SELECT Email FROM dbo.Users WHERE UserId=?",
@@ -143,6 +160,27 @@ class IdentityIT {
                         "/account/export/authorize",
                         Map.of("loginSecret", user.secret, "expectedCredential", version));
         assertThat(grant.statusCode()).isEqualTo(200);
+        assertThat(b.get("/account/export/data?category=profile").statusCode()).isEqualTo(401);
+        b.exportGrant = b.json(grant).path("grant").asText();
+        for (String category :
+                List.of(
+                        "profile",
+                        "settings",
+                        "education",
+                        "certificates",
+                        "workExperience",
+                        "posts",
+                        "comments",
+                        "topics",
+                        "replies")) {
+            var exported = b.get("/account/export/data?category=" + category);
+            assertThat(exported.statusCode()).as(exported.body()).isEqualTo(200);
+            assertThat(exported.body()).doesNotContain(user.secret);
+        }
+        db.update(
+                "UPDATE auth.ExportGrants SET ExpiresAt=? WHERE UserId=?",
+                OffsetDateTime.now().minusSeconds(1),
+                user.id);
         assertThat(b.get("/account/export/data?category=profile").statusCode()).isEqualTo(401);
     }
 
@@ -737,6 +775,7 @@ class IdentityIT {
     class Browser {
         final Map<String, String> cookies = new LinkedHashMap<>();
         String access;
+        String exportGrant;
         boolean csrf = true;
         HttpResponse<String> last;
         List<String> cookieHeaders = List.of();
@@ -756,6 +795,7 @@ class IdentityIT {
         HttpResponse<String> call(String method, String path, Object body) throws Exception {
             var request = HttpRequest.newBuilder(URI.create(url(path))).header("Origin", ORIGIN);
             if (access != null) request.header("Authorization", "Bearer " + access);
+            if (exportGrant != null) request.header("X-Export-Grant", exportGrant);
             if (!cookies.isEmpty())
                 request.header(
                         "Cookie",
