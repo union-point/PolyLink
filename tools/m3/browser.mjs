@@ -1,3 +1,4 @@
+import { waitForAsync } from '../m1/browser-wait.mjs';
 import { isolateDecorativeAssets } from '../m1/browser-assets.mjs';
 import { chromium } from '../m1/node_modules/playwright/index.mjs';
 import assert from 'node:assert/strict';
@@ -73,9 +74,9 @@ try{
     await p.reload();await p.waitForFunction(()=>document.querySelector('[data-setting="language"]')?.value==='ru'&&typeof document.querySelector('[data-setting="language"]')?.onchange==='function');
     assert.equal(await p.locator('[data-setting="language"]').inputValue(),'ru');
     await p.locator('[data-setting="isProfilePublic"]').selectOption('closed');
-    await p.waitForFunction(async()=>{const {settings}=await import('/js/services/index.js');return !(await settings.get()).isProfilePublic;});
+    await waitForAsync(p,async()=>{const {settings}=await import('/js/services/index.js');return !(await settings.get()).isProfilePublic;});
     await p.locator('[data-setting="isProfilePublic"]').selectOption('open');
-    await p.waitForFunction(async()=>{const {settings}=await import('/js/services/index.js');return (await settings.get()).isProfilePublic;});
+    await waitForAsync(p,async()=>{const {settings}=await import('/js/services/index.js');return (await settings.get()).isProfilePublic;});
     const exportDownload=p.waitForEvent('download');await p.locator('#download-data-btn').click();
     const exportForm=p.locator('#download-data-btn').locator('..').locator('form');await exportForm.locator('input[type=password]').fill(oldPassword);await exportForm.locator('button[type=submit]').click();
     const archive=await exportDownload;assert.equal(archive.suggestedFilename(),'polylink-data.zip');
@@ -88,8 +89,8 @@ try{
     await p.locator('#edit-password-btn').click();await p.locator('#old-password').fill(oldPassword);await p.locator('#new-password').fill(newPassword);await p.locator('#confirm-password').fill(newPassword);await p.locator('#save-password-btn').click();
     await p.locator('[data-inline-verification]').waitFor({timeout:30000});assert(lost);assert.equal(commits,2);
     await p.locator('[data-inline-verification] input').fill(await proof());await p.locator('[data-inline-verification] button').first().click();
-    await p.waitForFunction(async()=>{const {auth}=await import('/js/services/index.js');const u=await auth.me();return u&&!u.cryptoLocked&&!document.querySelector('[data-inline-verification]');});
-    await tab.reload();await tab.waitForFunction(async()=>{const {auth}=await import('/js/services/index.js');const u=await auth.me();return u&&!u.cryptoLocked;});
+    await waitForAsync(p,async()=>{const {auth}=await import('/js/services/index.js');const u=await auth.me();return u&&!u.cryptoLocked&&!document.querySelector('[data-inline-verification]');});
+    await tab.reload();await waitForAsync(tab,async()=>{const {auth}=await import('/js/services/index.js');const u=await auth.me();return u&&!u.cryptoLocked;});
     assert((await messages(p)).some(m=>m.text==='M2 secret text — Բարեւ 👋'));assert(!(await user(tab)).cryptoLocked);
     assert.equal(await user(op),null,'Other browser sessions must be revoked');await other.close();
     const oldResult=await p.evaluate(async({email,password})=>{const {auth}=await import('/js/services/index.js');try{await auth.login({email,password});return 'unexpected';}catch(e){return e.code;}},{email,password:oldPassword});assert.equal(oldResult,'UNAUTHORIZED');

@@ -1,3 +1,4 @@
+import { waitForAsync } from '../m1/browser-wait.mjs';
 import assert from 'node:assert/strict';
 import {origin,api,password,email,contexts,errors,payloads,sends,context,proof,call,chat,image,downloadCode} from './browser-support.mjs';
 try{
@@ -19,9 +20,9 @@ try{
   await chat(a.p,'send',room,{text:'M6 secret before addition'});await a.p.locator('.message-input input').fill('M6 draft survives membership changes');
   await a.p.locator('.menu-btn').click();await a.p.getByRole('button',{name:'Group members',exact:false}).click();
   await dialog.getByRole('searchbox',{name:'Find people'}).fill('M6 User4');await dialog.getByRole('button',{name:'Add member',exact:true}).click();await dialog.getByRole('status').filter({hasText:'must finish encrypted account setup'}).waitFor();assert.equal((await chat(a.p,'participants',room)).participants.length,2);
-  await dialog.getByRole('searchbox',{name:'Find people'}).fill('M6 User3');await dialog.getByRole('button',{name:'Add member',exact:true}).click();await a.p.waitForFunction(async room=>{const {chat}=await import('/js/services/index.js');return (await chat.participants(room)).participants.length===3;},room);
+  await dialog.getByRole('searchbox',{name:'Find people'}).fill('M6 User3');await dialog.getByRole('button',{name:'Add member',exact:true}).click();await waitForAsync(a.p,async room=>{const {chat}=await import('/js/services/index.js');return (await chat.participants(room)).participants.length===3;},room);
   await dialog.getByRole('textbox',{name:'Group name'}).fill('M6 renamed group');await dialog.getByRole('button',{name:'Save name',exact:true}).click();
-  await a.p.waitForFunction(async room=>{const {chat}=await import('/js/services/index.js');return (await chat.participants(room)).name==='M6 renamed group';},room);
+  await waitForAsync(a.p,async room=>{const {chat}=await import('/js/services/index.js');return (await chat.participants(room)).name==='M6 renamed group';},room);
   await a.p.waitForFunction(()=>[...document.querySelectorAll('.group-dialog button')].some(button=>button.textContent==='Close'&&!button.disabled));
   if(process.env.M6_SCREENSHOT)await a.p.screenshot({path:process.env.M6_SCREENSHOT});
   await dialog.getByRole('button',{name:'Close',exact:true}).click();assert.equal(await a.p.locator('.message-input input').inputValue(),'M6 draft survives membership changes');
@@ -31,7 +32,7 @@ try{
   let lost=false;await a.ctx.route(api+`/chat/rooms/${room}/participants/${bu}`,async route=>{if(route.request().method()==='DELETE'&&!lost){const response=await route.fetch();assert.equal(response.status(),200);lost=true;await route.abort('failed');}else await route.continue();});
   await assert.rejects(chat(a.p,'removeParticipant',room,bu));assert(lost);await a.ctx.close();
   await assert.rejects(chat(b.p,'messages',room));await c.p.goto(origin+'/message.html?room='+room);
-  await c.p.waitForFunction(async room=>{const {chat}=await import('/js/services/index.js');return (await chat.participants(room)).keySnapshot.keyState==='ready';},room);
+  await waitForAsync(c.p,async room=>{const {chat}=await import('/js/services/index.js');return (await chat.participants(room)).keySnapshot.keyState==='ready';},room);
   const back=await context(1);const receipt=await chat(back.p,'removeParticipant',room,bu);assert.equal(receipt.membershipVersion,'3');
   await chat(back.p,'addParticipant',room,bu);assert.equal((await chat(b.p,'messages',room)).length,0);assert.equal(await downloadCode(b.p,oldImage.attachmentId),'NOT_FOUND');
   const replay=await b.p.evaluate(async({room,request})=>{const {loadTransport}=await import('/js/data/http/transport.js');const api=await loadTransport();await api.restore();try{await api.request({method:'post',url:`/chat/rooms/${room}/messages`,data:request});return 'allowed';}catch(e){return e.code;}},{room,request:oldRequest});assert.equal(replay,'NOT_FOUND');

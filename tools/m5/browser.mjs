@@ -1,3 +1,4 @@
+import { waitForAsync } from '../m1/browser-wait.mjs';
 import { isolateDecorativeAssets } from '../m1/browser-assets.mjs';
 import { chromium } from '../m1/node_modules/playwright/index.mjs';
 import assert from 'node:assert/strict';
@@ -39,14 +40,14 @@ try{
     const room=(await chat(a.p,'openDirect',bu.id)).id;
     await a.p.evaluate(async room=>{const {chat}=await import('/js/services/index.js');for(let i=0;i<125;i++)await chat.send(room,{text:`M5 history ${String(i).padStart(3,'0')}`});},room);
     await b.p.goto(origin+'/message.html?room='+room);await b.p.locator('.message').last().waitFor();assert.equal(await b.p.locator('.message').count(),50);
-    await b.p.waitForFunction(async room=>{const {chat}=await import('/js/services/index.js');return (await chat.list()).find(r=>r.id===room)?.lastReadSequence==='125';},room);
+    await waitForAsync(b.p,async room=>{const {chat}=await import('/js/services/index.js');return (await chat.list()).find(r=>r.id===room)?.lastReadSequence==='125';},room);
     const before=await b.p.evaluate(()=>{const h=document.querySelector('.messages');h.scrollTop=0;const n=h.querySelector('.message');return {id:n.dataset.messageId,offset:n.getBoundingClientRect().top-h.getBoundingClientRect().top};});
     await b.p.waitForFunction(()=>document.querySelectorAll('.message').length===100);const after=await anchor(b.p,before.id);assert.equal(after.id,before.id);assert(Math.abs(after.offset-before.offset)<3,'Prepending must preserve the old first visible message');
     await b.p.locator('[data-load-earlier]').click();await b.p.waitForFunction(()=>document.querySelectorAll('.message').length===125);
     const anchored=await anchor(b.p);await chat(a.p,'send',room,{text:'M5 incoming while reading old history'});await b.p.locator('[data-new-messages]').waitFor({state:'visible',timeout:15000});
     const stable=await anchor(b.p);assert.equal(stable.id,anchored.id);assert(Math.abs(stable.offset-anchored.offset)<3);assert(!reads.includes('126'),'An off-screen arrival must not be acknowledged');
     assert.equal((await chat(b.p,'list')).find(r=>r.id===room).unreadCount,'1');await b.p.locator('[data-new-messages]').click();
-    await b.p.waitForFunction(async room=>{const {chat}=await import('/js/services/index.js');return (await chat.list()).find(r=>r.id===room)?.lastReadSequence==='126';},room);
+    await waitForAsync(b.p,async room=>{const {chat}=await import('/js/services/index.js');return (await chat.list()).find(r=>r.id===room)?.lastReadSequence==='126';},room);
     await b.p.getByRole('button',{name:'Search loaded history',exact:true}).click();await b.p.getByRole('searchbox',{name:'Search loaded history only'}).fill('M5 history 000');await b.p.waitForFunction(()=>document.querySelectorAll('.message').length===1);
     await b.p.getByRole('button',{name:'Search loaded history',exact:true}).click();
     const input=b.p.locator('.message-input input');await input.fill('M5 compose survives a polling failure');
@@ -74,7 +75,7 @@ try{
     const group=(await chat(a.p,'list')).find(r=>r.isGroup);assert(group);await chat(a.p,'send',group.id,{text:'M5 group ignores direct blocks'});assert((await chat(b.p,'messages',group.id)).some(m=>m.text==='M5 group ignores direct blocks'));
     await b.p.goto(origin+'/message.html?room='+group.id);await b.p.locator('.messages').getByText('M5 group ignores direct blocks',{exact:false}).first().waitFor();assert(await b.p.locator('.message-input input').isEnabled());
     await chat(b.p,'block',au.id,false);await b.p.goto(origin+'/message.html?room='+room);await b.p.locator('.message').last().waitFor();await b.p.locator('.menu-btn').click();await b.p.locator('.chat-dropdown-item').filter({hasText:'Ջնջել նամակագրությունը'}).click();await b.p.locator('[data-confirm-yes]').click();
-    await b.p.waitForFunction(async room=>{const {chat}=await import('/js/services/index.js');return !(await chat.list()).some(r=>r.id===room);},room);assert.equal(await downloadCode(b.p,attachment.id),'NOT_FOUND');assert.equal(await downloadCode(a.p,attachment.id),'allowed');
+    await waitForAsync(b.p,async room=>{const {chat}=await import('/js/services/index.js');return !(await chat.list()).some(r=>r.id===room);},room);assert.equal(await downloadCode(b.p,attachment.id),'NOT_FOUND');assert.equal(await downloadCode(a.p,attachment.id),'allowed');
     await chat(a.p,'send',room,{text:'M5 incoming reopens a hidden conversation'});await b.p.locator(`.chat-item[data-room-id="${room}"]`).waitFor({timeout:15000});await b.p.locator(`.chat-item[data-room-id="${room}"]`).click();await b.p.locator('.messages').getByText('M5 incoming reopens a hidden conversation',{exact:false}).first().waitFor();assert.equal(await b.p.locator('.message').count(),1);assert.equal(await downloadCode(b.p,attachment.id),'NOT_FOUND');
     assert(!payloads.some(body=>body.includes('M5 history ')||body.includes('M5 incoming ')||body.includes('private-image-name.png')));assert.equal(errors.length,0,errors.join('\n'));
     console.log('M5 HTTP browser acceptance passed: paginated anchors, visible acknowledgements, polling failure, image types/size, durable upload/send retries, private downloads, mute, blocks, groups and hide/reopen.');

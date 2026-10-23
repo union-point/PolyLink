@@ -1,3 +1,4 @@
+import { waitForAsync } from '../m1/browser-wait.mjs';
 import { isolateDecorativeAssets } from '../m1/browser-assets.mjs';
 import { chromium } from '../m1/node_modules/playwright/index.mjs';
 import assert from 'node:assert/strict';
@@ -57,7 +58,7 @@ try{
   if(phase!=='local'){
     const direct=rooms.find(r=>!r.isGroup);assert((await chat('messages',direct.id)).some(m=>m.text==='M2 secret text — Բարեւ 👋'));
     // Both peers remain offline. Merely opening/listing history must rotate future epochs.
-    await p.waitForFunction(async()=>{const {chat}=await import('/js/services/index.js');const rooms=await chat.list();return rooms.every(r=>!r.canSend||r.keySnapshot.keyState==='ready');},{},{timeout:15000});
+    await waitForAsync(p,async()=>{const {chat}=await import('/js/services/index.js');const rooms=await chat.list();return rooms.every(r=>!r.canSend||r.keySnapshot.keyState==='ready');},{},{timeout:15000});
     await chat('send',direct.id,{text:'M4 post-recovery future text'});await chat('send',group.id,{text:'M4 post-recovery group text'});
     const forbidden=await p.evaluate(async()=>{const {auth}=await import('/js/services/index.js');const op=await auth.recoveryStatus();const {loadTransport}=await import('/js/data/http/transport.js');try{await(await loadTransport()).request({method:'post',url:'/auth/recovery/unlock',data:{operationId:op.operationId}});return false;}catch(e){return e.code==='REVISION_CONFLICT';}});assert(forbidden);
   }
