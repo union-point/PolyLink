@@ -1,7 +1,7 @@
 import { auth } from './services/index.js';
 import { clearWorkflow } from './services/workflow.js';
 import { start, bootstrap, pending } from './shared/ui.js';
-import { initializePasswordControls, finishLogin, inlineCode } from './shared/auth-ui.js';
+import { initializePasswordControls, finishLogin } from './shared/auth-ui.js';
 
 start(async () => {
   await bootstrap({ protectedPage: false });
@@ -13,9 +13,7 @@ start(async () => {
     event.preventDefault();
     pending(form.querySelector('[type="submit"]'), form, async () => {
       clearWorkflow();
-      let result = await auth.login({ email: document.getElementById('email').value, password: document.getElementById('password').value });
-      document.getElementById('password').value = '';
-      if (result.status === 'challenge' && result.expiresAt && typeof result.expiresAt === 'string') result = await inlineCode(auth, result, 'LOGIN', form);
+      const result = await auth.login({ email: document.getElementById('email').value, password: document.getElementById('password').value, persistChallenge: true });
       document.getElementById('password').value = '';
       finishLogin(result);
     });

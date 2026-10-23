@@ -1,6 +1,6 @@
 import { createRecoveryClient } from './recovery-client.js';
 import { sodium, derive, seal, open, aad } from '../crypto/sodium.js';
-import { saveDevice, openDevice, clearDevice } from '../crypto/device-store.js';
+import { saveDevice, openDevice, clearDevice, saveLoginChallenge, loadLoginChallenge, clearLoginChallenge } from '../crypto/device-store.js';
 import { outboxStore } from '../crypto/outbox-store.js';
 import { validatePassword } from './password-policy.js';
 import { DataError } from '../data/errors.js';
@@ -17,6 +17,7 @@ export function createIdentityClient(api){
   function forgetPending(){pending?.derived.login.fill(0);pending?.derived.wrapping.fill(0);pending=null;changing=false;transitionUser=null;}
   async function clear(expected=session){
     forget();forgetPending();api.setToken(null);session=null;
+    await clearLoginChallenge().catch(()=>{});
     await clearDevice(expected?.user.id,expected).catch(()=>{});
     await outboxStore.clear(expected?.user.id).catch(()=>{});
   }
@@ -79,7 +80,7 @@ export function createIdentityClient(api){
       if(acceptedRevision!==revision){await clearDevice(acceptedSession.user.id,acceptedSession).catch(()=>{});throw changed();}
       api.beginSession();channel?.postMessage({operation:'auth.login',account:session.user.id,versions:session.versions});emit('auth.login');
       return {status:'authenticated',user:user(),storageUnavailable};
-    }finally{derived.login.fill(0);derived.wrapping.fill(0);pending=null;changing=false;transitionUser=null;}
+    }finally{derived.login.fill(0);derived.wrapping.fill(0);pending=null;changing=false;transitionUser=null;await clearLoginChallenge().catch(()=>{});}
   }
   const recovery=createRecoveryClient(api,{
     readVault,
@@ -102,19 +103,25 @@ export function createIdentityClient(api){
   });
   const client={
     ...recovery,
-    async login({email,password}){
+    async login({email,password,persistChallenge=false}){
       if(pending){pending.derived.login.fill(0);pending.derived.wrapping.fill(0);pending=null;}
+      await clearLoginChallenge();
       const attemptRevision=revision;const settings=await post('/auth/parameters',{email});const derived=await derive(password,settings),s=await sodium();
       try{
         return await transition(async()=>{
         if(attemptRevision!==revision)throw changed();
         const result=await post('/auth/login',{email,scheme:'PLK1',loginSecret:s.to_base64(derived.login,s.base64_variants.URLSAFE_NO_PADDING)});
-        if(result.status==='challenge'){pending={derived,settings,challenge:result.challenge};return {status:'challenge',...result.challenge};}
+        if(result.status==='challenge'){
+          const attempt={derived,settings,challenge:result.challenge,persisted:persistChallenge};
+          if(persistChallenge)await saveLoginChallenge(attempt);
+          pending=attempt;return {status:'challenge',...result.challenge};
+        }
         return await complete(result,derived,settings);
         });
       }catch(error){if(!pending){derived.login.fill(0);derived.wrapping.fill(0);}throw error;}
     },
     async verifySecondFactor({challengeId,code}){
+      if(!pending)pending=await loadLoginChallenge(challengeId);
       if(!pending||pending.challenge.challengeId!==challengeId)throw new DataError('UNAUTHORIZED','Start signing in again.');
       return transition(async()=>{const attempt=pending;const result=await post('/auth/login/verify',{challengeId,code});return complete(result,attempt.derived,attempt.settings);});
     },
@@ -128,7 +135,10 @@ export function createIdentityClient(api){
     async verifyEmail({challengeId,code}){return post('/auth/email/verify',{challengeId,code});},
     async resendChallenge(input){
       const challengeId=typeof input==='string'?input:input.challengeId;
-      const result=await post('/auth/challenges/resend',{challengeId});if(pending)pending.challenge=result;return result;
+      if(!pending)pending=await loadLoginChallenge(challengeId);
+      const result=await post('/auth/challenges/resend',{challengeId});
+      if(pending){pending.challenge=result;if(pending.persisted)await saveLoginChallenge(pending);}
+      return result;
     },
     async me(){
       if(api.isLoggedOut()){if(session)await clear();return null;}
@@ -234,6 +244,7 @@ export function createIdentityClient(api){
       api.markLoggedOut?.();
       if(!api.markLoggedOut){try{localStorage.setItem('polylink.http.loggedOut','true');}catch{}}
       const previous=session;forget();forgetPending();session=null;
+      await clearLoginChallenge().catch(()=>{});
       channel?.postMessage({operation:'auth.logout'});emit('auth.logout');
       return transition(async()=>{
         await clearDevice(previous?.user.id).catch(()=>{});await outboxStore.clear(previous?.user.id).catch(()=>{});
