@@ -528,3 +528,104 @@ body {
         font-size: 13px;
     }
 }
+/* Sensitive actions stay inside their setting row, using the shared form palette. */
+.settings-item.has-inline-form {
+    flex-wrap: wrap;
+    gap: 16px;
+}
+.settings-inline-form {
+    flex: 0 0 100%;
+    min-width: 0;
+    box-sizing: border-box;
+    display: flex;
+    align-items: flex-end;
+    gap: 16px;
+    padding: 18px;
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    background: var(--form-bg);
+}
+.settings-inline-label {
+    display: grid;
+    gap: 8px;
+    flex: 1;
+    min-width: 0;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--font-color-primary);
+}
+.settings-inline-actions {
+    display: flex;
+    gap: 10px;
+    flex-shrink: 0;
+}
+.settings-inline-actions button {
+    min-height: 44px;
+    border-radius: 10px;
+    font-size: 14px;
+    white-space: nowrap;
+}
+.form-input:focus-visible {
+    outline: 2px solid var(--primary-blue);
+    outline-offset: 2px;
+}
+.settings-inline-actions button:focus-visible,
+.toggle-switch input:focus-visible + .toggle-slider {
+    outline: 2px solid var(--primary-blue);
+    outline-offset: 4px;
+}
+.toggle-switch {
+    flex-shrink: 0;
+}
+.toggle-switch input:disabled + .toggle-slider {
+    opacity: .55;
+    cursor: wait;
+}
+.browser-notification-setting {
+    gap: 20px;
+    flex-wrap: wrap;
+}
+.browser-notification-setting > [data-status] {
+    flex-basis: 100%;
+}
+.settings-delivery-note {
+    margin-top: 16px;
+    font-size: 13px;
+    line-height: 1.6;
+    color: var(--font-color-secondary);
+}
+@media (max-width: 768px) {
+    .settings-inline-form {
+        width: 100%;
+        flex-direction: column;
+        align-items: stretch;
+        padding: 16px;
+    }
+    .settings-inline-actions > button {
+        width: auto;
+        flex: 1;
+    }
+    .browser-notification-setting {
+        flex-direction: row;
+        align-items: center;
+    }
+}
+.settings-item > [data-status]:empty {
+    display: none;
+}
+.settings-item.has-inline-form > [data-status] {
+    flex-basis: 100%;
+}
+.settings-inline-form .form-input {
+    background: var(--card-background);
+    color: var(--font-color-primary);
+    border: 1px solid var(--border-color);
+}
+.settings-inline-form .form-input:focus {
+    outline: 2px solid var(--button-bg);
+    outline-offset: 2px;
+}
+.settings-inline-actions .btn-cancel {
+    background: var(--card-background);
+    color: var(--font-color-secondary);
+}

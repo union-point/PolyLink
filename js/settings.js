@@ -27,11 +27,16 @@ start(async () => {
     };
   });
   const {browserNotificationsEnabled,enableBrowserNotifications}=await import('./shared/browser-notifications.js');
-  const browserRow=document.createElement('div');browserRow.className='settings-item';
-  const browserLabel=document.createElement('label');browserLabel.textContent='Ծանուցումներ այս դիտարկիչում';
-  const browserToggle=document.createElement('input');browserToggle.type='checkbox';browserToggle.checked=browserNotificationsEnabled(user.id);browserLabel.append(browserToggle);browserRow.append(browserLabel);
+  const browserRow=document.createElement('div');browserRow.className='settings-item browser-notification-setting';
+  const browserInfo=document.createElement('div');browserInfo.className='settings-item-info';
+  const browserTitle=document.createElement('h3');browserTitle.id='browser-notifications-title';browserTitle.textContent='Ծանուցումներ այս դիտարկիչում';
+  const browserDescription=document.createElement('p');browserDescription.id='browser-notifications-description';browserDescription.className='settings-item-description';browserDescription.textContent='Ստանալ ծանուցումներ, երբ կայքը բաց է այս դիտարկիչում։';
+  browserInfo.append(browserTitle,browserDescription);
+  const browserLabel=document.createElement('label');browserLabel.className='toggle-switch';
+  const browserToggle=document.createElement('input');browserToggle.type='checkbox';browserToggle.id='browser-notifications-toggle';browserToggle.setAttribute('aria-labelledby',browserTitle.id);browserToggle.setAttribute('aria-describedby',browserDescription.id);browserToggle.checked=browserNotificationsEnabled(user.id);
+  const browserSlider=document.createElement('span');browserSlider.className='toggle-slider';browserSlider.setAttribute('aria-hidden','true');browserLabel.append(browserToggle,browserSlider);browserRow.append(browserInfo,browserLabel);
   document.querySelector('[data-setting="emailEnabled"]').closest('section').append(browserRow);
-  const deliveryNotice=document.createElement('p');deliveryNotice.textContent='Հայտարարությունների և ֆորումի ծանուցումները հասանելի կլինեն այդ բաժինների սերվերային միացումից հետո։';browserRow.after(deliveryNotice);
+  const deliveryNotice=document.createElement('p');deliveryNotice.className='settings-delivery-note';deliveryNotice.textContent='Հայտարարությունների և ֆորումի ծանուցումները հասանելի կլինեն այդ բաժինների սերվերային միացումից հետո։';browserRow.after(deliveryNotice);
   browserToggle.onchange=async()=>{const wanted=browserToggle.checked;browserToggle.disabled=true;await pending(null,browserRow,()=>enableBrowserNotifications(user.id,wanted));browserToggle.checked=browserNotificationsEnabled(user.id);browserToggle.disabled=false;};
   const themeButtons = [...document.querySelectorAll('.theme-btn')];
   function updateThemes() {

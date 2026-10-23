@@ -1,15 +1,18 @@
 // Inline sensitive-action inputs; passwords are cleared immediately after use.
 export function requestPassword(container) {
   return new Promise((resolve,reject)=>{
-    const form=document.createElement('form');
+    const form=document.createElement('form');form.className='settings-inline-form';container.classList.add('has-inline-form');
     const label=document.createElement('label');label.textContent='Ընթացիկ գաղտնաբառ';
-    const input=document.createElement('input');input.type='password';input.autocomplete='current-password';input.required=true;label.append(input);
-    const submit=document.createElement('button');submit.type='submit';submit.textContent='Հաստատել';
-    const cancel=document.createElement('button');cancel.type='button';cancel.textContent='Չեղարկել';
-    const close=()=>{input.value='';form.remove();};
+    const input=document.createElement('input');input.type='password';input.autocomplete='current-password';input.required=true;input.className='form-input';input.placeholder='Մուտքագրեք ընթացիկ գաղտնաբառը';label.className='settings-inline-label';label.append(input);
+    const submit=document.createElement('button');submit.type='submit';submit.className='btn-primary';submit.textContent='Հաստատել';
+    const cancel=document.createElement('button');cancel.type='button';cancel.className='btn-cancel';cancel.textContent='Չեղարկել';
+    const previousFocus=document.activeElement;
+    const close=()=>{input.value='';form.remove();container.classList.remove('has-inline-form');if(previousFocus?.isConnected)previousFocus.focus();};
     cancel.onclick=()=>{close();reject(new Error('Գործողությունը չեղարկված է'));};
     form.onsubmit=event=>{event.preventDefault();const value=input.value;close();resolve(value);};
-    form.append(label,submit,cancel);container.append(form);input.focus();
+    const actions=document.createElement('div');actions.className='settings-inline-actions';actions.append(cancel,submit);
+    form.onkeydown=event=>{if(event.key==='Escape'){event.preventDefault();cancel.click();}};
+    form.append(label,actions);container.append(form);input.focus();
   });
 }
 export function verifyEmailChange(settings,initial,container){
