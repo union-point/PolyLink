@@ -5,6 +5,7 @@ const table=Uint32Array.from({length:256},(_,i)=>{for(let n=0;n<8;n++)i=i&1?0xed
 function crc32(bytes){let crc=0xffffffff;for(const byte of bytes)crc=table[(crc^byte)&255]^(crc>>>8);return (crc^0xffffffff)>>>0;}
 // ZIP STORE entries keep archive creation dependency-free and bound to the export cap.
 export function zip(files){
+  if(files.length>65535)throw new DataError('EXPORT_TOO_LARGE','Export contains too many files.');
   const chunks=[],central=[];let offset=0,total=0;
   for(const [path,source] of files){
     const name=encoder.encode(path),bytes=typeof source==='string'?encoder.encode(source):source;

@@ -22,3 +22,12 @@ test('full export uses a header grant, walks pages and reports unavailable legac
  assert.equal(result.type,'application/zip');assert.equal(requests.length,9);
  for(const request of requests){assert.equal(request.headers['X-Export-Grant'],'test-grant');assert(!request.url.includes('test-grant'));}
 });
+test('browser permission denial does not enable notifications and opt-in is device-local',async()=>{
+ const {enableBrowserNotifications,browserNotificationsEnabled}=await import('../../js/shared/browser-notifications.js');
+ const records=new Map();globalThis.localStorage={getItem:key=>records.get(key)??null,setItem:(key,value)=>records.set(key,value),removeItem:key=>records.delete(key)};
+ globalThis.window={Notification:{}};Object.defineProperty(globalThis,'navigator',{value:{locks:{}},configurable:true});
+ globalThis.Notification={requestPermission:async()=>'denied'};
+ await assert.rejects(enableBrowserNotifications('one',true));assert(!browserNotificationsEnabled('one'));
+ globalThis.Notification.requestPermission=async()=>'granted';await enableBrowserNotifications('one',true);assert(browserNotificationsEnabled('one'));assert(!browserNotificationsEnabled('two'));
+ await enableBrowserNotifications('one',false);assert(!browserNotificationsEnabled('one'));
+});

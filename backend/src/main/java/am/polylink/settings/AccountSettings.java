@@ -102,14 +102,15 @@ public class AccountSettings {
         return Rows.query(db, "SELECT * FROM auth.EmailChanges WHERE UserId=?", id).getFirst();
     }
 
-    private void deliver(Map<String, Object> r, String code) {
+    private void deliver(Map<String, Object> r, String code, String ip) {
+        limits.issue((String) r.get(r.get("Stage").equals("OLD") ? "OldEmail" : "NewEmail"), ip);
         mail.sendCode(
                 (String) r.get(r.get("Stage").equals("OLD") ? "OldEmail" : "NewEmail"),
                 "EMAIL_CHANGE",
                 code);
     }
 
-    public Map<String, Object> start(Sessions.Principal caller, Start input) {
+    public Map<String, Object> start(Sessions.Principal caller, Start input, String ip) {
         if (input.email() == null
                 || input.email().length() > 255
                 || !input.email().matches("[^\\s@]+@[^\\s@]+\\.[^\\s@]+"))
@@ -142,7 +143,7 @@ public class AccountSettings {
                                     now().plusSeconds(60));
                             return row(a.id());
                         });
-        deliver(r, code);
+        deliver(r, code, ip);
         return response(r);
     }
 
@@ -164,7 +165,7 @@ public class AccountSettings {
         return r;
     }
 
-    public Map<String, Object> verify(Sessions.Principal caller, Code input) {
+    public Map<String, Object> verify(Sessions.Principal caller, Code input, String ip) {
         limits.consume("SETTING_VERIFY", "" + caller.account().id(), 50, 1800);
         String next = secrets.code();
         var result =
@@ -217,13 +218,13 @@ public class AccountSettings {
                         });
         if (result.containsKey("invalid")) throw AuthFailure.invalid();
         if (result.containsKey("Stage")) {
-            deliver(result, next);
+            deliver(result, next, ip);
             return response(result);
         }
         return result;
     }
 
-    public Map<String, Object> resend(Sessions.Principal caller, Code input) {
+    public Map<String, Object> resend(Sessions.Principal caller, Code input, String ip) {
         limits.consume("SETTING_RESEND", "" + caller.account().id(), 10, 3600);
         String code = secrets.code();
         var r =
@@ -241,7 +242,7 @@ public class AccountSettings {
                                     caller.account().id());
                             return row(caller.account().id());
                         });
-        deliver(r, code);
+        deliver(r, code, ip);
         return response(r);
     }
 }

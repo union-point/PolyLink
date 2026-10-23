@@ -19,19 +19,19 @@ public class AccountSettingsController {
     @PostMapping("/account/email-change/start")
     public Map<String, Object> start(
             @RequestBody AccountSettings.Start input, HttpServletRequest request) {
-        return settings.start(sessions.require(request), input);
+        return settings.start(sessions.require(request), input, request.getRemoteAddr());
     }
 
     @PostMapping("/account/email-change/verify")
     public Map<String, Object> verify(
             @RequestBody AccountSettings.Code input, HttpServletRequest request) {
-        return settings.verify(sessions.require(request), input);
+        return settings.verify(sessions.require(request), input, request.getRemoteAddr());
     }
 
     @PostMapping("/account/email-change/resend")
     public Map<String, Object> resend(
             @RequestBody AccountSettings.Code input, HttpServletRequest request) {
-        return settings.resend(sessions.require(request), input);
+        return settings.resend(sessions.require(request), input, request.getRemoteAddr());
     }
 
     @PutMapping("/account/email-factor")

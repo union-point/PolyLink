@@ -38,5 +38,6 @@ export function startBrowserNotifications(user){
   };
   tick();
   const stop=()=>{stopped=true;clearTimeout(timer);for(const item of shown.values())item.close();channel?.close();window.removeEventListener('polylink-chat-read',onRead);};
-  window.addEventListener('pagehide',stop,{once:true});return stop;
+  window.addEventListener('pagehide',stop,{once:true});
+  const restore=event=>{if(event.persisted){window.removeEventListener('pageshow',restore);startBrowserNotifications(user);}};window.addEventListener('pageshow',restore);return stop;
 }

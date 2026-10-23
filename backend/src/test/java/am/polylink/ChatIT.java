@@ -173,6 +173,50 @@ class ChatIT {
             var first = sends.getFirst().get(10, TimeUnit.SECONDS);
             for (var sent : sends) assertThat(sent.get().path("id")).isEqualTo(first.path("id"));
             assertThat(first.path("sequence").asText()).isEqualTo("1");
+            assertThat(
+                            db.queryForObject(
+                                    "SELECT COUNT(*) FROM auth.ActivityNotifications WHERE RoomId=? AND UserId=?",
+                                    Integer.class,
+                                    UUID.fromString(room),
+                                    b.id()))
+                    .isEqualTo(1);
+            assertThat(
+                            b.browser()
+                                    .json(b.browser().get("/notifications?cursor=0"))
+                                    .path("items")
+                                    .size())
+                    .isEqualTo(1);
+            assertThat(
+                            a.browser()
+                                    .json(a.browser().get("/notifications?cursor=0"))
+                                    .path("items")
+                                    .size())
+                    .isZero();
+            db.update(
+                    "UPDATE messaging.Participants SET Muted=1 WHERE RoomId=? AND UserId=?",
+                    UUID.fromString(room),
+                    b.id());
+            assertThat(
+                            b.browser()
+                                    .json(b.browser().get("/notifications?cursor=0"))
+                                    .path("items")
+                                    .size())
+                    .isZero();
+            db.update(
+                    "UPDATE messaging.Participants SET Muted=0,LastReadSequence=1 WHERE RoomId=? AND UserId=?",
+                    UUID.fromString(room),
+                    b.id());
+            assertThat(
+                            b.browser()
+                                    .json(b.browser().get("/notifications?cursor=0"))
+                                    .path("items")
+                                    .size())
+                    .isZero();
+            db.update(
+                    "UPDATE messaging.Participants SET LastReadSequence=0 WHERE RoomId=? AND UserId=?",
+                    UUID.fromString(room),
+                    b.id());
+
             var changed = new LinkedHashMap<>(input);
             changed.put(
                     "packet",
