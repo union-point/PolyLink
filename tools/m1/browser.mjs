@@ -33,6 +33,13 @@ async function code(){
   throw new Error('Local verification email did not arrive');
 }
 async function verifyCode(){
+  if(phase==='factor'){
+    await page.waitForURL('**/2fa-verify.html');
+    const value=await code();
+    for(let i=0;i<value.length;i++)await page.locator('.code-input').nth(i).fill(value[i]);
+    await page.locator('#verify-form [type=submit]').click();
+    return;
+  }
   await page.locator('[data-inline-verification]').waitFor();
   await page.locator('[data-inline-verification] input').fill(await code());
   await page.locator('[data-inline-verification] button').first().click();
@@ -69,14 +76,23 @@ try{
   }else if(phase==='factor'){
     await page.goto(origin+'/login.html');await page.locator('#login-form [type=submit]').waitFor();
     await page.locator('#email').fill(email);await page.locator('#password').fill(password);await page.locator('#login-form [type=submit]').click();
-    await page.locator('[data-inline-verification]').waitFor();
-    assert(!(await page.evaluate(()=>indexedDB.databases())).some(db=>db.name==='polylink-key-device-v1'),'No device key before second factor');
-    await page.reload();assert.equal(await page.locator('[data-inline-verification]').count(),0);
-    await page.locator('#email').fill(email);await page.locator('#password').fill(password);await page.locator('#login-form [type=submit]').click();await verifyCode();await assertReady();
+    await page.waitForURL('**/2fa-verify.html');
+    await page.waitForFunction(()=>typeof document.querySelector('#verify-form')?.onsubmit==='function');
+    assert.equal(await page.evaluate(async api=>(await fetch(api+'/auth/me',{credentials:'include'})).status,api),401,'No authenticated session before second factor');
+    assert(await page.evaluate(async()=>{
+      const db=await new Promise((resolve,reject)=>{const r=indexedDB.open('polylink-key-device-v1');r.onsuccess=()=>resolve(r.result);r.onerror=()=>reject(r.error);});
+      try{
+        const records=await new Promise((resolve,reject)=>{const r=db.transaction('devices').objectStore('devices').getAll();r.onsuccess=()=>resolve(r.result);r.onerror=()=>reject(r.error);});
+        return records.length===1&&records.every(record=>record.account.startsWith('login-challenge:')&&record.key.extractable===false&&record.ciphertext instanceof ArrayBuffer&&!record.familyId);
+      }finally{db.close();}
+    }),'Only encrypted challenge context may be stored before second factor');
+    await page.reload();await page.waitForFunction(()=>typeof document.querySelector('#verify-form')?.onsubmit==='function');
+    await verifyCode();await assertReady();
+    assert.equal(await page.evaluate(()=>sessionStorage.getItem('polylink.http.loginChallenge')),null,'Verified challenge context must be cleared');
   }else throw new Error('Unknown browser phase');
   assert(!outbound.some(body=>body.includes(password)),'Original password must never reach HTTP');
   assert(!outbound.some(body=>body.includes('"password"')),'Raw password DTO must never reach HTTP');
-  assert(!page.url().includes('2fa-verify.html'),'Verification stays on the login page');
+  assert(!page.url().includes('2fa-verify.html'),'Successful verification must leave the challenge page');
   assert.equal(failures.length,0,'Browser module execution must not raise uncaught errors');
   console.log('Browser '+phase+' acceptance passed.');
 }finally{await browser.close();}

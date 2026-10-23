@@ -45,7 +45,10 @@ await context.route('**/js/data/http/transport.js',route=>route.fulfill({content
 await context.route(/\/(profile|profile_info)\.html$/,route=>route.fulfill({contentType:'text/html',body:'<p>Signed in</p>'}));
 const page=await context.newPage();
 page.on('pageerror',error=>errors.push(error.message));
-async function ready(){await page.waitForFunction(()=>document.querySelector('form')&&!document.querySelector('.container').inert);}
+async function ready(){await page.waitForFunction(()=>{
+  const form=document.querySelector('form');
+  return form&&!document.querySelector('.container').inert&&(typeof form.onsubmit==='function'||form.querySelector('[type=submit]')?.disabled);
+});}
 async function login(email){
   await page.goto(origin+'/login.html');await ready();
   assert.equal(await page.locator('[data-inline-verification],.code-input').count(),0);
@@ -90,4 +93,5 @@ try{
   assert.equal(await page.locator('[type=submit]').isDisabled(),true);
   assert.deepEqual(errors,[]);
   console.log('Login UI checks passed: clean login card, challenge redirect, encrypted context, reload, wrong code, resend, verified profile redirect, context cleanup, direct login, missing and expired challenges.');
-}finally{await browser.close();}
+}catch(error){console.error('Login UI page:',page.url(),'alerts:',await page.getByRole('alert').allTextContents(),'page errors:',errors);throw error;}
+finally{await browser.close();}

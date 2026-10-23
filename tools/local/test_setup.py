@@ -1,5 +1,6 @@
 """Exercise local setup with disposable files; never touch a developer's services/config."""
 import importlib.util
+import json
 import os
 from pathlib import Path
 import shutil
@@ -15,6 +16,15 @@ SPEC.loader.exec_module(setup)
 
 
 class LocalSetupTests(unittest.TestCase):
+    def setUp(self):
+        # The test runner may have sourced the developer's local.env. Keep those
+        # values (and token paths) out of disposable setup fixtures.
+        names = json.loads((setup.HERE / "config.example.json").read_text())
+        environment = {key: value for key, value in os.environ.items() if key not in names and key != "OPENBAO_TOKEN_FILE"}
+        patcher = patch.dict(os.environ, environment, clear=True)
+        patcher.start()
+        self.addCleanup(patcher.stop)
+
     def test_shell_values_roundtrip_without_executing_secret_content(self):
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "local.env"
@@ -37,7 +47,7 @@ class LocalSetupTests(unittest.TestCase):
 
     def test_java_discovery_ignores_a_runtime_only_and_accepts_full_25(self):
         with tempfile.TemporaryDirectory() as directory:
-            root = Path(directory)
+            root = Path(directory).resolve()
             for name in ("runtime", "jdk"):
                 (root / name / "bin").mkdir(parents=True)
                 (root / name / "lib/security").mkdir(parents=True)
@@ -47,13 +57,13 @@ class LocalSetupTests(unittest.TestCase):
                     path.write_text('#!/bin/sh\nprintf \'openjdk version \"25.0.1\"\\n\'\n' if tool == 'java' else '#!/bin/sh\nprintf \'javac 25.0.1\\n\'\n')
                     path.chmod(0o755)
             (root / "runtime/bin/javac").unlink()
-            with patch.dict(os.environ, {"JAVA_HOME": str(root / "runtime")}), patch.object(setup.glob, "glob", return_value=[str(root / "jdk")]), patch.object(setup.shutil, "which", return_value=None):
+            with patch.dict(os.environ, {"JAVA_HOME": str(root / "runtime")}), patch.object(setup.sys, "platform", "linux"), patch.object(setup.glob, "glob", return_value=[str(root / "jdk")]), patch.object(setup.shutil, "which", return_value=None):
                 self.assertEqual(setup.find_jdk(), str(root / "jdk"))
 
     def test_setup_is_idempotent_and_survives_a_different_checkout(self):
         java = setup.find_jdk()
         with tempfile.TemporaryDirectory(prefix="polylink setup ") as directory:
-            state = Path(directory) / "private state"
+            state = Path(directory).resolve() / "private state"
             with patch.dict(os.environ, {"DB_PASSWORD": "test-only-secret", "AUTH_HMAC_KEY": "", "AUTH_REPLAY_KEY": ""}):
                 first = setup.setup(state, java, discovery=False)
                 files = [state / "local.env", state / "security/tls/server.key", state / "openbao-truststore"]
