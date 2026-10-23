@@ -65,6 +65,18 @@ try{
     await ready(p);assert(!(await user(p)).cryptoLocked);assert((await messages(p)).length>=5);assert.equal(workers,0,'Browser restart must use only the validated device copy');console.log('M3 persistent browser restart passed.');
   }else if(phase==='password'){
     await ready(p,'settings.html');await p.locator('#edit-password-btn').waitFor();
+    await p.locator('[data-setting="language"]').selectOption('ru');
+    await p.waitForFunction(async()=>{const {settings}=await import('/js/services/index.js');return (await settings.get()).language==='ru';});
+    await p.reload();await p.locator('#edit-password-btn').waitFor();assert.equal(await p.locator('[data-setting="language"]').inputValue(),'ru');
+    await p.locator('[data-setting="isProfilePublic"]').selectOption('closed');
+    await p.waitForFunction(async()=>{const {settings}=await import('/js/services/index.js');return !(await settings.get()).isProfilePublic;});
+    await p.locator('[data-setting="isProfilePublic"]').selectOption('open');
+    await p.waitForFunction(async()=>{const {settings}=await import('/js/services/index.js');return (await settings.get()).isProfilePublic;});
+    const exportDownload=p.waitForEvent('download');await p.locator('#download-data-btn').click();
+    const exportForm=p.locator('#download-data-btn').locator('..').locator('form');await exportForm.locator('input[type=password]').fill(oldPassword);await exportForm.locator('button[type=submit]').click();
+    const archive=await exportDownload;assert.equal(archive.suggestedFilename(),'polylink-data.zip');
+    const stream=await archive.createReadStream();let archiveBytes=0;for await(const bytes of stream)archiveBytes+=bytes.length;assert(archiveBytes>100);
+
     const other=await browser.browser().newContext();await configure(other);const op=await other.newPage();await login(op,oldPassword);await op.goto(origin+'/profile.html');
     const tab=await browser.newPage();await ready(tab);
     let lost=false,commits=0;

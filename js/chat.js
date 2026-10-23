@@ -93,7 +93,7 @@ start(async()=>{
       if(messageShown(rect,box)&&(!image||(image.complete&&image.naturalWidth)))sequence=BigInt(node.dataset.sequence)>sequence?BigInt(node.dataset.sequence):sequence;
     }
     if(sequence<=s.ack)return;s.acking=true;
-    try{const result=await chat.read(s.id,sequence.toString());s.ack=BigInt(result?.lastReadSequence||sequence);const room=rooms.find(r=>r.id===s.id);if(room){room.unreadCount=result?.unreadCount??room.unreadCount;room.lastReadSequence=s.ack.toString();renderList();}}
+    try{const result=await chat.read(s.id,sequence.toString());s.ack=BigInt(result?.lastReadSequence||sequence);window.dispatchEvent(new CustomEvent('polylink-chat-read',{detail:{roomId:s.id,through:s.ack.toString()}}));const room=rooms.find(r=>r.id===s.id);if(room){room.unreadCount=result?.unreadCount??room.unreadCount;room.lastReadSequence=s.ack.toString();renderList();}}
     catch(error){if(valid(s))pollStatus.textContent=error.message;}
     finally{s.acking=false;}
   }

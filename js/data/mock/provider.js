@@ -217,10 +217,10 @@ const operations = {
   },
   'forum.replies.create': (state, id, data) => { find(state.topics, id); const reply = { id: nextId(state, 'reply'), topicId: String(id), userId: me(state).id, content: richContent(data.content), createdAt: now(), likes: [] }; state.replies.push(reply); return replyView(state, reply); },
   'forum.replies.like': (state, id, liked) => { const reply = find(state.replies, id), userId = me(state).id; reply.likes = reply.likes.filter(id => id !== userId); if (liked) reply.likes.push(userId); return replyView(state, reply); },
-  'search.people': (state, filters = {}) => state.users.filter(user => user.status === 'active' && (user.id === state.sessionUserId || state.settings[user.id]?.isProfilePublic) &&
+  'search.people': (state, filters = {}) => state.users.filter(user => user.status === 'active' &&
     (!filters.q || `${user.name} ${user.jobTitle} ${user.specialization}`.toLowerCase().includes(filters.q.trim().toLowerCase())) &&
     (!filters.specialization || user.specialization === filters.specialization) && (!filters.institute || user.institute === filters.institute) &&
-    (!filters.year || user.graduationYear === String(filters.year))).map(user => profile(state, user)),
+    (!filters.year || user.graduationYear === String(filters.year))).map(user => ({id:user.id,name:user.name,firstName:user.firstName,lastName:user.lastName,role:user.role,onboardingComplete:user.onboardingComplete,canOpenProfile:(state.settings[user.id]||defaults()).isProfilePublic})),
   'chat.list': state => state.rooms.filter(room => room.participants.includes(me(state).id) && !preference(room, me(state).id).hidden).map(room => roomView(state, room)),
   'chat.openDirect': (state, userId) => {
     const own = me(state).id; find(state.users, userId);
@@ -253,19 +253,40 @@ const operations = {
   'settings.get': state => state.settings[me(state).id] || defaults(),
   'settings.update': (state, data) => {
     const settings = state.settings[me(state).id] ||= defaults();
+    for(const [key,value]of Object.entries(data)) {
+      if(key==='twoFactorEnabled'||!(key in defaults())||(key==='language'? !['hy','en','ru'].includes(value):typeof value!=='boolean'))throw new DataError('VALIDATION','Անվավեր կարգավորում։');
+    }
     for (const key of Object.keys(defaults())) if (key in data) {
       if (key === 'language') { if (!['hy', 'en', 'ru'].includes(data.language)) throw new DataError('VALIDATION', 'Անվավեր լեզու։'); settings.language = data.language; }
       else settings[key] = Boolean(data[key]);
     }
     return settings;
   },
+  'settings.setEmailFactor': (state,data)=>{
+    const user=me(state);if(state.credentials[user.id]!==data.digest)throw new DataError('UNAUTHORIZED','Սխալ գաղտնաբառ։');
+    const preferences=state.settings[user.id] ||= defaults();preferences.twoFactorEnabled=data.enabled;
+    state.challenges.filter(item=>item.userId===user.id&&item.purpose==='email-change').forEach(item=>item.consumed=true);
+    return {twoFactorEnabled:data.enabled};
+  },
+  'settings.verifyEmailChange':(state,data)=>{
+    const user=me(state),item=challenge(state,data.requestId,'email-change');if(item.userId!==user.id)throw new DataError('UNAUTHORIZED','Անհասանելի գործողություն։');
+    const failure=checkCode(item,data.code);if(failure)return failure;
+    if(item.stage==='OLD'){item.stage='NEW';item.attempts=0;item.expiresAt=Date.now()+600000;return {status:'challenge',requestId:item.id,stage:'NEW'};}
+    if(state.users.some(other=>other.id!==user.id&&other.email===item.email))throw new DataError('CONFLICT','Էլ․ փոստն արդեն գրանցված է։');
+    user.email=item.email;state.credentials[user.id]=item.newDigest;item.consumed=true;return {status:'completed',email:user.email};
+  },
+  'settings.resendEmailChange':(state,data)=>{
+    const item=challenge(state,data.requestId,'email-change');if(item.userId!==me(state).id)throw new DataError('UNAUTHORIZED','Անհասանելի գործողություն։');
+    if(Date.now()-item.sentAt<60000)throw new DataError('RATE_LIMIT','Խնդրում ենք սպասել։');item.sentAt=Date.now();return {status:'challenge',requestId:item.id,stage:item.stage};
+  },
   'settings.changeEmail': (state, data) => {
     const user = me(state);
     if (state.credentials[user.id] !== data.oldDigest) throw new DataError('UNAUTHORIZED', 'Սխալ գաղտնաբառ։');
     if (state.users.some(other => other.id !== user.id && other.email === data.email)) throw new DataError('CONFLICT', 'Տվյալ էլ․ փոստն արդեն գրանցված է։');
-    user.email = data.email; state.credentials[user.id] = data.newDigest;
-    state.challenges.filter(item => item.userId === user.id).forEach(item => { item.consumed = true; });
-    return profile(state, user);
+    state.challenges.filter(item=>item.userId===user.id&&item.purpose==='email-change').forEach(item=>item.consumed=true);
+    const created=newChallenge(state,user.id,'email-change'),item=state.challenges.find(item=>item.id===created.challengeId);
+    Object.assign(item,{email:data.email,newDigest:data.newDigest,stage:(state.settings[user.id]||defaults()).twoFactorEnabled?'OLD':'NEW'});
+    return {status:'challenge',requestId:item.id,stage:item.stage,...created};
   },
   'settings.changePassword': (state, data) => { const user = me(state); if (state.credentials[user.id] !== data.oldDigest) throw new DataError('UNAUTHORIZED', 'Սխալ գաղտնաբառ։'); state.credentials[user.id] = data.newDigest; user.passwordChangedAt = now(); state.challenges.filter(item => item.userId === user.id).forEach(item => { item.consumed = true; }); return null; },
   'settings.deactivate': (state, data) => { const user = me(state); if (state.credentials[user.id] !== data.digest) throw new DataError('UNAUTHORIZED', 'Սխալ գաղտնաբառ։'); user.status = 'deactivated'; state.sessionUserId = null; return null; },
@@ -274,9 +295,8 @@ const operations = {
     if (state.credentials[id] !== data.digest) throw new DataError('UNAUTHORIZED', 'Սխալ գաղտնաբառ։');
     const postIds = state.posts.filter(item => item.userId === id).map(item => item.id);
     const topicIds = state.topics.filter(item => item.userId === id).map(item => item.id);
-    for (const key of ['education', 'certificates', 'posts', 'topics', 'media']) state[key] = state[key].filter(item => item.userId !== id);
-    state.comments = state.comments.filter(item => item.userId !== id && !postIds.includes(item.postId));
-    state.replies = state.replies.filter(item => item.userId !== id && !topicIds.includes(item.topicId));
+    for (const key of ['education', 'certificates', 'media']) state[key] = state[key].filter(item => item.userId !== id);
+
     state.replies.forEach(item => { item.likes = item.likes.filter(userId => userId !== id); });
     state.messages.forEach(item=>{if(item.senderId===id){item.senderId=null;item.text='Message deleted';item.attachment=null;item.deleted=true;}});
     state.rooms.forEach(room=>{if(!room.participants.includes(id))return;if(room.isGroup){leaveMember(room,id);if(room.ownerId===id){room.ownerId=room.participants.filter(person=>state.users.find(u=>u.id===person)?.status==='active').sort(compareUserIds)[0]||null;if(!room.ownerId)room.closed=true;}}else room.closed=true;delete room.preferences[id];});
@@ -286,8 +306,8 @@ const operations = {
     Object.assign(user,{status:'deleted',name:'Deleted account',firstName:'Deleted',lastName:'account',email:`deleted-${id}@deleted.invalid`,avatar:'',cover:'',description:''}); delete state.credentials[id]; delete state.settings[id]; state.sessionUserId = null;
     return null;
   },
-  'settings.export': state => {
-    const user = me(state), id = user.id;
+  'settings.export': (state,data) => {
+    const user = me(state), id = user.id;if(state.credentials[id]!==data.digest)throw new DataError('UNAUTHORIZED','Սխալ գաղտնաբառ։');
     return { exportedAt: now(), user: profile(state, user), settings: state.settings[id], posts: state.posts.filter(item => item.userId === id), comments: state.comments.filter(item => item.userId === id), topics: state.topics.filter(item => item.userId === id), replies: state.replies.filter(item => item.userId === id).map(({ likes, ...item }) => item), messages: state.messages.filter(item => item.senderId === id&&state.rooms.some(room=>room.id===item.roomId&&room.participants.includes(id)&&visibleMessages(state,room,id).some(m=>m.id===item.id))) };
   },
 };
@@ -338,12 +358,12 @@ export function createMockProvider() {
       const address = await transaction(state => find(state.users, item.userId).email);
       args = [{ recoveryToken: args[0].recoveryToken, digest: await digest(address, password(args[0].newPassword)) }];
     }
-    if (['settings.changeEmail', 'settings.changePassword', 'settings.deactivate', 'settings.deleteAccount'].includes(operation)) {
+    if (['settings.changeEmail', 'settings.changePassword', 'settings.deactivate', 'settings.deleteAccount','settings.setEmailFactor','settings.export'].includes(operation)) {
       const user = await transaction(state => me(state)), data = args[0];
       if (operation === 'settings.changeEmail') {
         const address = email(data.email); args = [{ email: address, oldDigest: await digest(user.email, data.password), newDigest: await digest(address, data.password) }];
       } else if (operation === 'settings.changePassword') args = [{ oldDigest: await digest(user.email, data.oldPassword), newDigest: await digest(user.email, password(data.newPassword)) }];
-      else args = [{ digest: await digest(user.email, data.password) }];
+      else args = [{ ...data,digest: await digest(user.email, data.password) }];
     }
     if(operation==='chat.send'&&args[1]?.file){const file=validateImage(args[1].file);await validateImageBytes(new Uint8Array(await file.arrayBuffer()),file.type);}
     const write = !readOperations.has(operation);
@@ -359,7 +379,9 @@ export function createMockProvider() {
       const assets = await Promise.all(media.map(item => new Promise((resolve, reject) => {
         const reader = new FileReader(); reader.onload = () => resolve({ id: item.id, type: item.blob.type, dataUrl: reader.result }); reader.onerror = () => reject(new DataError('STORAGE', 'Չհաջողվեց արտահանել պատկերները։')); reader.readAsDataURL(item.blob);
       })));
-      return { ...result, media: assets };
+      const {zip}=await import('../../account-export.js');
+      const files=assets.map((asset,index)=>[`files/asset-${index+1}`,Uint8Array.from(atob(asset.dataUrl.split(',')[1]),c=>c.charCodeAt(0))]);
+      return zip([['data.json',JSON.stringify(result,null,2)],['manifest.json',JSON.stringify({version:1,exportedAt:now(),unavailable:[],files:assets.map((asset,index)=>({id:asset.id,path:`files/asset-${index+1}`,type:asset.type}))},null,2)],...files]);
     }
     return hydrate(result);
   }

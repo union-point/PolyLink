@@ -33,6 +33,7 @@ export const chat = {
   read: operation('chat.read'), mute: operation('chat.mute'), hide: operation('chat.hide'), block: operation('chat.block'), subscribe,
 };
 export const settings = {
+  verifyEmailChange:operation('settings.verifyEmailChange'),resendEmailChange:operation('settings.resendEmailChange'),setEmailFactor:operation('settings.setEmailFactor'),
   get: operation('settings.get'), update: operation('settings.update'), changeEmail: operation('settings.changeEmail'), changePassword: operation('settings.changePassword'),
   deactivate: operation('settings.deactivate'), deleteAccount: operation('settings.deleteAccount'), export: operation('settings.export'),
 };

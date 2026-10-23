@@ -18,7 +18,7 @@ start(async () => {
       if (!people.length) { stateMessage(list, 'Օգտատերեր չեն գտնվել'); return; }
       list.innerHTML = people.map(user => `<div class="card" data-user-id="${e(user.id)}"><div class="letter">${e(user.name.slice(0, 1))}</div><h3>${e(user.name)}</h3>
         <p><strong>Մասնագիտություն՝</strong> ${e(user.specialization)} ${user.graduationYear ? `(${e(user.graduationYear)})` : ''}</p><p><strong>Ինստիտուտ՝</strong> ${e(user.institute || user.department || '')}</p><p>${e(user.jobTitle)}</p>
-        <div class="card-buttons"><button class="btn-view">Դիտել էջը</button><button class="btn-connect" ${user.id === currentUser.id ? 'disabled' : ''}>Կապ հաստատել</button></div></div>`).join('');
+        <div class="card-buttons"><button class="btn-view" ${user.canOpenProfile === false && user.id !== currentUser.id ? 'disabled title="Պրոֆիլը փակ է"' : ''}>Դիտել էջը</button><button class="btn-connect" ${user.id === currentUser.id ? 'disabled' : ''}>Կապ հաստատել</button></div></div>`).join('');
     } catch (error) { if (current === generation) stateMessage(list, error.message, { retry: load }); }
   }
   query.setAttribute('aria-label', 'Որոնել օգտատերերին');

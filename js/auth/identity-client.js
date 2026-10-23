@@ -207,6 +207,16 @@ export function createIdentityClient(api){
         }finally{changing=!!pending?.passwordChange;if(!changing)transitionUser=null;derived?.login.fill(0);derived?.wrapping.fill(0);old?.login.fill(0);old?.wrapping.fill(0);}
       });
     },
+    async accountProof(url,{password,...data},method='post'){
+      await client.me();if(!session)throw new DataError('UNAUTHORIZED','Sign in first.');
+      const settings=await post('/auth/parameters',{email:session.user.email}),derived=await derive(password,settings),s=await sodium();
+      try{return await api.request({method,url,data:{...data,expectedCredential:session.versions.credential,loginSecret:s.to_base64(derived.login,s.base64_variants.URLSAFE_NO_PADDING)}});}
+      finally{derived.login.fill(0);derived.wrapping.fill(0);}
+    },
+    async changeEmail(data){return client.accountProof('/account/email-change/start',data);},
+    async verifyEmailChange(data){const result=await post('/account/email-change/verify',data);if(result.status==='completed'){await client.me();emit('auth.me');}return result;},
+    async resendEmailChange(data){return post('/account/email-change/resend',data);},
+    async setEmailFactor(data){return client.accountProof('/account/email-factor',data,'put');},
     async lifecycle(action,{password}){
       if(!['deactivate','deleteAccount'].includes(action))throw new DataError('VALIDATION','Invalid account action.');
       return transition(async()=>{

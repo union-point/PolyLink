@@ -1,3 +1,4 @@
+import { requestPassword, verifyEmailChange } from './settings-security.js';
 import { settings } from './services/index.js';
 import { bootstrap, start, pending, notify, setTheme, dateTime } from './shared/ui.js';
 import { auth } from './services/index.js';
@@ -20,11 +21,18 @@ start(async () => {
     element.onchange = async () => {
       const previous = preferences[key], value = element.type === 'checkbox' ? element.checked : key === 'isProfilePublic' ? element.value === 'open' : element.value;
       element.disabled = true;
-      const saved = await pending(null, element.closest('.settings-item'), async () => { const updated = await settings.update({ [key]: value }); preferences = { ...preferences, [key]: updated[key] }; });
+      const saved = await pending(null, element.closest('.settings-item'), async () => { const updated = key==='twoFactorEnabled' ? await settings.setEmailFactor({enabled:value,password:await requestPassword(element.closest('.settings-item'))}) : await settings.update({ [key]: value }); preferences = { ...preferences, [key]: updated[key] }; });
       element.disabled = false; applyControl(element, saved ? preferences[key] : previous);
       if (saved) notify('Կարգավորումը պահպանվել է');
     };
   });
+  const {browserNotificationsEnabled,enableBrowserNotifications}=await import('./shared/browser-notifications.js');
+  const browserRow=document.createElement('div');browserRow.className='settings-item';
+  const browserLabel=document.createElement('label');browserLabel.textContent='Ծանուցումներ այս դիտարկիչում';
+  const browserToggle=document.createElement('input');browserToggle.type='checkbox';browserToggle.checked=browserNotificationsEnabled(user.id);browserLabel.append(browserToggle);browserRow.append(browserLabel);
+  document.querySelector('[data-setting="emailEnabled"]').closest('section').append(browserRow);
+  const deliveryNotice=document.createElement('p');deliveryNotice.textContent='Հայտարարությունների և ֆորումի ծանուցումները հասանելի կլինեն այդ բաժինների սերվերային միացումից հետո։';browserRow.after(deliveryNotice);
+  browserToggle.onchange=async()=>{const wanted=browserToggle.checked;browserToggle.disabled=true;await pending(null,browserRow,()=>enableBrowserNotifications(user.id,wanted));browserToggle.checked=browserNotificationsEnabled(user.id);browserToggle.disabled=false;};
   const themeButtons = [...document.querySelectorAll('.theme-btn')];
   function updateThemes() {
     const classes = document.documentElement.classList;
@@ -48,7 +56,8 @@ start(async () => {
   document.getElementById('new-password').name = 'password'; document.getElementById('confirm-password').name = 'confirmPassword';
   document.getElementById('save-email-btn').onclick = async event => {
     const saved = await pending(event.currentTarget, emailEdit.form, async () => {
-      const updated = await settings.changeEmail({ email: document.getElementById('new-email').value, password: document.getElementById('email-old-password').value });
+      let updated;try{updated = await settings.changeEmail({ email: document.getElementById('new-email').value, password: document.getElementById('email-old-password').value });}finally{document.getElementById('email-old-password').value='';}
+      if(updated.status==='challenge')updated=await verifyEmailChange(settings,updated,emailEdit.form);
       document.getElementById('current-email').textContent = updated.email;
     });
     if (saved) { emailEdit.close(); notify('Էլ․ փոստը թարմացվել է'); }
@@ -66,9 +75,9 @@ start(async () => {
     if (saved) { passwordEdit.close(); notify('Գաղտնաբառը թարմացվել է'); }
   };
   document.getElementById('download-data-btn').onclick = event => pending(event.currentTarget, event.currentTarget.closest('.settings-item'), async () => {
-    const data = await settings.export();
-    const url = URL.createObjectURL(new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' }));
-    const link = document.createElement('a'); link.href = url; link.download = 'polylink-data.json'; document.body.appendChild(link); link.click(); link.remove();
+    const data = await settings.export({password:await requestPassword(event.currentTarget.closest('.settings-item'))});
+    const url = URL.createObjectURL(data instanceof Blob ? data : new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' }));
+    const link = document.createElement('a'); link.href = url; link.download = data instanceof Blob ? 'polylink-data.zip' : 'polylink-data.json'; document.body.appendChild(link); link.click(); link.remove();
     setTimeout(() => URL.revokeObjectURL(url), 10000);
     notify('Տվյալների պատճենը պատրաստ է');
   });
@@ -80,7 +89,7 @@ start(async () => {
   function openConfirmation(kind, button) {
     lifecycle = kind; previousFocus = button;
     document.getElementById('confirm-title').textContent = kind === 'deleteAccount' ? 'Ջնջել հաշիվը' : 'Ապաակտիվացնել հաշիվը';
-    document.getElementById('confirm-text').textContent = kind === 'deleteAccount' ? 'Հաստատեք հաշվի և ձեր տվյալների մշտական ջնջումը։' : 'Հաշվի հասանելիությունը կասեցվելու է։ Վերաակտիվացման համար դիմեք ադմինիստրատորին։';
+    document.getElementById('confirm-text').textContent = kind === 'deleteAccount' ? 'Հաստատեք հաշվի և անձնական տվյալների ջնջումը։ Քննարկումները կպահպանվեն անանուն հեղինակով, իսկ այլ անձանց ստացած պատճեններն ու պահուստային պատճենները անմիջապես չեն ջնջվում։' : 'Հաշվի հասանելիությունը կասեցվելու է։ Վերաակտիվացման համար դիմեք ադմինիստրատորին։';
     document.getElementById('confirm-password-delete').value = ''; document.getElementById('confirm-error').textContent = ''; backdrop.querySelector('[data-status]')?.remove();
     confirmation.textContent = kind === 'deleteAccount' ? 'ՋՆՋԵԼ' : 'Ապաակտիվացնել';
     backdrop.classList.remove('hidden'); backdrop.style.zIndex = '2000'; backdrop.setAttribute('role', 'dialog'); backdrop.setAttribute('aria-modal', 'true'); backdrop.setAttribute('aria-label', 'Հաստատել հաշվի գործողությունը');

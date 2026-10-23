@@ -166,6 +166,7 @@ export async function bootstrap({ protectedPage = true, requireOnboarding = true
     window.addEventListener('pageshow',event=>{if(event.persisted){leaving=false;check();}});
     window.addEventListener('focus',check);document.addEventListener('visibilitychange',check);
   }else window.addEventListener('pageshow', event => { if (event.persisted) { leaving = false; auth.me().then(next => validateSession(next)).catch(error => validateSession(null, error)); } });
+  if(config.dataMode==='http') {const {startBrowserNotifications}=await import('./browser-notifications.js');startBrowserNotifications(user.id);}
   return user;
 }
 

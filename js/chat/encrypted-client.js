@@ -64,7 +64,7 @@ export function createEncryptedChat(api,identity,store=outboxStore){
     }
     throw new DataError('REVISION_CONFLICT','Conversation keys changed. Please retry.');
   }
-  async function decrypt(message,bundle,context,loadImage=true,signal){
+  async function decrypt(message,bundle,context,loadImage=true,signal,exportHeaders){
     scope(context);const openingImageGeneration=imageGeneration;
     if(message.deleted)return {...message,sender:message.sender||{id:'',name:''},text:'Message deleted',attachment:null};
     let key,plain;
@@ -83,7 +83,7 @@ export function createEncryptedChat(api,identity,store=outboxStore){
           if(cached&&(cached.fingerprint!==fingerprint||cached.room!==message.roomId||cached.owner!==message.sender.id))throw new Error();
           if(cached)attachment.url=cached.url;
           else{
-            const bytes=new Uint8Array(await api.request({...routes['chat.download'](meta.id),signal}));
+            const bytes=new Uint8Array(await api.request({...routes['chat.download'](meta.id),...(exportHeaders?{url:`/account/export/files/${encodeURIComponent(meta.id)}`,headers:exportHeaders}:{}),signal}));
             const blob=await decryptImage(bytes,meta,message.roomId,message.sender.id);
             if(signal?.aborted)throw new DOMException('Selection changed','AbortError');
             if(openingImageGeneration!==imageGeneration)throw new DataError('SESSION_CHANGED','Your session changed.');
@@ -194,14 +194,21 @@ export function createEncryptedChat(api,identity,store=outboxStore){
     leaveGroup:room=>groupMutation('leave',room),
     renameGroup:(room,name)=>groupMutation('rename',room,{name:name.trim()}),
     transferOwner:(room,userId)=>groupMutation('owner',room,{userId:String(userId)}),
-    async exportOwn(){return identity.withKeys(async context=>{
-      const messages=[];let cursor=null;
+    async exportOwn({headers,exportUrl,onSize=()=>{}}={}){return identity.withKeys(async context=>{
+      const messages=[],unavailable=[];let cursor=null;
       do{
-        const response=await call('exportOwn',{...(cursor?{cursor}:{}),limit:50});
-        for(const item of response.items){const bundle=await call('keys',item.roomId),message=await decrypt(item,bundle,context);if(message.attachment?.url){const blob=await(await fetch(message.attachment.url)).blob();const bytes=new Uint8Array(await blob.arrayBuffer());const s=await sodium();message.attachment={id:message.attachment.id,name:message.attachment.name,type:message.attachment.type,size:message.attachment.size,data:s.to_base64(bytes,s.base64_variants.ORIGINAL)};}messages.push({id:message.id,roomId:message.roomId,sequence:message.sequence,createdAt:message.createdAt,text:message.text,attachment:message.attachment,deleted:message.deleted});}
+        const response=exportUrl?await api.request({method:'get',url:exportUrl,params:{...(cursor?{cursor}:{}),limit:50},headers}):await call('exportOwn',{...(cursor?{cursor}:{}),limit:50});
+        for(const item of response.items){
+          try{
+            const bundle=await call('keys',item.roomId),message=await decrypt(item,bundle,context,true,undefined,headers);
+            onSize(new TextEncoder().encode(message.text||'').length);
+            if(message.attachment?.url){const blob=await(await fetch(message.attachment.url)).blob();onSize(blob.size);const bytes=new Uint8Array(await blob.arrayBuffer());const s=await sodium();message.attachment={id:message.attachment.id,name:message.attachment.name,type:message.attachment.type,size:message.attachment.size,data:s.to_base64(bytes,s.base64_variants.ORIGINAL)};}
+            messages.push({id:message.id,roomId:message.roomId,sequence:message.sequence,createdAt:message.createdAt,text:message.text,attachment:message.attachment,deleted:message.deleted});
+          }catch(error){if(['DATA_INTEGRITY','NOT_FOUND'].includes(error.code))unavailable.push({messageId:item.id,reason:error.code});else throw error;}
+        }
         cursor=response.nextCursor;
       }while(cursor);
-      return {exportedAt:new Date().toISOString(),user:context.session.user,messages};
+      return {exportedAt:new Date().toISOString(),user:context.session.user,messages,unavailable};
     });},
     openDirect:target=>identity.withKeys(()=>call('openDirect',typeof target==='object'?target.id:target)),
     page,
