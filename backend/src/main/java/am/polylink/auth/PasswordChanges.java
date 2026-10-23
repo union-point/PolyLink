@@ -189,6 +189,7 @@ public class PasswordChanges {
                     var prepared = mapper.readTree((byte[]) row.get("PreparedCiphertext"));
                     var params = prepared.path("derivation");
                     long version = Math.addExact(account.credential(), 1);
+                    db.update("DELETE auth.EmailChanges WHERE UserId=?", caller.account().id());
                     db.update(
                             "UPDATE auth.AccountSecurity SET CredentialVersion=?,ClientSalt=?,ClientOpsLimit=?,ClientMemoryBytes=?,LoginVerifier=?,UpdatedAt=? WHERE UserId=?",
                             version,

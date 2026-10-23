@@ -68,7 +68,7 @@ public final class SchemaCommand {
         flyway.validate();
         assertCurrentSchema(connection);
         System.out.println(
-                "Schema migrated and validated through V9; obsolete legacy chat and authentication fields were removed.");
+                "Schema migrated and validated through V10; account settings are available.");
     }
 
     public static String inventory(Connection connection) throws Exception {
@@ -87,7 +87,7 @@ public final class SchemaCommand {
     }
 
     public static void assertCurrentSchema(Connection connection) throws Exception {
-        assertSchema(connection, 9);
+        assertSchema(connection, appliedVersion(connection));
     }
 
     private static int appliedVersion(Connection connection) throws SQLException {
@@ -118,6 +118,20 @@ public final class SchemaCommand {
                         if (java.util.Set.of("PasswordHash", "TwoFactorEnabled")
                                 .contains(columns.get(i).path("name").asText())) columns.remove(i);
                     }
+                }
+            }
+        }
+        if (version >= 10) {
+            for (var table : expected.path("tables")) {
+                if (table.path("name").asText().equals("Users")) {
+                    ((tools.jackson.databind.node.ArrayNode) table.path("columns"))
+                            .add(
+                                    mapper.readTree(
+                                            "{\"name\":\"ShowEmail\",\"type\":\"bit\",\"maxLength\":1,\"precision\":1,\"scale\":0,\"nullable\":false,\"defaultName\":\"DF_Users_ShowEmail\",\"defaultDefinition\":\"((0))\"}"));
+                }
+                if (table.path("name").asText().equals("UserNotificationSettings")) {
+                    for (var column : table.path("columns"))
+                        ((tools.jackson.databind.node.ObjectNode) column).put("nullable", false);
                 }
             }
         }

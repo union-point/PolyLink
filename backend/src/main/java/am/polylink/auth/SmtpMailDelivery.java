@@ -17,6 +17,20 @@ public class SmtpMailDelivery implements MailDelivery {
     }
 
     @Override
+    public void sendNotice(String email, String subject, String body) {
+        var message = new SimpleMailMessage();
+        message.setFrom(from);
+        message.setTo(email);
+        message.setSubject(subject);
+        message.setText(body);
+        try {
+            sender.send(message);
+        } catch (RuntimeException failure) {
+            throw AuthFailure.unavailable();
+        }
+    }
+
+    @Override
     public void sendCode(String email, String purpose, String code) {
         var mail = new SimpleMailMessage();
         mail.setFrom(from);

@@ -97,7 +97,7 @@ public class EnrollmentService {
                             if (users.isEmpty()) {
                                 int language =
                                         db.queryForObject(
-                                                "SELECT Id FROM dbo.Languages WHERE Code=N'en'",
+                                                "SELECT Id FROM dbo.Languages WHERE Code=N'hy'",
                                                 Integer.class);
                                 user =
                                         db.queryForObject(
@@ -111,6 +111,10 @@ public class EnrollmentService {
                             } else {
                                 user = users.getFirst();
                             }
+                            db.update(
+                                    "INSERT dbo.UserNotificationSettings(UserId) SELECT ? WHERE NOT EXISTS(SELECT 1 FROM dbo.UserNotificationSettings WHERE UserId=?)",
+                                    user,
+                                    user);
                             long version = existing.map(a -> a.credential() + 1).orElse(1L);
                             if (existing.isPresent())
                                 db.update(

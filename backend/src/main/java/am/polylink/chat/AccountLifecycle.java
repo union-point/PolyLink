@@ -110,6 +110,7 @@ public class AccountLifecycle {
                             throw AuthFailure.conflict();
                         locked.put(room, row);
                     }
+                    chat.db.update("DELETE auth.EmailChanges WHERE UserId=?", caller);
                     if (delete) {
                         for (var entry : locked.entrySet()) {
                             var room = entry.getKey();

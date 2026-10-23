@@ -118,6 +118,22 @@ public class SecurityConfiguration {
                                 .requestMatchers(HttpMethod.DELETE, "/chat/rooms/*/participants/*")
                                 .permitAll();
                     }
+                    if (enabled) {
+                        authorize
+                                .requestMatchers(HttpMethod.GET, "/settings", "/notifications")
+                                .permitAll();
+                        authorize.requestMatchers(HttpMethod.PATCH, "/settings").permitAll();
+                        authorize
+                                .requestMatchers(
+                                        HttpMethod.POST,
+                                        "/account/email-change/start",
+                                        "/account/email-change/verify",
+                                        "/account/email-change/resend")
+                                .permitAll();
+                        authorize
+                                .requestMatchers(HttpMethod.PUT, "/account/email-factor")
+                                .permitAll();
+                    }
                     authorize.anyRequest().denyAll();
                 });
         return http.formLogin(AbstractHttpConfigurer::disable)
