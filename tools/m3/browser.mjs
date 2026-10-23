@@ -65,9 +65,13 @@ try{
     await ready(p);assert(!(await user(p)).cryptoLocked);assert((await messages(p)).length>=5);assert.equal(workers,0,'Browser restart must use only the validated device copy');console.log('M3 persistent browser restart passed.');
   }else if(phase==='password'){
     await ready(p,'settings.html');await p.locator('#edit-password-btn').waitFor();
+    await p.waitForFunction(()=>typeof document.querySelector('[data-setting="language"]')?.onchange==='function');
+    const languageSaved=p.waitForResponse(response=>response.url()===api+'/settings'&&response.request().method()==='PATCH');
     await p.locator('[data-setting="language"]').selectOption('ru');
-    await p.waitForFunction(async()=>{const {settings}=await import('/js/services/index.js');return (await settings.get()).language==='ru';});
-    await p.reload();await p.waitForFunction(()=>document.querySelector('[data-setting="language"]')?.value==='ru'&&!document.querySelector('main')?.inert);assert.equal(await p.locator('[data-setting="language"]').inputValue(),'ru');
+    const savedLanguage=await languageSaved;assert.equal(savedLanguage.status(),200);assert.equal((await savedLanguage.json()).language,'ru');
+    await p.waitForFunction(()=>!document.querySelector('[data-setting="language"]').disabled);
+    await p.reload();await p.waitForFunction(()=>document.querySelector('[data-setting="language"]')?.value==='ru'&&typeof document.querySelector('[data-setting="language"]')?.onchange==='function');
+    assert.equal(await p.locator('[data-setting="language"]').inputValue(),'ru');
     await p.locator('[data-setting="isProfilePublic"]').selectOption('closed');
     await p.waitForFunction(async()=>{const {settings}=await import('/js/services/index.js');return !(await settings.get()).isProfilePublic;});
     await p.locator('[data-setting="isProfilePublic"]').selectOption('open');
