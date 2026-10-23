@@ -45,6 +45,15 @@ public class NotificationService {
                             user);
             return Map.of("items", List.of(), "nextCursor", latest.toString());
         }
+        var scan =
+                db.queryForList(
+                        "SELECT TOP ("
+                                + limit
+                                + ") Id FROM auth.ActivityNotifications WHERE UserId=? AND Id>? ORDER BY Id",
+                        Long.class,
+                        user,
+                        after);
+        long through = scan.isEmpty() ? after : scan.getLast();
         var rows =
                 Rows.query(
                         db,
@@ -52,9 +61,10 @@ public class NotificationService {
                                 + limit
                                 + ") n.Id,n.RoomId,n.Sequence,actor.FirstName,actor.LastName"
                                 + ELIGIBLE
-                                + " AND n.UserId=? AND n.Id>? ORDER BY n.Id",
+                                + " AND n.UserId=? AND n.Id>? AND n.Id<=? ORDER BY n.Id",
                         user,
-                        after);
+                        after,
+                        through);
         List<Map<String, Object>> items = new ArrayList<>();
         for (var r : rows) {
             items.add(
@@ -70,11 +80,7 @@ public class NotificationService {
                             "body",
                             "New message"));
         }
-        return Map.of(
-                "items",
-                items,
-                "nextCursor",
-                rows.isEmpty() ? cursor : rows.getLast().get("Id").toString());
+        return Map.of("items", items, "nextCursor", Long.toString(through));
     }
 
     @Scheduled(fixedDelay = 15000)

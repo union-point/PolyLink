@@ -202,6 +202,8 @@ class ChatIT {
                                     .path("items")
                                     .size())
                     .isZero();
+            var mutedPage = b.browser().json(b.browser().get("/notifications?cursor=0"));
+            assertThat(Long.parseLong(mutedPage.path("nextCursor").asText())).isGreaterThan(0);
             db.update(
                     "UPDATE messaging.Participants SET Muted=0,LastReadSequence=1 WHERE RoomId=? AND UserId=?",
                     UUID.fromString(room),
@@ -217,6 +219,18 @@ class ChatIT {
                     UUID.fromString(room),
                     b.id());
 
+            assertThat(
+                            b.browser()
+                                    .json(
+                                            b.browser()
+                                                    .get(
+                                                            "/notifications?cursor="
+                                                                    + mutedPage
+                                                                            .path("nextCursor")
+                                                                            .asText()))
+                                    .path("items")
+                                    .size())
+                    .isZero();
             var changed = new LinkedHashMap<>(input);
             changed.put(
                     "packet",
