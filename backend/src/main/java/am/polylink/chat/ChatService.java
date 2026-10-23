@@ -414,6 +414,15 @@ public class ChatService {
                             "UPDATE messaging.Participants SET Hidden=0 WHERE RoomId=? AND UserId<>?",
                             room,
                             caller);
+                    db.update(
+                            "INSERT auth.ActivityNotifications(UserId,Kind,EventKey,ActorId,RoomId,Sequence,CreatedAt,RetryAt) SELECT p.UserId,'DIRECT_MESSAGE',?, ?,p.RoomId,?,?,? FROM messaging.Participants p WHERE p.RoomId=? AND p.UserId<>?",
+                            room + ":" + sequence,
+                            caller,
+                            sequence,
+                            now(),
+                            now().plusSeconds(60),
+                            room,
+                            caller);
                     return messages(caller, room, "m.Sequence=?", sequence).getFirst();
                 });
     }
@@ -772,7 +781,7 @@ public class ChatService {
                         .replace("[", "![");
         return Rows.query(
                         db,
-                        "SELECT TOP (100) u.UserId,u.FirstName,u.LastName FROM dbo.Users u JOIN auth.AccountSecurity a ON a.UserId=u.UserId WHERE a.AdmissionStatus='ADMITTED' AND a.EmailVerifiedAt IS NOT NULL AND (u.FirstName+' '+u.LastName LIKE ? ESCAPE '!') ORDER BY u.FirstName,u.LastName,u.UserId",
+                        "SELECT TOP (100) u.UserId,u.FirstName,u.LastName,u.IsProfilePublic FROM dbo.Users u JOIN auth.AccountSecurity a ON a.UserId=u.UserId WHERE a.AdmissionStatus='ADMITTED' AND a.EmailVerifiedAt IS NOT NULL AND (u.FirstName+' '+u.LastName LIKE ? ESCAPE '!') ORDER BY u.FirstName,u.LastName,u.UserId",
                         "%" + text + "%")
                 .stream()
                 .map(
@@ -785,6 +794,7 @@ public class ChatService {
                                     "role",
                                     accounts.get(((Number) r.get("UserId")).intValue()).role());
                             person.put("onboardingComplete", true);
+                            person.put("canOpenProfile", r.get("IsProfilePublic"));
                             return person;
                         })
                 .toList();
