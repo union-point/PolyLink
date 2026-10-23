@@ -1,3 +1,4 @@
+import { spawnSync } from 'node:child_process';
 import { isolateDecorativeAssets } from '../m1/browser-assets.mjs';
 import { chromium } from '../m1/node_modules/playwright/index.mjs';
 import assert from 'node:assert/strict';
@@ -29,3 +30,12 @@ export async function image(p,room,large=false,type='image/png'){
   },{room,large,type});
 }
 export async function downloadCode(p,id){return p.evaluate(async id=>{const {loadTransport}=await import('/js/data/http/transport.js');const api=await loadTransport();await api.restore();try{await api.request({method:'get',url:'/chat/attachments/'+id,responseType:'arraybuffer'});return 'allowed';}catch(e){return e.code;}},id);}
+
+export async function exportData(page,password){
+  const encoded=await page.evaluate(async password=>{
+    const {settings}=await import('/js/services/index.js');const archive=await settings.export({password});
+    return new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(reader.result.split(',')[1]);reader.onerror=reject;reader.readAsDataURL(archive);});
+  },password);
+  const result=spawnSync('python3',['-c',"import sys,io,zipfile;z=zipfile.ZipFile(io.BytesIO(sys.stdin.buffer.read()));sys.stdout.buffer.write(z.read('data.json'))"],{input:Buffer.from(encoded,'base64'),maxBuffer:20*1024*1024});
+  assert.equal(result.status,0,result.stderr.toString());return JSON.parse(result.stdout.toString());
+}
