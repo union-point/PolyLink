@@ -111,7 +111,21 @@ public class AccountLifecycle {
                         locked.put(room, row);
                     }
                     chat.db.update("DELETE auth.EmailChanges WHERE UserId=?", caller);
+                    chat.db.update("DELETE auth.ExportGrants WHERE UserId=?", caller);
+                    chat.db.update(
+                            "DELETE auth.ActivityNotifications WHERE UserId=? OR ActorId=?",
+                            caller,
+                            caller);
                     if (delete) {
+                        for (String table :
+                                java.util.List.of(
+                                        "Education",
+                                        "Certificates",
+                                        "WorkExperience",
+                                        "Lecturers",
+                                        "ForumReplyLikes",
+                                        "UserNotificationSettings"))
+                            chat.db.update("DELETE dbo." + table + " WHERE UserId=?", caller);
                         for (var entry : locked.entrySet()) {
                             var room = entry.getKey();
                             var row = entry.getValue();

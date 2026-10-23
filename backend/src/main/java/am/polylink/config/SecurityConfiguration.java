@@ -31,7 +31,12 @@ public class SecurityConfiguration {
             cors.setAllowCredentials(true);
             cors.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
             cors.setAllowedHeaders(
-                    List.of("Content-Type", "Authorization", "X-CSRF-Token", "X-Attachment-Id"));
+                    List.of(
+                            "Content-Type",
+                            "Authorization",
+                            "X-CSRF-Token",
+                            "X-Attachment-Id",
+                            "X-Export-Grant"));
             cors.setMaxAge(600L);
             var source = new UrlBasedCorsConfigurationSource();
             source.registerCorsConfiguration("/**", cors);
@@ -120,12 +125,19 @@ public class SecurityConfiguration {
                     }
                     if (enabled) {
                         authorize
-                                .requestMatchers(HttpMethod.GET, "/settings", "/notifications")
+                                .requestMatchers(
+                                        HttpMethod.GET,
+                                        "/settings",
+                                        "/notifications",
+                                        "/account/export/data",
+                                        "/account/export/messages",
+                                        "/account/export/files/*")
                                 .permitAll();
                         authorize.requestMatchers(HttpMethod.PATCH, "/settings").permitAll();
                         authorize
                                 .requestMatchers(
                                         HttpMethod.POST,
+                                        "/account/export/authorize",
                                         "/account/email-change/start",
                                         "/account/email-change/verify",
                                         "/account/email-change/resend")

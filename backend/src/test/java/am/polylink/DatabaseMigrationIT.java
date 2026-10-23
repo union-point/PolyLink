@@ -14,6 +14,41 @@ import org.springframework.jdbc.datasource.SingleConnectionDataSource;
 
 class DatabaseMigrationIT {
     @Test
+    void v9SettingsBackfillPreservesVisibilityAndLanguage() throws Exception {
+        inIsolatedDatabase(
+                connection -> {
+                    var source = new SingleConnectionDataSource(connection, true);
+                    Flyway.configure()
+                            .dataSource(source)
+                            .locations("classpath:db/migration")
+                            .target("9")
+                            .load()
+                            .migrate();
+                    try (var statement = connection.createStatement()) {
+                        statement.execute(
+                                "INSERT dbo.Users(FirstName,LastName,Email,RoleId,LanguageId,IsProfilePublic) SELECT N'Settings',N'Fixture',N'settings@example.invalid',(SELECT TOP(1) RoleId FROM dbo.Roles),(SELECT Id FROM dbo.Languages WHERE Code=N'en'),0");
+                        statement.execute(
+                                "INSERT dbo.UserNotificationSettings(UserId,EmailEnabled,NewListingNotifications) SELECT UserId,0,NULL FROM dbo.Users");
+                    }
+                    SchemaCommand.migrate(connection, "upgrade");
+                    SchemaCommand.assertCurrentSchema(connection);
+                    try (var statement = connection.createStatement();
+                            var rows =
+                                    statement.executeQuery(
+                                            "SELECT u.IsProfilePublic,u.ShowEmail,l.Code,n.EmailEnabled,n.NewListingNotifications FROM dbo.Users u JOIN dbo.Languages l ON l.Id=u.LanguageId JOIN dbo.UserNotificationSettings n ON n.UserId=u.UserId")) {
+                        assertThat(rows.next()).isTrue();
+                        assertThat(rows.getBoolean(1)).isFalse();
+                        assertThat(rows.getBoolean(2)).isFalse();
+                        assertThat(rows.getString(3)).isEqualTo("en");
+                        assertThat(rows.getBoolean(4)).isFalse();
+                        assertThat(rows.getBoolean(5)).isTrue();
+                    }
+                    assertThat(SchemaCommand.migrations(source).migrate().migrationsExecuted)
+                            .isZero();
+                });
+    }
+
+    @Test
     void freshInstallRetiresLegacyChatWithoutCredentialsOrContent() throws Exception {
         inIsolatedDatabase(
                 connection -> {

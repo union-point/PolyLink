@@ -15,7 +15,7 @@ public class AccountSettings {
 
     public record Start(String email, String loginSecret, String expectedCredential) {}
 
-    public record Factor(boolean enabled, String loginSecret, String expectedCredential) {}
+    public record Factor(Boolean enabled, String loginSecret, String expectedCredential) {}
 
     public record Code(UUID requestId, String code) {}
 
@@ -61,6 +61,7 @@ public class AccountSettings {
     }
 
     public Map<String, Object> factor(Sessions.Principal caller, Factor input) {
+        if (input.enabled() == null) throw AuthFailure.invalid();
         limits.consume("SETTING_PROOF", "" + caller.account().id(), 10, 3600);
         return tx.execute(
                 s -> {
@@ -152,8 +153,8 @@ public class AccountSettings {
         if (rows.isEmpty()) throw AuthFailure.invalid();
         var r = rows.getFirst();
         if (id == null
-                || !id.toString().equals(r.get("RequestId").toString())
-                || !caller.familyId().toString().equals(r.get("FamilyId").toString())
+                || !id.toString().equalsIgnoreCase(r.get("RequestId").toString())
+                || !caller.familyId().toString().equalsIgnoreCase(r.get("FamilyId").toString())
                 || a.credential() != ((Number) r.get("CredentialVersion")).longValue()
                 || !a.email().equals(r.get("OldEmail"))
                 || a.emailFactor() != r.get("EmailFactor").equals(true))

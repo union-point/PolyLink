@@ -182,7 +182,7 @@ public class IdentityController {
         var visible =
                 Rows.query(
                         db,
-                        "SELECT u.FirstName,u.LastName,u.Email,u.ShowEmail,u.IsProfilePublic FROM dbo.Users u JOIN auth.AccountSecurity a ON a.UserId=u.UserId WHERE u.UserId=? AND a.AdmissionStatus='ADMITTED' AND a.EmailVerifiedAt IS NOT NULL",
+                        "SELECT u.FirstName,u.LastName,u.Email,u.ShowEmail,u.IsProfilePublic,r.Name AS RoleName FROM dbo.Users u JOIN dbo.Roles r ON r.RoleId=u.RoleId JOIN auth.AccountSecurity a ON a.UserId=u.UserId WHERE u.UserId=? AND a.AdmissionStatus='ADMITTED' AND a.EmailVerifiedAt IS NOT NULL",
                         userId);
         if (visible.isEmpty()
                 || (!owner && !Boolean.TRUE.equals(visible.getFirst().get("IsProfilePublic"))))
@@ -194,6 +194,9 @@ public class IdentityController {
             result.put("id", Integer.toString(userId));
             result.put("firstName", profile.get("FirstName"));
             result.put("lastName", profile.get("LastName"));
+            result.put(
+                    "role", profile.get("RoleName").toString().toLowerCase(java.util.Locale.ROOT));
+            result.put("onboardingComplete", true);
             if (Boolean.TRUE.equals(profile.get("ShowEmail")))
                 result.put("email", profile.get("Email"));
         }

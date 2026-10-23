@@ -68,7 +68,7 @@ public final class SchemaCommand {
         flyway.validate();
         assertCurrentSchema(connection);
         System.out.println(
-                "Schema migrated and validated through V10; account settings are available.");
+                "Schema migrated and validated through V11; account settings are available.");
     }
 
     public static String inventory(Connection connection) throws Exception {

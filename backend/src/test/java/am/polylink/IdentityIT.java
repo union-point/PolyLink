@@ -51,6 +51,163 @@ class IdentityIT {
         registry.add("spring.datasource.password", () -> required("DB_TEST_ADMIN_PASSWORD"));
     }
 
+    @BeforeEach
+    void resetRateLimits() {
+        db.update("DELETE auth.RateLimits");
+    }
+
+    @Test
+    void settingsEmailFactorAndEmailChangePreserveSessionAuthority() throws Exception {
+        var user = enroll("graduate");
+        var peer = enroll("lecturer");
+        var b = user.browser;
+        assertThat(b.get("/settings").statusCode()).isEqualTo(200);
+        assertThat(b.call("PATCH", "/settings", Map.of("twoFactorEnabled", true)).statusCode())
+                .isEqualTo(400);
+        assertThat(b.call("PATCH", "/settings", Map.of("showEmail", "true")).statusCode())
+                .isEqualTo(400);
+        assertThat(
+                        b.call(
+                                        "PATCH",
+                                        "/settings",
+                                        Map.of("isProfilePublic", false, "language", "ru"))
+                                .statusCode())
+                .isEqualTo(200);
+        assertThat(peer.browser.get("/users/" + user.id).statusCode()).isEqualTo(404);
+        String version = user.login.path("session").path("versions").path("credential").asText();
+        var factor =
+                Map.of("enabled", true, "loginSecret", user.secret, "expectedCredential", version);
+        assertThat(b.call("PUT", "/account/email-factor", factor).statusCode()).isEqualTo(200);
+        String email = "changed-" + UUID.randomUUID() + "@example.invalid";
+        var start =
+                b.post(
+                        "/account/email-change/start",
+                        Map.of(
+                                "email",
+                                email,
+                                "loginSecret",
+                                user.secret,
+                                "expectedCredential",
+                                version));
+        assertThat(start.statusCode()).as(start.body()).isEqualTo(200);
+        var challenge = b.json(start);
+        assertThat(challenge.path("stage").asText()).isEqualTo("OLD");
+        String id = challenge.path("requestId").asText();
+        assertThat(
+                        peer.browser
+                                .post(
+                                        "/account/email-change/verify",
+                                        Map.of("requestId", id, "code", mailCode(user.email)))
+                                .statusCode())
+                .isEqualTo(400);
+        var old =
+                b.post(
+                        "/account/email-change/verify",
+                        Map.of("requestId", id, "code", mailCode(user.email)));
+        assertThat(old.statusCode()).as(old.body()).isEqualTo(200);
+        assertThat(b.json(old).path("stage").asText()).isEqualTo("NEW");
+        assertThat(
+                        b.post(
+                                        "/account/email-change/verify",
+                                        Map.of("requestId", id, "code", mailCode(email)))
+                                .statusCode())
+                .isEqualTo(200);
+        assertThat(b.get("/auth/me").statusCode()).isEqualTo(200);
+        assertThat(
+                        db.queryForObject(
+                                "SELECT Email FROM dbo.Users WHERE UserId=?",
+                                String.class,
+                                user.id))
+                .isEqualTo(email);
+        assertThat(
+                        db.queryForObject(
+                                "SELECT CredentialVersion FROM auth.AccountSecurity WHERE UserId=?",
+                                Long.class,
+                                user.id))
+                .isEqualTo(Long.parseLong(version));
+        assertThat(
+                        b.call(
+                                        "PUT",
+                                        "/account/email-factor",
+                                        Map.of(
+                                                "enabled",
+                                                false,
+                                                "loginSecret",
+                                                user.secret,
+                                                "expectedCredential",
+                                                version))
+                                .statusCode())
+                .isEqualTo(200);
+        var grant =
+                b.post(
+                        "/account/export/authorize",
+                        Map.of("loginSecret", user.secret, "expectedCredential", version));
+        assertThat(grant.statusCode()).isEqualTo(200);
+        assertThat(b.get("/account/export/data?category=profile").statusCode()).isEqualTo(401);
+    }
+
+    @Test
+    void emailRequestsAreReplacedAttemptLimitedAndNeverChangeAddressEarly() throws Exception {
+        var user = enroll("graduate");
+        var b = user.browser;
+        String version = user.login.path("session").path("versions").path("credential").asText();
+        var input =
+                Map.of(
+                        "email",
+                        "first-" + UUID.randomUUID() + "@example.invalid",
+                        "loginSecret",
+                        user.secret,
+                        "expectedCredential",
+                        version);
+        var first = b.json(b.post("/account/email-change/start", input));
+        var second = b.json(b.post("/account/email-change/start", input));
+        assertThat(first.path("requestId").asText())
+                .isNotEqualTo(second.path("requestId").asText());
+        assertThat(
+                        b.post(
+                                        "/account/email-change/verify",
+                                        Map.of(
+                                                "requestId",
+                                                first.path("requestId").asText(),
+                                                "code",
+                                                "123456"))
+                                .statusCode())
+                .isEqualTo(409);
+        assertThat(
+                        db.queryForObject(
+                                "SELECT Email FROM dbo.Users WHERE UserId=?",
+                                String.class,
+                                user.id))
+                .isEqualTo(user.email);
+        for (int i = 0; i < 5; i++)
+            assertThat(
+                            b.post(
+                                            "/account/email-change/verify",
+                                            Map.of(
+                                                    "requestId",
+                                                    second.path("requestId").asText(),
+                                                    "code",
+                                                    "not-a-code"))
+                                    .statusCode())
+                    .isEqualTo(400);
+        assertThat(
+                        db.queryForObject(
+                                "SELECT Attempts FROM auth.EmailChanges WHERE UserId=?",
+                                Integer.class,
+                                user.id))
+                .isEqualTo(5);
+        assertThat(
+                        b.post(
+                                        "/account/email-change/verify",
+                                        Map.of(
+                                                "requestId",
+                                                second.path("requestId").asText(),
+                                                "code",
+                                                mailCode((String) input.get("email"))))
+                                .statusCode())
+                .isEqualTo(400);
+    }
+
     @Test
     void rawPasswordsOriginsAndUnknownAccountsFailClosed() throws Exception {
         var browser = new Browser();
@@ -98,7 +255,7 @@ class IdentityIT {
         var one = enroll("graduate");
         var two = enroll("lecturer");
         assertThat(one.browser.get("/auth/me").statusCode()).isEqualTo(200);
-        assertThat(one.browser.get("/users/" + two.id).statusCode()).isEqualTo(404);
+        assertThat(one.browser.get("/users/" + two.id).statusCode()).isEqualTo(200);
         assertThat(one.browser.get("/keys/me").statusCode()).isEqualTo(404);
         assertThat(
                         db.queryForObject(
