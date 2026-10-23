@@ -1,6 +1,7 @@
 // Only routes evidenced in the repository are mapped. Missing capabilities stay
 // explicit until a backend contract is agreed; add them here, never in page scripts.
 export const routes = {
+  'notifications.list':params=>({method:'get',url:'/notifications',params}),
   'settings.get':()=>({method:'get',url:'/settings'}),
   'settings.update':data=>({method:'patch',url:'/settings',data}),
   'chat.prepareGroup': data=>({method:'post',url:'/chat/groups/prepare',data}),

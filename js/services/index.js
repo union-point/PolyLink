@@ -37,3 +37,5 @@ export const settings = {
   get: operation('settings.get'), update: operation('settings.update'), changeEmail: operation('settings.changeEmail'), changePassword: operation('settings.changePassword'),
   deactivate: operation('settings.deactivate'), deleteAccount: operation('settings.deleteAccount'), export: operation('settings.export'),
 };
+
+export const notifications = { list:operation('notifications.list') };

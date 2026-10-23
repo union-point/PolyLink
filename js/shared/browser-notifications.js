@@ -1,4 +1,4 @@
-import { loadTransport } from '../data/http/transport.js';
+import { notifications } from '../services/index.js';
 const preference=user=>`polylink.notifications.${user}`;
 export function browserNotificationsEnabled(user){try{return localStorage.getItem(preference(user))==='true';}catch{return false;}}
 export async function enableBrowserNotifications(user,enabled){
@@ -21,8 +21,8 @@ export function startBrowserNotifications(user){
       if(browserNotificationsEnabled(user)&&globalThis.Notification?.permission==='granted'&&navigator.locks){
         await navigator.locks.request(preference(user),{ifAvailable:true},async lock=>{
           if(!lock||stopped)return;
-          const api=await loadTransport(),key=`${preference(user)}.cursor`,cursor=localStorage.getItem(key)||'initial';
-          const result=await api.request({method:'get',url:'/notifications',params:{cursor,limit:100}});
+          const key=`${preference(user)}.cursor`,cursor=localStorage.getItem(key)||'initial';
+          const result=await notifications.list({cursor,limit:100});
           if(stopped||!browserNotificationsEnabled(user))return;
           for(const item of result.items){
             shown.get(item.roomId)?.close();
