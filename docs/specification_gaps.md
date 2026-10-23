@@ -1,5 +1,7 @@
 # PolyLink specification gaps
 
+Approved settings decisions are tracked in [settings decisions](settings_decisions.md) and supersede proposals here for the same behavior.
+
 Reviewed 15 October 2026. This lists behavior that is still undecided in `frontend_context.md` and `backend_design_context.md`. Each item is something an implementer would otherwise have to invent.
 
 The documents already name most of these gaps. What is missing is one answer per item, specific enough to implement without copying the mock. Mock rules are demo behavior, not production policy. Every recommendation below is a proposal for review, not an approved product decision or an implemented backend contract. Applying a recommendation may require coordinated schema, API, mock, and page changes.
