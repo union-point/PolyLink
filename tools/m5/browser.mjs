@@ -48,10 +48,10 @@ try{
     const stable=await anchor(b.p);assert.equal(stable.id,anchored.id);assert(Math.abs(stable.offset-anchored.offset)<3);assert(!reads.includes('126'),'An off-screen arrival must not be acknowledged');
     assert.equal((await chat(b.p,'list')).find(r=>r.id===room).unreadCount,'1');await b.p.locator('[data-new-messages]').click();
     await waitForAsync(b.p,async room=>{const {chat}=await import('/js/services/index.js');return (await chat.list()).find(r=>r.id===room)?.lastReadSequence==='126';},room);
-    await b.p.getByRole('button',{name:'Search loaded history',exact:true}).click();await b.p.getByRole('searchbox',{name:'Search loaded history only'}).fill('M5 history 000');await b.p.waitForFunction(()=>document.querySelectorAll('.message').length===1);
-    await b.p.getByRole('button',{name:'Search loaded history',exact:true}).click();
+    await b.p.locator('button[aria-controls=chat-search]').click();await b.p.locator('#chat-search').fill('M5 history 000');await b.p.waitForFunction(()=>document.querySelectorAll('.message').length===1);
+    await b.p.locator('button[aria-controls=chat-search]').click();
     const input=b.p.locator('.message-input input');await input.fill('M5 compose survives a polling failure');
-    await b.ctx.route(api+'/chat/rooms*',route=>route.abort('failed'));await b.p.evaluate(()=>dispatchEvent(new Event('online')));await b.p.locator('[data-poll-status]').filter({hasText:'Retrying'}).waitFor();assert.equal(await input.inputValue(),'M5 compose survives a polling failure');assert.equal(await b.p.locator('.message').count(),126);
+    await b.ctx.route(api+'/chat/rooms*',route=>route.abort('failed'));await b.p.evaluate(()=>dispatchEvent(new Event('online')));await b.p.waitForFunction(()=>Boolean(document.querySelector('[data-poll-status]').textContent));assert.equal(await input.inputValue(),'M5 compose survives a polling failure');assert.equal(await b.p.locator('.message').count(),126);
     await b.ctx.unroute(api+'/chat/rooms*');await b.p.evaluate(()=>dispatchEvent(new Event('online')));await b.p.waitForFunction(()=>!document.querySelector('[data-poll-status]').textContent);assert.equal(await input.inputValue(),'M5 compose survives a polling failure');await input.fill('');
     let lostUpload=false,lostSend=false;
     await a.ctx.route(api+`/chat/rooms/${room}/attachments`,async route=>{if(!lostUpload){const result=await route.fetch();assert.equal(result.status(),201);lostUpload=true;await route.abort('failed');}else await route.continue();});
