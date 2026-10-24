@@ -20,9 +20,9 @@ The previously ignored `DB/` assets were moved here without changing their conte
 
 Run database commands below from `db/`. Backend commands run separately from `backend/`.
 
-## Existing installation on this PC
+## Historical restore snapshot (17 October 2026)
 
-The populated May backup is already restored. **Do not restore again for a normal startup.**
+The following records the original May-backup restore, not the current schema or row counts. Later local migrations are recorded below; inspect Flyway history for the current version. **Do not restore again for a normal startup.**
 
 - Database: `polylink`, SQL Server 2025 Developer, compatibility level 160.
 - Restored source: `backups/polylink-2026523-16-23-23.bak`, dated 23 May 2026.
@@ -103,7 +103,7 @@ A named volume provides persistence, not an independent backup. Keep `.bak` file
 
 ## Apply schema migrations
 
-Restoring a backup and applying migrations are separate steps. Container startup/restart does not apply migrations. M0 left the working `polylink` database at its original 27-table schema; its migration checks used disposable databases.
+Restoring a backup and applying migrations are separate steps. Container startup/restart does not apply migrations. M0 originally left the working `polylink` database at its 27-table schema; later V8/V9 local upgrades are recorded below. Query migration history rather than assuming the current version.
 
 Follow the [backend migration instructions](../backend/README.md#migrations) to export the target and migration credentials. The migration tool reads neither this directory's `.env` nor the backend's local properties file. From `db/`, change to the backend directory and run the guarded upgrade after reviewing the schema inventory and taking a safety backup:
 

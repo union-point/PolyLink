@@ -8,9 +8,10 @@ Start with the [root quickstart](../../README.md). Scripts locate their own chec
 | `source tools/local/env.sh` | Load private configuration into the current shell, resolve JDK 25 again, set PATH and replace only the local truststore JVM options while retaining other options. No provisioning. |
 | `bash tools/local/provision-openbao.sh` | Provision a running loopback HTTPS OpenBao for local development, with guarded initialization/unseal, existing Transit-key validation and narrow token creation/renewal. No Docker or SQL start. |
 | `bash tools/local/test.sh` | Install pinned test dependencies; run setup, client/crypto, OpenAPI and backend checks. |
-| `bash tools/local/test.sh --full` | Include the existing isolated M1–M6 SQL/SMTP/TLS/browser acceptance runner. |
+| `bash tools/local/test.sh --full` | Include combined isolated SQL/SMTP/TLS/browser acceptance through the groups runner, including forum regressions. |
+| `bash tools/local/test.sh --forum` | Run focused forum SQL/mail/browser acceptance. |
 
-Simple starts remain explicit in the README: Maven for the backend, Python for the frontend, and Docker Compose for mail/OpenBao. Migrations and invitations also remain explicit commands.
+Simple starts remain explicit in the README: Maven for the backend, Python for the frontend, and Docker Compose for mail/OpenBao. Migrations remain explicit commands; new accounts use [registry enrollment](../../docs/registry_enrollment.md). Invitations are retired.
 
 ## State and worktrees
 

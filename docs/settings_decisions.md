@@ -1,6 +1,6 @@
 # Settings product decisions
 
-Approved by the user on 23 October 2026. These decisions take precedence over older proposals for the same behavior in `specification_gaps.md`. They describe intended behavior, not completed implementation.
+Approved by the user on 23 October 2026. These decisions take precedence over older proposals for the same behavior in `specification_gaps.md`. They record approved policy; see [settings backend](settings_backend.md) for implemented behavior, deployment and acceptance evidence.
 
 ## Email change
 

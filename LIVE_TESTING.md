@@ -1,6 +1,6 @@
-Current authentication flow: [V14 registry enrollment](docs/registry_enrollment.md). Registration opens the mandatory academic form before any email is sent. After verification, enter the password again to finish key setup. Use two eligible university addresses for manual multi-account checks.
+# Live application verification
 
-# Live verification of M1–M6
+Current authentication flow: [V14 registry enrollment](docs/registry_enrollment.md). Registration opens the mandatory academic form before any email is sent. After verification, enter the password again to finish key setup. Use two eligible university addresses for manual multi-account checks.
 
 First complete the [Linux/macOS quickstart in README.md](README.md#run-the-real-application): local setup, OpenBao/mail, explicit migrations, registry eligibility and app startup. The helper scripts replace the old manual environment/key/truststore routine and retain private local state across worktrees. See [tools/local/README.md](tools/local/README.md) for their behavior.
 

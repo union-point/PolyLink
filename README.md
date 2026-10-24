@@ -1,6 +1,8 @@
 # PolyLink
 
-A university alumni/lecturer networking project with a Java 25/Spring Boot backend and a vanilla JavaScript frontend. The real application currently supports registry-based registration, email verification, encrypted direct/group text and image messaging, group membership management, persistent sessions, password changes, email-based account/history recovery, own-message export and account lifecycle actions. Encryption-key setup is automatic; users never save or enter a recovery key.
+A university networking application for graduates and lecturers, built with Java 25, Spring Boot and vanilla JavaScript. It supports registry-based enrollment, encrypted direct/group messaging, a career forum, account settings and email-based recovery. Encryption-key setup is automatic.
+
+General profile editing and publication APIs remain unavailable in HTTP mode. See the [documentation index](docs/README.md) for current capabilities and limitations.
 
 ## Requirements — Linux and macOS
 
@@ -16,7 +18,7 @@ The commands below work in Bash or Zsh on Linux and macOS. Run them from the pro
 bash tools/local/setup.sh
 ```
 
-Open the generated **`$HOME/.config/polylink/local.env`** and fill in your existing SQL credentials if they were not discovered. Then load this terminal:
+Open the generated **`$HOME/.config/polylink/local.env`** and fill in your existing SQL credentials if they were not discovered. Then load the environment:
 
 ```sh
 source tools/local/env.sh
@@ -34,7 +36,7 @@ bash tools/local/provision-openbao.sh
 
 The provisioning script initializes **only a fresh local development instance**, unseals it using its saved local operator state, configures Transit, and creates/renews the narrow backend token. Existing Transit keys and data are preserved. Its operator credentials are stored separately in `$HOME/.config/polylink-operator`, never in the application environment.
 
-An existing instance whose operator state is elsewhere may need its existing three unseal shares. Follow the script's instructions or [the operator runbook](infra/openbao/README.md); it will not reinitialize that instance. Moving an existing service's mounts out of an old worktree can require this one-time unseal after Compose recreates the container. Automatic local operator storage is for development; deployment uses the runbook's separate custody procedure.
+An existing instance without saved local operator state may require its three unseal shares. Follow the script's instructions or the [operator runbook](infra/openbao/README.md), which also covers deployment custody.
 
 Mail is captured at [http://localhost:8025](http://localhost:8025), not sent to external inboxes.
 
@@ -48,7 +50,7 @@ export MIGRATION_DB_PASSWORD="$DB_PASSWORD"
 ./backend/mvnw -f backend/pom.xml compile exec:java -Dexec.mainClass=am.polylink.database.SchemaCommand -Dexec.args=upgrade
 ```
 
-Use separate migration credentials if your runtime SQL user lacks permission. For an already-created **empty** database, use `-Dexec.args=fresh` instead. An existing database must pass the baseline guard; do not force it or delete tables. This applies/validates migrations through V14. If historical forum topics/replies exist, first stop at V12 and complete the [reviewed category/timezone backfill](docs/forum_implementation.md#existing-database-upgrade); V13 refuses unreviewed data. Application startup never migrates a database. See [schema details](docs/messenger/schema-and-migrations.md).
+Use separate migration credentials if your runtime SQL user lacks permission. For an already-created **empty** database, use `-Dexec.args=fresh` instead. An existing database must pass the baseline guard; do not force it or delete tables. This applies/validates migrations through V15. If historical forum topics/replies exist, first stop at V12 and complete the [reviewed category/timezone backfill](docs/forum_implementation.md#existing-database-upgrade); V13 refuses unreviewed data. Application startup never migrates a database. See [schema details](docs/messenger/schema-and-migrations.md).
 
 ### 4. Check registry eligibility
 
@@ -74,22 +76,11 @@ python3 server.py --port 8001
 
 Check [backend health](http://localhost:3004/actuator/health), then open [registration](http://localhost:8001/register.html). `js/config.js` already selects `http` and `http://localhost:3004`. No frontend install/build is needed for manual use; Axios/fonts/styles can still require internet access.
 
-If recovery returns `SERVICE_UNAVAILABLE` from `/auth/recovery/unlock`, check that OpenBao is unsealed and its application token is valid. A backend started without the local JVM truststore cannot reach its HTTPS endpoint. Stop the backend, rerun `bash tools/local/setup.sh`, then `source tools/local/env.sh` **in the same terminal** and start it again. Sourcing `local.env` directly does not configure Java TLS. These steps preserve existing Transit keys and account data; see [local troubleshooting](tools/local/README.md).
+For OpenBao, token or Java TLS errors, follow [local troubleshooting](tools/local/README.md#recovery-reports-service-unavailable). Always load the environment with `source tools/local/env.sh` before starting the backend.
 
 Use **`localhost` consistently**, rather than mixing it with `127.0.0.1`. Keep the default ports unless you also update the allowed frontend origin and API URL. Stop older app servers occupying ports 3004/8001 so you test this checkout.
 
-### 6. Try it
-
-1. Register an eligible university address as **graduate** with a password containing 8–128 characters, an uppercase letter, a number and a symbol.
-2. Complete the mandatory academic profile, request a code, then read the verification code in [Mailpit](http://localhost:8025) and verify the account. Enter the password again to log in; key setup completes automatically.
-3. In a **different browser profile or browser**, register and verify a second eligible account. Two ordinary tabs share one login and cannot represent different users.
-4. In Alice's [Search page](http://localhost:8001/search.html), find Bob and click **Connect**. Exchange text through [Messages](http://localhost:8001/message.html).
-5. Reload or restart the browser: a valid session and working secure browser storage restore access without another password. Bob can also close his browser and read Alice's later message when he returns.
-6. Try **Settings → Password**. The new password should preserve history and revoke other device sessions. A clean browser profile can open the same history with that password.
-
-Use **Messages → «Ստեղծել խումբ»** to create a group. Click the group name or avatar in the chat header to view members and manage the group as its owner. Members can leave through the three-dot menu. Settings provides own-message/image export and account deactivation/deletion; see [M6](docs/messenger/m6.md) for V8/V9 legacy-schema retirement and lifecycle operations. Some unrelated profile and announcement actions remain unavailable and fail explicitly; HTTP mode never falls back to demo data. See [LIVE_TESTING.md](LIVE_TESTING.md) for detailed checks and troubleshooting.
-
-## Test automatically
+## Automated tests
 
 The test script handles dependency installation, a private Python virtual environment, contract/client tests and Maven verification:
 
@@ -105,7 +96,7 @@ For the complete disposable SQL/OpenBao/mail/browser acceptance suite:
 bash tools/local/test.sh --full
 ```
 
-`--full` and `--forum` need running Docker and SQL credentials allowed to create/drop **disposable** databases. It uses `DB_TEST_ADMIN_USERNAME`/`DB_TEST_ADMIN_PASSWORD` when supplied, otherwise your configured migration/runtime credentials. It creates its own temporary services and never migrates the working database. On Linux, Playwright may also request missing system browser libraries; follow its reported dependency instructions.
+`--full` and `--forum` need running Docker and SQL credentials allowed to create/drop **disposable** databases. The runner uses `DB_TEST_ADMIN_USERNAME`/`DB_TEST_ADMIN_PASSWORD` when supplied, otherwise your configured migration/runtime credentials. It creates its own temporary services and never migrates the working database. On Linux, Playwright may also request missing system browser libraries; follow its reported dependency instructions.
 
 A quick backend-only check remains a direct command:
 
@@ -138,12 +129,4 @@ The browser check uses isolated mock data without editing `js/config.js`. It cov
 
 ## Further documentation
 
-- [Forum API, legacy migration, notifications and takedown operations](docs/forum_implementation.md)
-
-- [Detailed live testing and troubleshooting](LIVE_TESTING.md)
-- [Local setup automation and generated files](tools/local/README.md)
-- [Backend configuration and schema workflow](backend/README.md)
-- [OpenBao operator runbook](infra/openbao/README.md)
-- [Messenger specification](docs/messenger_spec.md) and [implementation plan](docs/messenger_implementation_plan.md)
-- [M0 contracts](docs/messenger/README.md), [M1 identity](docs/messenger/m1.md), [M2 messaging](docs/messenger/m2.md), [M3 sessions/passwords](docs/messenger/m3.md), [M4 recovery](docs/messenger/m4.md), [M5 messenger UI/images](docs/messenger/m5.md), [M6 groups/lifecycle](docs/messenger/m6.md)
-- [Frontend architecture](docs/frontend_context.md) and [profile module](js/profile/README.md)
+Use the [documentation index](docs/README.md) for architecture, product decisions, API contracts, operator runbooks and historical milestone evidence. Start with [live testing](LIVE_TESTING.md) for manual checks or [local tooling](tools/local/README.md) for setup troubleshooting.

@@ -1,5 +1,7 @@
 # PolyLink messenger implementation plan
 
+> Historical delivery plan. M0–M6 are implemented; M7 release/platform/restore checks remain. Use the [documentation index](README.md) and [registry enrollment](registry_enrollment.md) for current behavior and setup. Invitation enrollment and earlier feature defaults below describe milestone history.
+
 Planning baseline: 18 October 2026. The authority for product behavior is the [agreed messenger specification](messenger_spec.md), including its 18 October recovery and session decisions. This plan translates it into implementation work; proposed names, endpoints, schema details and algorithms below become contracts only when recorded and verified in the corresponding milestone. No messenger functionality is implemented by this document.
 
 M0 handoff, 18 October 2026: [contracts, schema migrations and validation evidence](messenger/README.md) are now present. The handoff records selected engineering formats and remaining M1/M6 gates; later implementation must use those versioned contracts rather than treating the proposals below as existing APIs.

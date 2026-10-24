@@ -1,6 +1,6 @@
-# Registry enrollment (V14)
+# Registry enrollment (V14–V15)
 
-V14 replaces invitation admission with **register → saved academic profile → registry match → email code → admission → password login and automatic key setup**. Apply V14 explicitly with the matching backend after backing up and stopping application access. Startup does not migrate. No production registry identities or synthetic lecturer names are seeded by the migration.
+V14 replaces invitation admission with **register → saved academic profile → registry match → email code → admission → password login and automatic key setup**. Apply migrations through V15 explicitly with the matching backend after backing up and stopping application access. Startup does not migrate. No production registry identities or synthetic lecturer names are seeded by the migration.
 
 Existing admitted accounts retain their credentials, sessions, vaults and access without a claim. The migration records `GrandfatheredAdmission` for admitted accounts and previously admitted deactivated accounts. Never-admitted accounts, including old invitation enrollments, must complete the registry flow. Old invitations and `AdmissionCommand invite` cannot grant admission.
 
@@ -33,11 +33,19 @@ New enrollment and every proposed email change require the exact normalized doma
 
 Names and diploma numbers use Unicode NFKC normalization, collapse Unicode whitespace, trim and lowercase with `Locale.ROOT`, with no accent removal, transliteration or fuzzy matching. Do final comparisons in Java to avoid accepting database-collation near matches. Alumni candidates are bounded to 1,000 in the selected specialization/study-year cohort; oversized or ambiguous cohorts fail closed and need an operator import review. Lecturer email lookup is bounded and then checked against normalized email in Java.
 
-Graduates must match diploma number, first/last names, specialization ID and the years of the registry study dates. Lecturers must match registration email, first/last names and department ID. Profession is a required reference selection, not registry evidence. Missing official lecturer names/department blocks admission. Patronymics are not collected. Biography is optional; profile photos are optional and can be added when profile-media editing is available.
+Graduates must match diploma number, first/last names, specialization ID and the years of the registry study dates. Lecturers must match registration email, first/last names and department ID. Profession is a required reference selection, not registry evidence. Missing official lecturer names/department blocks admission. Patronymics are not collected. Biography is optional; profile photos are optional and can be uploaded during enrollment through V15.
 
 The admitted profile persists names, role, description and specialization/profession label. Lecturer department and profession IDs persist in `dbo.Lecturers`; graduate study dates and specialization remain linked through the verified alumni claim. Diploma details are absent from URLs, code payloads, public profile projections and ordinary exports. Claims retain registry provenance, verification time and profile revision, with a separate audit trail for admission, correction and release.
 
 Official registry corrections do not revoke admitted-user access or silently retarget claims. Foreign keys block removal of occupied registry rows until an operator resolves the link. Email changes preserve claims and role, even if the new lecturer email differs from its original registry email.
+
+## Enrollment avatars (V15)
+
+V15 stores one normalized avatar per account in `auth.ProfileAvatars`, retained on admission. This is separate from the unimplemented general profile-media editor.
+
+- `PUT /auth/enrollment/avatar` accepts JSON `{content: "base64 image bytes"}` under restricted enrollment cookie/CSRF/origin checks and returns `{url}`. Input is JPEG or PNG, at most 256 KiB decoded and 1024×1024 pixels. The backend center-crops and re-encodes to 256×256 JPEG. Uploads are limited to 20 per account per hour.
+- `DELETE /auth/enrollment/avatar` removes the avatar and profile URL under the same enrollment authority.
+- `GET /auth/avatars/{id}` serves JPEG by randomized photo ID for pending/admitted accounts. This URL is publicly retrievable; profile visibility does not protect it. Replacement/removal invalidates the previous stored ID.
 
 ## Offline maintenance and rollout
 

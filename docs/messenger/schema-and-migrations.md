@@ -1,6 +1,9 @@
-Current schema: **V14** adds restricted registry enrollment, verified claims and explicit grandfathering. Apply migrations explicitly with a backup and matching application version. See [registry enrollment deployment](../registry_enrollment.md). Historical V1–V13 workflows below remain relevant to upgrades; invitations no longer admit new accounts.
-
 # Schema inventory and migration workflow
+
+Current schema: **V15**, including V14 restricted registry enrollment/claims and V15 enrollment avatars. Apply migrations explicitly with a backup and matching application version. See [registry enrollment deployment](../registry_enrollment.md). Historical V1–V13 workflows below remain relevant to upgrades; invitations no longer admit new accounts.
+
+The legacy inventory, V2 mapping and dated acceptance below describe their original migration stages. Use the [backend migration commands](../../backend/README.md#migrations) for the current full upgrade and the [forum backfill procedure](../forum_implementation.md#existing-database-upgrade) before V13 when historical rows exist.
+
 
 M0 baseline, 18 October 2026. Source: read-only SQL catalog inspection of the restored `polylink` database, SQL Server 17.0.5015.4, compatibility 160, collation `SQL_Latin1_General_CP1_CI_AS`. The [catalog query](../../backend/src/main/resources/db/inventory/legacy-schema.sql) and [metadata snapshot](../../backend/src/main/resources/db/inventory/legacy-schema.json) contain no row values, users' email addresses, password hashes or message bodies.
 
@@ -27,7 +30,7 @@ Existing chat tables have only primary-key indexes. They lack pair uniqueness, s
 
 Neither a `Users` row, its role nor `TwoFactorEnabled` proves active admission or verified email. V2 deliberately inserts no `auth.AccountSecurity` rows. M1 must implement an authoritative admission/email-enrollment process; the exact registry claim cardinality, proof and alumni exception policy remain general-account dependencies. Existing users cannot authenticate by treating legacy hashes as new server verifiers. Missing security state means no messaging authorization.
 
-## Additive physical model
+## Historical V2 physical model
 
 [V2](../../backend/src/main/resources/db/migration/V2__messenger_foundation.sql) creates separate capability schemas. No legacy table is altered. Keep encrypted messaging in `messaging` so legacy bodies cannot enter ciphertext endpoints through an accidental ORM mapping. `LegacyRoomId` is an optional, unique reference for an explicitly approved later migration.
 
@@ -40,7 +43,7 @@ Neither a `Users` row, its role nor `TwoFactorEnabled` proves active admission o
 | Active vault/copies | `keyvault.Vaults`, independent vault-key version/content revision and current identity FK; JSON packets serialized as UTF-8 bytes. Transit ciphertext/context are retained separately. |
 | Durable prepared transitions | `keyvault.Operations`, operation kind/state, expected independent versions, expiry, protected authorization, immutable fingerprint, ciphertext/verifier and completion result. No raw secret/password/vault key. |
 | Rooms and unique pairs | `messaging.Rooms`, `messaging.DirectPairs`; ordered user pair PK, no self-pair, one pair per direct room. Services enforce room kind/two participants. |
-| Membership/visibility | `messaging.Participants`, fixed continuous membership start, cutoff, read marker, hidden/mute; user-room lookup index. Rejoin intervals remain outside v1. |
+| Membership/visibility | `messaging.Participants`, fixed continuous membership start, cutoff, read marker, hidden/mute; user-room lookup index. V7 subsequently adds historical membership intervals for rejoin. |
 | Personal direct blocking | `messaging.Blocks`; both directions checked for direct send only. |
 | Room epochs and recipient envelopes | `messaging.RoomKeys`, `messaging.Envelopes`; composite room/version keys, complete canonical recipient snapshot, identity references. Complete membership/snapshot validation and a single active winner are transactional service invariants. |
 | Sequenced bodies/results | `messaging.Messages`, `messaging.SendOperations`; clustered `(room,sequence)`, unique server message ID, unique sender/room/client operation and immutable fingerprint/result. Deleted bodies become null with a neutral retained position. |
@@ -59,7 +62,7 @@ From `backend/`, set `DB_HOST`, `DB_PORT`, `DB_NAME`, `MIGRATION_DB_USERNAME`, `
 ./mvnw compile exec:java -Dexec.mainClass=am.polylink.database.SchemaCommand -Dexec.args=fresh
 ```
 
-`inventory` is read-only and prints metadata. `fresh` requires an empty database, executes V1 then V2 and validates checksums. It seeds no data or credentials. The DBA creates the empty database first. Use the inspected collation for consistency; V1 explicitly declares legacy string collations.
+`inventory` is read-only and prints metadata. `fresh` requires an empty database, executes all numbered migrations through V15 and validates checksums. Reference data may be seeded, but eligible identities and usable credentials are not. The DBA creates the empty database first. Use the inspected collation for consistency; V1 explicitly declares legacy string collations.
 
 For an existing restored database, first compare the inventory against the snapshot and take an independent safety backup. Then use:
 
@@ -67,7 +70,7 @@ For an existing restored database, first compare the inventory against the snaps
 ./mvnw compile exec:java -Dexec.mainClass=am.polylink.database.SchemaCommand -Dexec.args=upgrade
 ```
 
-Without history, `upgrade` verifies exact legacy structure and rejects unexpected tables/objects before explicitly baselining at V1 and applying V2. With history, it checks the original baseline before V8, or the baseline excluding the three retired chat tables after a successful V8, then runs unapplied migrations and validates checksums. Equivalent schemas with different generated constraint names require deliberate reconciliation, not an automatic baseline. Do not use `flyway baseline`, `baselineOnMigrate=true`, `clean` or Hibernate schema generation to bypass the guard. Migrations are immutable after acceptance; add a subsequent version for changes.
+Without history, `upgrade` verifies exact legacy structure and rejects unexpected tables/objects before explicitly baselining at V1 and applying pending migrations. With history, it checks the original baseline before V8, or the baseline excluding the three retired chat tables after a successful V8, then runs unapplied migrations and validates checksums. Equivalent schemas with different generated constraint names require deliberate reconciliation, not an automatic baseline. Do not use `flyway baseline`, `baselineOnMigrate=true`, `clean` or Hibernate schema generation to bypass the guard. Migrations are immutable after acceptance; add a subsequent version for changes.
 
 Ordinary runtime DB credentials need only required application permissions. Migration/test-admin credentials are separate from runtime configuration. Test administrators need permission to create/drop databases; production application users do not. Historical ignored scripts are not part of this deployment path.
 

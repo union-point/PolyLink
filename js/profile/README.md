@@ -4,7 +4,7 @@
 public profile selected by `user.html?id=...`. Both use async feature services.
 
 - `profile-render.js`: shared education, certificates, announcements and comments.
-- `profile-sections.js`: owner forms, durable CRUD and image uploads.
+- `profile-sections.js`: owner forms, CRUD and image uploads through the selected provider (general writes are mock-only).
 - `profile-editor.js`: intro editing, save/cancel and pending state.
 - `profile-modal.js`: existing modal layout, formatting and asynchronous save handling.
 - `profile-validation.js`: form checks; provider validation remains authoritative.
@@ -13,4 +13,5 @@ public profile selected by `user.html?id=...`. Both use async feature services.
 Theme, confirmation, notification, dates and session behavior live in `../shared/ui.js`.
 Rendering uses escaped text, sanitized rich HTML and safe URLs from `../shared/content.js`.
 No profile module accesses Axios, IndexedDB or persisted user identity directly.
-See ../../frontend_context.md and ../../docs/REFACTOR.md for contracts and manual QA.
+See [frontend architecture](../../docs/frontend_context.md) for HTTP limitations and
+[live testing](../../LIVE_TESTING.md) for manual checks.

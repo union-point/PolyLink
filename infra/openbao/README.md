@@ -1,6 +1,8 @@
-# OpenBao for PolyLink M1
+# OpenBao operator runbook
 
 The [Compose service](compose.yaml) runs pinned OpenBao 2.7.1 in normal server mode, with TLS, persistent single-node Raft storage and manual operator unseal. The application uses only [the backend policy](backend-policy.hcl). The browser never contacts OpenBao. Default SQL/Java startup does not create this infrastructure or initialize its keys.
+
+For routine local development use the [setup and provisioning helpers](../../tools/local/README.md). The manual procedure below describes operator custody and infrastructure configuration.
 
 ## Provisioning
 
@@ -29,7 +31,7 @@ bao token create -policy=polylink-backend -period=1h -no-default-policy -format=
 
 Set `BAO_ADDR`/`BAO_CACERT` appropriately before using the host CLI. Capture the token-create output securely and install only its `auth.client_token` as the backend-readable token file; do not print it to application logs. The backend reads `OPENBAO_TOKEN_FILE` for each request so operators can replace a revoked token without embedding credentials in images or SQL. It renews the periodic token every ten minutes. The policy grants only this key's encrypt/decrypt plus token-self lookup/renew; it cannot create/export/delete Transit keys or administer OpenBao. Do not run the backend with the initialization root token.
 
-On key creation leave convergent encryption off. PLK1 derives a context from owner, purpose and vault-key version. Setup checks an encrypt/decrypt round-trip before publishing an identity. M1 has no user-facing service-unlock route; possession of an ordinary session never authorizes that operation.
+On key creation leave convergent encryption off. PLK1 derives a context from owner, purpose and vault-key version. Setup checks an encrypt/decrypt round-trip before publishing an identity. Account/history recovery uses a separate purpose-bound authorization through `/auth/recovery/unlock`; possession of an ordinary session never authorizes that operation. See [M4 recovery](../../docs/messenger/m4.md).
 
 ## Restart, backup and outages
 

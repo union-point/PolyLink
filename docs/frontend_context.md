@@ -1,6 +1,6 @@
 # PolyLink frontend context
 
-Reviewed 24 October 2026 against the current source. PolyLink is an Armenian-language, static multi-page frontend using native ES modules. No frontend framework or build step is required for manual use. A real Java/Spring Boot backend now implements identity, encrypted messaging, account settings and the career forum; profile editing and publications remain primarily mock features.
+Reviewed 25 October 2026 against the current source. PolyLink is an Armenian-language, static multi-page frontend using native ES modules. No frontend framework or build step is required for manual use. A real Java/Spring Boot backend now implements identity, encrypted messaging, account settings and the career forum; profile editing and publications remain primarily mock features.
 
 ## Architecture and provider boundary
 
@@ -28,7 +28,7 @@ HTML → page controller → js/services/index.js → js/data/client.js
 | --- | --- |
 | `login.html`, `register.html`, `2fa-verify.html`; `login.js`, `register.js`, `2fa-verify.js` | HTTP registry registration, verified email, optional email login factor and automatic backed-up key setup. Browser password derivation precedes HTTP authentication. Mock accounts and fixed codes are separate. |
 | `forgot.html`, `verify-code.html`, `reset-password.html`; `auth/recovery-client.js` | HTTP account/history recovery with local or platform-assisted vault unlock, resumable recovery authorization, atomic commit and identity rotation. No recovery key is shown to the user. |
-| `profile_info.html`; `profile-info.js` | Restricted graduate/lecturer enrollment form, saved revisions, database reference selections, email verification and password re-entry after admission. Uses explicit `/auth/enrollment` operations without application bootstrap or vault access. See [enrollment contract](registry_enrollment.md). |
+| `profile_info.html`; `profile-info.js` | Restricted graduate/lecturer enrollment form, saved revisions, database reference selections, optional V15 avatar upload, email verification and password re-entry after admission. Uses explicit `/auth/enrollment` operations without application bootstrap or vault access. See [enrollment contract](registry_enrollment.md). |
 | `profile.html`; `profile/profile-main.js`, editor/sections/modal/render modules | Owner profile, education/certificate/publication editing and media work in mock mode. Full initialization can fail in HTTP mode when it requests unimplemented publication/child-resource APIs. |
 | `user.html?id=...`; `user/user-main.js` | Profile projection and direct contact. HTTP public-profile read exists, but child publication reads remain unavailable. Closed profiles cannot be opened by another member. |
 | `search.html`; `search.js`, `chat/direct-contact.js` | Real member search and Search → Connect → encrypted direct room. Closed profiles remain discoverable with `canOpenProfile=false`; search does not expose email. |
@@ -85,11 +85,11 @@ Mock validation includes names ≤100, titles ≤255, rich text ≤20,000 visibl
 
 ## Running and verification
 
-Follow the [root setup](../README.md) and [backend setup](../backend/README.md), apply migrations explicitly through V11, and select `http` to use real services. Serve with `python3 server.py --port 8001`; use `localhost` consistently for frontend, cookies and API configuration. Use separate browser profiles for different accounts. Frontend-only mock use needs no API server.
+Follow the [root setup](../README.md) and [backend setup](../backend/README.md), apply migrations explicitly through V15, and select `http` to use real services. Serve with `python3 server.py --port 8001`; use `localhost` consistently for frontend, cookies and API configuration. Use separate browser profiles for different accounts. Frontend-only mock use needs no API server.
 
 [Settings acceptance recorded on 24 October](settings_backend.md) reports nine database-free backend tests, 42 integration tests, 41 contract/client tests and M1–M6 browser phases passing. These are recorded results, not checks rerun for this documentation update. Messenger checks cover HTTP/mock controls and mobile layouts; OS notification presentation and native macOS execution are not established by those results.
 
-Remaining work includes server profile/publication editing, reference-data authority, general registry claims, translation catalogs, background notification delivery, old-mailbox recovery and M7 production restore/retention gates. Keep selectors stable in the existing HTML, retain sanitization around legacy `document.execCommand`, and use milestone documents for detailed crypto/transport contracts.
+Remaining work includes server profile/publication editing, reference-data governance for future editing APIs, translation catalogs, background notification delivery, old-mailbox recovery and M7 production restore/retention gates. Keep selectors stable in the existing HTML, retain sanitization around legacy `document.execCommand`, and use milestone documents for detailed crypto/transport contracts.
 
 
 ## Implemented forum
