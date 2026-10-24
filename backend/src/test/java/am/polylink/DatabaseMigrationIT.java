@@ -14,6 +14,83 @@ import org.springframework.jdbc.datasource.SingleConnectionDataSource;
 
 class DatabaseMigrationIT {
     @Test
+    void forumReviewRequiresExactMappingAndPreservesOriginalDates() throws Exception {
+        inIsolatedDatabase(
+                connection -> {
+                    var source = new SingleConnectionDataSource(connection, true);
+                    SchemaCommand.migrations(source, "11").migrate();
+                    try (var statement = connection.createStatement()) {
+                        statement.execute(
+                                "INSERT dbo.Users(FirstName,LastName,Email,RoleId,LanguageId) SELECT N'Forum',N'Legacy',N'forum@example.invalid',(SELECT TOP(1) RoleId FROM dbo.Roles),(SELECT TOP(1) Id FROM dbo.Languages)");
+                        statement.execute(
+                                "INSERT dbo.ForumTopics(UserId,Title,Content,CreatedAt) SELECT UserId,N'Topic',N'<b>Legacy</b>','2020-01-01T12:00:00' FROM dbo.Users");
+                        statement.execute(
+                                "INSERT dbo.ForumReplies(TopicId,UserId,Content,CreatedAt) SELECT TopicId,UserId,N'Reply','2020-01-01T13:00:00' FROM dbo.ForumTopics");
+                    }
+                    SchemaCommand.migrate(connection, "upgrade", "12");
+                    var db = new org.springframework.jdbc.core.JdbcTemplate(source);
+                    assertThat(
+                                    db.queryForObject(
+                                            "SELECT COUNT(*) FROM dbo.ForumTopics WHERE CreatedAtUtc IS NULL",
+                                            Integer.class))
+                            .isEqualTo(1);
+                    var review =
+                            java.util.Map.of(
+                                    "operator",
+                                    "test operator",
+                                    "timezone",
+                                    "Asia/Yerevan",
+                                    "topics",
+                                    java.util.Map.of("1", "informatics"));
+                    assertThatThrownBy(
+                                    () ->
+                                            am.polylink.forum.ForumMaintenanceCommand.review(
+                                                    connection,
+                                                    java.util.Map.of(
+                                                            "operator",
+                                                            "test",
+                                                            "timezone",
+                                                            "UTC",
+                                                            "topics",
+                                                            java.util.Map.of()),
+                                                    false))
+                            .hasMessageContaining("exactly");
+                    am.polylink.forum.ForumMaintenanceCommand.review(connection, review, false);
+                    assertThat(
+                                    db.queryForObject(
+                                            "SELECT COUNT(*) FROM forum.LegacyReview",
+                                            Integer.class))
+                            .isZero();
+                    assertThatThrownBy(() -> SchemaCommand.migrations(source).migrate())
+                            .hasMessageContaining("Forum legacy review required");
+                    am.polylink.forum.ForumMaintenanceCommand.review(connection, review, true);
+                    SchemaCommand.migrate(connection, "upgrade");
+                    assertThat(
+                                    db.queryForObject(
+                                            "SELECT COUNT(*) FROM forum.LegacyReview",
+                                            Integer.class))
+                            .isEqualTo(2);
+                    assertThat(
+                                    db.queryForObject(
+                                            "SELECT CONVERT(varchar(30),CreatedAt,126) FROM dbo.ForumTopics",
+                                            String.class))
+                            .startsWith("2020-01-01T12:00:00");
+                    assertThat(
+                                    db.queryForObject(
+                                            "SELECT DATEPART(hour,CreatedAtUtc) FROM dbo.ForumTopics",
+                                            Integer.class))
+                            .isEqualTo(8);
+                    assertThat(
+                                    db.queryForObject(
+                                            "SELECT Content FROM dbo.ForumTopics", String.class))
+                            .isEqualTo("<b>Legacy</b>");
+                    db.execute("ALTER TABLE dbo.ForumTopics ADD UnexpectedForumState bit NULL");
+                    assertThatThrownBy(() -> SchemaCommand.assertCurrentSchema(connection))
+                            .hasMessageContaining("reviewed forum inventory");
+                });
+    }
+
+    @Test
     void v9SettingsBackfillPreservesVisibilityAndLanguage() throws Exception {
         inIsolatedDatabase(
                 connection -> {
