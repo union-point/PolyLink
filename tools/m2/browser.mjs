@@ -1,3 +1,4 @@
+import { registerForVerification } from '../m1/enrollment-fixture.mjs';
 import { isolateDecorativeAssets } from '../m1/browser-assets.mjs';
 import { chromium } from '../m1/node_modules/playwright/index.mjs';
 import assert from 'node:assert/strict';
@@ -23,7 +24,7 @@ async function code(email){
 }
 async function enroll(ctx,index){
   const p=await page(ctx),email=process.env.M1_BROWSER_EMAIL.replace('browser-','m2-'+index+'-');
-  const challenge=await p.evaluate(async({email,password})=>{const {auth}=await import('/js/services/index.js');return auth.register({email,password,firstName:'M2',lastName:'Fixture',role:'graduate'});},{email,password});
+  const challenge=await registerForVerification(p,{email,password,firstName:'M2',lastName:'Fixture',role:'graduate'});
   const proof=await code(email);
   await p.evaluate(async({challengeId,proof,email,password})=>{const {auth}=await import('/js/services/index.js');await auth.verifyEmail({challengeId,code:proof});await auth.login({email,password});},{challengeId:challenge.challengeId,proof,email,password});
   const user=await p.evaluate(async()=>{const {auth}=await import('/js/services/index.js');return auth.me();});assert(user&&!user.cryptoLocked);return {p,user,email};

@@ -1,3 +1,4 @@
+import { registerForVerification } from '../m1/enrollment-fixture.mjs';
 import { waitForAsync } from '../m1/browser-wait.mjs';
 import assert from 'node:assert/strict';
 import {origin,api,password,email,contexts,errors,payloads,sends,context,proof,call,chat,image,downloadCode,exportData} from './browser-support.mjs';
@@ -5,7 +6,7 @@ try{
   // Recipients publish fully backed-up identities once, then go offline.
   const a=await context(1),offline=[];let unconfiguredId;
   for(let i=1;i<=4;i++){
-    const entry=i===1?a:await context(i);const challenge=await call(entry.p,'auth','register',[{email:email(i),password,firstName:'M6',lastName:`User${i}`,role:'graduate'}]);
+    const entry=i===1?a:await context(i);const challenge=await registerForVerification(entry.p,{email:email(i),password,firstName:'M6',lastName:`User${i}`,role:'graduate'});
     await call(entry.p,'auth','verifyEmail',[{challengeId:challenge.challengeId,code:await proof(email(i))}]);
     if(i<4){await call(entry.p,'auth','login',[{email:email(i),password}]);const user=await call(entry.p,'auth','me');offline.push(user.id);}
     else{const people=await call(a.p,'search','people',[{q:'M6 User4'}]);unconfiguredId=people[0].id;}

@@ -1,3 +1,4 @@
+import { registerForVerification } from '../m1/enrollment-fixture.mjs';
 import { waitForAsync } from '../m1/browser-wait.mjs';
 import { isolateDecorativeAssets } from '../m1/browser-assets.mjs';
 import { chromium } from '../m1/node_modules/playwright/index.mjs';
@@ -33,7 +34,7 @@ async function downloadCode(p,id){return p.evaluate(async id=>{const {loadTransp
 async function anchor(p,id){return p.evaluate(id=>{const h=document.querySelector('.messages'),rect=h.getBoundingClientRect(),node=id?[...h.querySelectorAll('.message')].find(n=>n.dataset.messageId===id):[...h.querySelectorAll('.message')].find(n=>n.getBoundingClientRect().bottom>rect.top);return {id:node?.dataset.messageId,offset:node?node.getBoundingClientRect().top-rect.top:0,top:h.scrollTop};},id);}
 try{
   if(phase==='setup'){
-    for(let i=1;i<=3;i++){const {p}=await context(i);const challenge=await call(p,'auth','register',[{email:email(i),password,firstName:'M5',lastName:`User${i}`,role:'graduate'}]);await call(p,'auth','verifyEmail',[{challengeId:challenge.challengeId,code:await proof(email(i))}]);const result=await call(p,'auth','login',[{email:email(i),password}]);assert(!result.user.cryptoLocked);}
+    for(let i=1;i<=3;i++){const {p}=await context(i);const challenge=await registerForVerification(p,{email:email(i),password,firstName:'M5',lastName:`User${i}`,role:'graduate'});await call(p,'auth','verifyEmail',[{challengeId:challenge.challengeId,code:await proof(email(i))}]);const result=await call(p,'auth','login',[{email:email(i),password}]);assert(!result.user.cryptoLocked);}
     console.log('M5 browser fixtures configured.');
   }else if(phase==='ui'){
     const a=await context(1),b=await context(2),c=await context(3);const au=await call(a.p,'auth','me'),bu=await call(b.p,'auth','me');

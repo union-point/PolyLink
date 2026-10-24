@@ -569,3 +569,13 @@ select.error:focus {
 #profile-fields label { display: block; margin-top: 14px; }
 #enrollment-code, #enrollment-login { margin-top: 24px; }
 [hidden] { display: none !important; }
+.enrollment-page .container { width: min(430px, calc(100% - 20px)); min-width: 0; padding: 28px 24px; overflow-wrap: anywhere; }
+.enrollment-page h2 { font-size: 22px; line-height: 1.4; }
+.enrollment-page p { line-height: 1.5; }
+.enrollment-page .year-range-box { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); padding: 12px; }
+.enrollment-page .year-item { min-width: 0; }
+.enrollment-page button { min-height: 44px; padding: 10px 14px; border: 1px solid var(--primary-blue); border-radius: 8px; background: var(--primary-blue); color: white; cursor: pointer; font-weight: 600; }
+.enrollment-page button:disabled { opacity: .6; cursor: wait; }
+.enrollment-page #save-profile, .enrollment-page #resend-code, .enrollment-page #enrollment-logout { background: transparent; color: var(--primary-blue); }
+.enrollment-page .bottom-t { gap: 12px; flex-wrap: wrap; }
+.enrollment-page #enrollment-logout { margin: 12px 8px 0 0; }

@@ -1,3 +1,4 @@
+import { registerForVerification } from './enrollment-fixture.mjs';
 import { chromium } from 'playwright';
 import { isolateDecorativeAssets } from './browser-assets.mjs';
 import assert from 'node:assert/strict';
@@ -12,7 +13,7 @@ async function member(index,role){
  context.on('page',page=>page.on('pageerror',error=>errors.push(error.message)));
  const page=await context.newPage();await page.goto(origin+'/login.html');await page.locator('#login-form').waitFor();
  const email=process.env.M1_BROWSER_EMAIL.replace('browser-',`forum-${index}-`);
- const challenge=await page.evaluate(async({email,password,role})=>{const {auth}=await import('/js/services/index.js');return auth.register({email,password,firstName:'Forum',lastName:role,role});},{email,password,role});
+ const challenge=await registerForVerification(page,{email,password,firstName:'Forum',lastName:role,role});
  let code;
  for(let tries=0;tries<50&&!code;tries++){
   const messages=await(await fetch(process.env.M1_MAILPIT_URL+'/api/v1/messages')).json();const found=messages.messages.find(item=>item.To.some(to=>to.Address===email));

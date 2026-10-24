@@ -40,9 +40,9 @@ async function verifyCode(){
     await page.locator('#verify-form [type=submit]').click();
     return;
   }
-  await page.locator('[data-inline-verification]').waitFor();
-  await page.locator('[data-inline-verification] input').fill(await code());
-  await page.locator('[data-inline-verification] button').first().click();
+  await page.locator('#enrollment-code:not([hidden])').waitFor();
+  await page.locator('#enrollment-code input').fill(await code());
+  await page.locator('#enrollment-code button').first().click();
 }
 async function assertReady(){
   await page.waitForURL('**/profile.html',{timeout:60000});
@@ -60,7 +60,14 @@ try{
   if(phase==='setup'){
     await page.goto(origin+'/register.html');await page.locator('select[name=role]').waitFor();
     for(const [id,value]of Object.entries({firstname:'Browser',lastname:'Fixture',email,password,confirm:password}))await page.locator('#'+id).fill(value);
-    await page.locator('#register-form [type=submit]').click();await verifyCode();await assertReady();
+    await page.locator('#register-form [type=submit]').click();
+    await page.waitForURL('**/profile_info.html');await page.locator('#profile-fields:not([disabled])').waitFor();
+    // Reload resumes the restricted enrollment without storing a password or a derived login proof.
+    await page.reload();await page.locator('#profile-fields:not([disabled])').waitFor();
+    await page.locator('#diplomaNumber').fill(email);await page.locator('#specializationId').selectOption({index:1});await page.locator('#startYear').fill('2021');await page.locator('#endYear').fill('2025');
+    await page.locator('#submit-profile').click();await page.locator('#enrollment-code:not([hidden])').waitFor();
+    await verifyCode();await page.locator('#enrollment-login:not([hidden])').waitFor();
+    await page.locator('#password').fill(password);await page.locator('#enrollment-login [type=submit]').click();await assertReady();
     await page.reload();await assertReady();
     const tab=await browser.newPage();await tab.goto(origin+'/profile.html');await tab.waitForURL('**/profile.html');
     const next=await tab.evaluate(async()=>{const {auth}=await import('/js/services/index.js');return auth.me();});assert(next&&!next.cryptoLocked);await tab.close();
