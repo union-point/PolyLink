@@ -1,6 +1,6 @@
 # PolyLink backend design context
 
-Reviewed 24 October 2026 against current Java controllers/services, migrations V1–V11, frontend provider clients and the settings/messenger handoffs. PolyLink now has an implemented Java 25 / Spring Boot 4.1.1 backend using Microsoft SQL Server, JDBC transactions, SMTP and OpenBao Transit. It is no longer only a design or scaffold.
+Reviewed 24 October 2026 against current Java controllers/services, migrations V1–V13, frontend provider clients and the settings/messenger handoffs. PolyLink now has an implemented Java 25 / Spring Boot 4.1.1 backend using Microsoft SQL Server, JDBC transactions, SMTP and OpenBao Transit. It is no longer only a design or scaffold.
 
 ## Evidence and authority
 
@@ -15,7 +15,7 @@ Ignored local `db/` scripts, report, diagram and backups are historical/referenc
 
 ## Implemented domain and boundaries
 
-The platform connects graduates and lecturers through discovery, profiles and direct/group messaging. Announcement, education, certificate and forum tables remain from the legacy domain; their full write APIs have not been implemented. `events.html` is a job/internship/training feed, with no event calendar, RSVP or attendance entity. Help, policies and tutorials remain static content. WorkExperience has no connected editor/API.
+The platform connects graduates and lecturers through discovery, profiles and direct/group messaging. Announcement, education and certificate tables remain from the legacy domain; their full write APIs have not been implemented. The career forum now has its own authenticated API and frontend integration. `events.html` is a job/internship/training feed, with no event calendar, RSVP or attendance entity. Help, policies and tutorials remain static content. WorkExperience has no connected editor/API.
 
 | Area | Current server implementation |
 | --- | --- |
@@ -25,7 +25,8 @@ The platform connects graduates and lecturers through discovery, profiles and di
 | Messenger | Encrypted direct/group text and images, key epochs/envelopes, idempotent sends, cursor history, read/mute/hide/block state and protected attachment access. |
 | Groups | User-created rooms, owner transfer/rename, add/remove/leave and sequence-bounded membership intervals. |
 | Settings | Privacy, language, notification preferences, staged email changes and password-authorized email factor. |
-| Notifications | Transactional messenger events, cursor browser feed and batched activity email; publication/forum event producers remain deferred. |
+| Forum | Database categories, cursor topics/replies, owner edits/deletion, desired-state likes, optimistic versions and create deduplication; independently enabled after V13. |
+| Notifications | Transactional messenger/forum events, cursor browser feed, batched message email and individual forum notices; announcement producers remain deferred. |
 | Export/lifecycle | Password-authorized full export, own encrypted messages/files, deactivation, account deletion and deletion ledger. |
 
 The code uses explicit JDBC/SQL service boundaries; domain JPA entity mappings are not implemented. SQL FKs alone do not enforce principal ownership, room membership, role consistency or visibility. Services must maintain these invariants transactionally.
@@ -45,10 +46,12 @@ The code uses explicit JDBC/SQL service boundaries; domain JPA entity mappings a
 | V9 | Remove `dbo.Users.PasswordHash` and `TwoFactorEnabled`; active identity state remains in auth/keyvault. Legacy values are discarded, not imported as trusted credentials. |
 | V10 | Account settings, staged email changes and notification state/queues. |
 | V11 | Armenian language availability and session-bound account-export grants. |
+| V12 | Forum categories, versions/UTC projections, review/takedown audits, create deduplication and notification references. |
+| V13 | Required topic categories and UTC timestamps after reviewed legacy backfill. |
 
 Use `SchemaCommand inventory`, guarded `upgrade` for restored/existing databases, and `fresh` only for empty databases. Migrations use separate migration credentials and run explicitly. Startup disables Flyway and SQL initialization; Hibernate is configured for validation. Never edit applied migration checksums or bypass baseline drift checks. V8/V9 removal requires a verified backup and stopped application access with matching backend deployment. See [schema workflow](messenger/schema-and-migrations.md).
 
-Legacy education/lecturer data uses normalized university, degree, specialization, institute, department and profession references. Registries do not establish an automatic verified account claim. University/specialization verification flags do not implement an approval workflow. Certificate URL length and profile date precision require reconciliation when those APIs are built. Forum lacks a professional-major relationship and parent-reply model; current frontend replies are flat. Stable frontend category codes need deliberate lookup mappings.
+Legacy education/lecturer data uses normalized university, degree, specialization, institute, department and profession references. Registries do not establish an automatic verified account claim. University/specialization verification flags do not implement an approval workflow. Certificate URL length and profile date precision require reconciliation when those APIs are built. Forum uses a separate seeded category dictionary and flat replies. Historical topics require reviewed category mappings and source timezone through the V12 maintenance workflow; see [forum operations](forum_implementation.md).
 
 Legacy dates include `DATE` and `DATETIME2` defaults without an authoritative source timezone. Current protocol timestamps/version/sequence values follow messenger contracts; do not reinterpret historical timestamps or turn year/month profile inputs into verified graduation days. Legacy INT keys can be serialized as opaque strings at the frontend boundary.
 
@@ -79,7 +82,7 @@ The backend listens on loopback port 3004 by default; the default allowed fronte
 | Settings | GET/PATCH `/settings`; POST `/account/email-change/start`, `/verify`, `/resend`; PUT `/account/email-factor`; GET `/notifications`. |
 | Export/lifecycle | POST `/account/export/authorize`; GET `/account/export/data`, `/messages`, `/files/{id}`; POST `/account/deactivate`, `/account/delete`. |
 
-Frontend adapter mappings for profile update/onboarding/media, education/certificates, posts/comments and forum topics remain expectations rather than implemented controllers. Forum replies/likes have no HTTP mapping. HTTP failures remain visible; there is no fallback to fixtures. The historical forgot/verify/reset routes and plain `{email,password}` login contract are obsolete for real identity.
+Frontend adapter mappings for profile update/onboarding/media, education/certificates and posts/comments remain expectations rather than implemented controllers. Forum topics/replies/likes have implemented HTTP contracts and separate page-aware normalizers. HTTP failures remain visible; there is no fallback to fixtures. The historical forgot/verify/reset routes and plain `{email,password}` login contract are obsolete for real identity.
 
 Server ownership comes from the authenticated principal, never body `userId`/author/timestamps. Public projections exclude authentication metadata and undisclosed email; search never exposes email. Closed profiles remain discoverable with `canOpenProfile=false`, while another member's profile read returns 404. Legacy public media URLs cannot become private retroactively; future upload/storage APIs must enforce visibility.
 

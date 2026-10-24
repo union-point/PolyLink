@@ -7,6 +7,7 @@ const invalid = field => new DataError('VALIDATION', 'Խնդրում ենք ստ
 const missing = () => new DataError('NOT_FOUND', 'Թեման կամ պատասխանը չի գտնվել։');
 const find = (items, id) => { const item = items.find(item => item.id === String(id)); if (!item) throw missing(); return item; };
 const fields = (data, allowed) => { if (!data || typeof data !== 'object') throw invalid('content'); for (const key of Object.keys(data)) if (!allowed.includes(key)) throw invalid(key); };
+const title = value => { if (typeof value !== 'string') throw invalid('title'); return required(value,'title',255); };
 const content = value => { if (typeof value !== 'string' || value.length > 100000) throw invalid('content'); return richContent(value); };
 function category(code) { if (!Object.hasOwn(majors, code)) throw invalid('categoryCode'); return code; }
 function access(state) {
@@ -22,7 +23,7 @@ export function upgradeForumState(state) {
 }
 function author(state, id) {
   const user = find(state.users, id), deleted = user.status === 'deleted';
-  return { id: deleted ? null : id, name: deleted ? 'Ջնջված օգտատեր' : user.name, avatar: deleted ? '' : user.avatar || '', canOpenProfile: !deleted && user.status === 'active' && (id === state.sessionUserId || (state.settings[id]?.isProfilePublic ?? true)) };
+  return { id: deleted ? null : id, name: deleted ? 'Ջնջված օգտատեր' : user.name || [user.firstName,user.lastName].filter(Boolean).join(' '), avatar: deleted ? '' : user.avatar || '', canOpenProfile: !deleted && user.status === 'active' && (id === state.sessionUserId || (state.settings[id]?.isProfilePublic ?? true)) };
 }
 function topicView(state, topic) {
   const clean = sanitizeHtml(topic.content);
@@ -64,10 +65,10 @@ export const forumOperations = {
   'forum.list': (state,options={}) => { access(state);if(options.categoryCode)category(options.categoryCode);return page(state.topics.filter(item=>!options.categoryCode||item.categoryCode===options.categoryCode).map(item=>topicView(state,item)),options,`topics:${options.categoryCode||''}`,'newest'); },
   'forum.get': (state,id) => { access(state);return topicView(state,find(state.topics,id)); },
   'forum.create': (state,input) => {
-    fields(input,['title','content','categoryCode','requestId']);const payload={title:required(input.title,'title',255),content:content(input.content),categoryCode:category(input.categoryCode)};
+    fields(input,['title','content','categoryCode','requestId']);const payload={title:title(input.title),content:content(input.content),categoryCode:category(input.categoryCode)};
     return create(state,'topic',input,payload,userId=>{const item={...payload,id:nextId(state,'topic'),userId,createdAt:new Date().toISOString(),updatedAt:null,version:'1'};state.topics.push(item);return item;},id=>topicView(state,find(state.topics,id)));
   },
-  'forum.update': (state,id,input) => { fields(input,['title','content','categoryCode','expectedVersion']);if(Object.keys(input).length<2)throw invalid('content');const item=find(state.topics,id);own(state,item,input.expectedVersion);if('title'in input)item.title=required(input.title,'title',255);if('content'in input)item.content=content(input.content);if('categoryCode'in input)item.categoryCode=category(input.categoryCode);item.version=String(BigInt(item.version)+1n);item.updatedAt=new Date().toISOString();return topicView(state,item); },
+  'forum.update': (state,id,input) => { fields(input,['title','content','categoryCode','expectedVersion']);if(Object.keys(input).length<2)throw invalid('content');const item=find(state.topics,id);own(state,item,input.expectedVersion);if('title'in input)item.title=title(input.title);if('content'in input)item.content=content(input.content);if('categoryCode'in input)item.categoryCode=category(input.categoryCode);item.version=String(BigInt(item.version)+1n);item.updatedAt=new Date().toISOString();return topicView(state,item); },
   'forum.delete': (state,id,version) => { const item=find(state.topics,id);own(state,item,version);state.topics=state.topics.filter(topic=>topic!==item);state.replies=state.replies.filter(reply=>reply.topicId!==item.id);return null; },
   'forum.replies.get': (state,id) => { access(state);return replyView(state,find(state.replies,id)); },
   'forum.replies.list': (state,id,options={}) => { access(state);find(state.topics,id);const sort=options.sort||'newest';if(!['newest','oldest','popular'].includes(sort))throw invalid('sort');return page(state.replies.filter(item=>item.topicId===String(id)).map(item=>replyView(state,item)),options,`replies:${id}:${sort}`,sort); },

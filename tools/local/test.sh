@@ -4,7 +4,7 @@ set -euo pipefail
 umask 077
 script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 repo_dir="$(cd "$script_dir/../.." && pwd)"
-case "${1:-}" in ''|--full) ;; *) echo 'Usage: bash tools/local/test.sh [--full]' >&2; exit 1 ;; esac
+case "${1:-}" in ''|--full|--forum) ;; *) echo 'Usage: bash tools/local/test.sh [--full|--forum]' >&2; exit 1 ;; esac
 if [ -r "${POLYLINK_LOCAL_DIR:-$HOME/.config/polylink}/local.env" ]; then
   source "$script_dir/env.sh"
 else
@@ -23,7 +23,7 @@ mkdir -p "$state"
 python3 -m venv "$state/test-venv"
 "$state/test-venv/bin/python" -m pip install --disable-pip-version-check -r tools/contracts/requirements.txt
 "$state/test-venv/bin/python" tools/contracts/validate.py
-if [ "${1:-}" = --full ]; then
+if [ -n "${1:-}" ]; then
   command -v docker >/dev/null || { echo 'Docker is required for --full.' >&2; exit 1; }
   docker info >/dev/null
   export DB_TEST_ADMIN_USERNAME="${DB_TEST_ADMIN_USERNAME:-${MIGRATION_DB_USERNAME:-${DB_USERNAME:-sa}}}"
@@ -31,7 +31,11 @@ if [ "${1:-}" = --full ]; then
   [ -n "$DB_TEST_ADMIN_PASSWORD" ] || { echo 'Set DB_TEST_ADMIN_PASSWORD for disposable SQL databases.' >&2; exit 1; }
   npm ci --prefix tools/m1 --ignore-scripts
   npx --prefix tools/m1 playwright install chromium
-  python3 tools/m1/verify.py --groups
+  if [ "$1" = --forum ]; then
+    python3 tools/m1/verify.py --forum
+  else
+    python3 tools/m1/verify.py --groups
+  fi
 else
   ./backend/mvnw -f backend/pom.xml verify
 fi

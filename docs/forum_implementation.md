@@ -53,3 +53,10 @@ Deleting a topic explicitly removes all replies/likes/notification events. Delet
 Public launch requires a named responsible operator and confirmation that the existing support@polylink.am channel is operational. No report is silently submitted by the unavailable help form. Do not claim that the mailbox has been verified by implementing the forum.
 
 An authorized database operator can run `ForumMaintenanceCommand takedown-topic TOPIC_ID 'operator name' 'case reference and reason'` with migration credentials. It verifies existence, locks the topic, removes replies/likes/events transactionally, and records the operator/reason/time/reply count in `forum.Takedowns`. This operation has no HTTP equivalent or login bypass. Review the topic and backup first. Keep case details in the controlled reporting system; do not put unnecessary personal content in audit reasons. Backup retention/deletion replay remain the existing lifecycle runbook's responsibility.
+
+
+## Verification record — 24 October 2026
+
+`bash tools/local/test.sh --full` passed on Linux with JDK 25, disposable SQL Server/OpenBao/Mailpit services and headless Chromium: 12 local-tool tests, 48 client/contract tests, 11 backend unit tests and 48 SQL integration tests, followed by the existing M1–M6 browser phases and both forum browser suites. Focused forum acceptance also passed with messenger endpoints disabled. The live browser suite verifies both roles, manual refresh, forum event delivery to the browser API, notification navigation, real stale-edit/validation responses and a committed create whose response is deliberately lost before retry. Mock browser coverage includes formatting, cursor pagination/counts, conflict comparison, drafts, deletion confirmation and mobile/themes. Browser notification presentation is substituted in automation; these results do not establish native OS notification appearance or macOS execution.
+
+The working application database was not migrated by these checks. Production enablement still requires the explicit V12/V13 workflow where applicable, `FORUM_ENABLED=true`, and the reporting/operator prerequisites above.

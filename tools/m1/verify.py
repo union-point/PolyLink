@@ -57,10 +57,10 @@ def main():
             admin_sql('CREATE DATABASE ['+name+'] COLLATE SQL_Latin1_General_CP1_CI_AS');database_created=True
             run(maven+['exec:java','-Dexec.mainClass=am.polylink.database.SchemaCommand','-Dexec.args=fresh'],cwd=ROOT,env=env)
             run(maven+['-Pdatabase-tests','verify']+(['-Dit.test=ForumIT'] if args.forum else ['-Dit.test=GroupIT,MessengerStateIT'] if args.groups_only else ['-Dit.test=MessengerStateIT'] if args.messenger_ui_only else []),cwd=ROOT,env=env)
-            if args.browser or args.messenger:
+            if args.browser or args.messenger or args.forum:
                 import browser_check
-                browser_check.run(ROOT,env,admin_sql,request,root,messenger=args.messenger,continuity=args.continuity,recovery=args.recovery,messenger_ui=args.messenger_ui,messenger_ui_only=args.messenger_ui_only,groups=args.groups,groups_only=args.groups_only)
-            print(('M6 focused' if args.groups_only else 'M1–M6' if args.groups else 'M5 focused' if args.messenger_ui_only else 'M1–M5' if args.messenger_ui else 'M1/M2/M3/M4' if args.recovery else 'M1/M2/M3' if args.continuity else 'M1/M2' if args.messenger else 'M1')+' SQL, TLS Transit, SMTP and HTTP acceptance passed.')
+                browser_check.run(ROOT,env,admin_sql,request,root,messenger=args.messenger,continuity=args.continuity,recovery=args.recovery,messenger_ui=args.messenger_ui,messenger_ui_only=args.messenger_ui_only,groups=args.groups,groups_only=args.groups_only,forum=args.forum)
+            print(('Forum' if args.forum else 'M6 focused' if args.groups_only else 'M1–M6' if args.groups else 'M5 focused' if args.messenger_ui_only else 'M1–M5' if args.messenger_ui else 'M1/M2/M3/M4' if args.recovery else 'M1/M2/M3' if args.continuity else 'M1/M2' if args.messenger else 'M1')+' SQL, TLS Transit, SMTP and HTTP acceptance passed.')
         finally:
             if database_created:admin_sql('ALTER DATABASE ['+name+'] SET SINGLE_USER WITH ROLLBACK IMMEDIATE; DROP DATABASE ['+name+']')
             subprocess.run(['docker','rm','-f',bao,mail],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)

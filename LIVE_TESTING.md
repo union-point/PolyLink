@@ -95,3 +95,17 @@ The backend renews its OpenBao service token while running. After a sufficiently
 5. In Settings, download own data and confirm the export includes only your accessible authored messages/images and no encryption-key material. Use disposable accounts to test deactivation/deletion: deactivation suspends access, while deletion removes own bodies, closes direct sending and transfers owned groups deterministically. See the M6 operator instructions before production use.
 
 Run `python3 tools/m1/verify.py --groups` for the full disposable M1–M6 acceptance suite, or `bash tools/local/test.sh --full` to install test dependencies and run it. M7 retains the supported-platform and operational restore rehearsals.
+
+
+## Career forum
+
+After explicit V13 migration, start the backend with `FORUM_ENABLED=true`; no messenger flag is required. For historical discussions, complete the [V12 category/timezone review](docs/forum_implementation.md#existing-database-upgrade) first. Current admission is the documented temporary exception until verified onboarding ships.
+
+1. With two admitted users in separate browser profiles, open Forum. Confirm six backend-loaded categories and server-side filtering. Create a formatted topic, then open its returned URL.
+2. Reply as the second user, like/unlike the reply (including your own), and manually refresh the first user's topic. Sort newest/oldest/popular and load additional pages; the displayed total counts all replies.
+3. Edit the same topic or reply in two tabs. Save one, then save the other. Confirm the stale save fails while preserving the draft; compare the latest version and explicitly choose which content to continue editing.
+4. Delete an own reply. Confirm another user cannot edit/delete it. Delete an own topic only after the warning that all users' replies/likes will be removed. Opening missing/nonexistent topic IDs must show an error and a forum link.
+5. Opt into browser notifications explicitly. Replies from the other user produce forum notifications while a site tab remains open; clicking opens the referenced reply. The forum preference disables both activity channels; the email switch disables only email. Check activity emails through local Mailpit. Own replies produce no notifications.
+6. Export own data and check topics/replies. Deleting an account retains discussions under a neutral deleted author; explicit topic deletion removes the complete discussion. Closed profiles do not create actionable author links.
+
+`bash tools/local/test.sh --forum` automates focused unit/contract/SQL/SMTP/live-browser/mock-browser checks in disposable resources. `--full` also runs the messenger/settings/lifecycle regressions and forum browsers. Public launch additionally requires a verified support channel and assigned takedown operator; code completion does not establish those operational facts.

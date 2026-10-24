@@ -48,7 +48,7 @@ export MIGRATION_DB_PASSWORD="$DB_PASSWORD"
 ./backend/mvnw -f backend/pom.xml compile exec:java -Dexec.mainClass=am.polylink.database.SchemaCommand -Dexec.args=upgrade
 ```
 
-Use separate migration credentials if your runtime SQL user lacks permission. For an already-created **empty** database, use `-Dexec.args=fresh` instead. An existing database must pass the baseline guard; do not force it or delete tables. This applies/validates migrations through V7. Application startup never migrates a database. See [schema details](docs/messenger/schema-and-migrations.md).
+Use separate migration credentials if your runtime SQL user lacks permission. For an already-created **empty** database, use `-Dexec.args=fresh` instead. An existing database must pass the baseline guard; do not force it or delete tables. This applies/validates migrations through V13. If historical forum topics/replies exist, first stop at V12 and complete the [reviewed category/timezone backfill](docs/forum_implementation.md#existing-database-upgrade); V13 refuses unreviewed data. Application startup never migrates a database. See [schema details](docs/messenger/schema-and-migrations.md).
 
 ### 4. Invite two test users
 
@@ -65,6 +65,7 @@ In each new terminal, open this checkout's root. For the **backend**, load the e
 
 ```sh
 source tools/local/env.sh
+export FORUM_ENABLED=true
 (cd backend && ./mvnw spring-boot:run)
 ```
 
@@ -89,7 +90,7 @@ Use **`localhost` consistently**, rather than mixing it with `127.0.0.1`. Keep t
 5. Reload or restart the browser: a valid session and working secure browser storage restore access without another password. Bob can also close his browser and read Alice's later message when he returns.
 6. Try **Settings → Password**. The new password should preserve history and revoke other device sessions. A clean browser profile can open the same history with that password.
 
-Use **Messages → «Ստեղծել խումբ»** to create a group. Click the group name or avatar in the chat header to view members and manage the group as its owner. Members can leave through the three-dot menu. Settings provides own-message/image export and account deactivation/deletion; see [M6](docs/messenger/m6.md) for V8/V9 legacy-schema retirement and lifecycle operations. Some unrelated profile/forum/settings actions remain unavailable and fail explicitly; HTTP mode never falls back to demo data. See [LIVE_TESTING.md](LIVE_TESTING.md) for detailed checks and troubleshooting.
+Use **Messages → «Ստեղծել խումբ»** to create a group. Click the group name or avatar in the chat header to view members and manage the group as its owner. Members can leave through the three-dot menu. Settings provides own-message/image export and account deactivation/deletion; see [M6](docs/messenger/m6.md) for V8/V9 legacy-schema retirement and lifecycle operations. Some unrelated profile and announcement actions remain unavailable and fail explicitly; HTTP mode never falls back to demo data. See [LIVE_TESTING.md](LIVE_TESTING.md) for detailed checks and troubleshooting.
 
 ## Test automatically
 
@@ -99,13 +100,15 @@ The test script handles dependency installation, a private Python virtual enviro
 bash tools/local/test.sh
 ```
 
+For focused forum SQL/mail/browser acceptance, run `bash tools/local/test.sh --forum`.
+
 For the complete disposable SQL/OpenBao/mail/browser acceptance suite:
 
 ```sh
 bash tools/local/test.sh --full
 ```
 
-`--full` needs running Docker and SQL credentials allowed to create/drop **disposable** databases. It uses `DB_TEST_ADMIN_USERNAME`/`DB_TEST_ADMIN_PASSWORD` when supplied, otherwise your configured migration/runtime credentials. It creates its own temporary services and never migrates the working database. On Linux, Playwright may also request missing system browser libraries; follow its reported dependency instructions.
+`--full` and `--forum` need running Docker and SQL credentials allowed to create/drop **disposable** databases. It uses `DB_TEST_ADMIN_USERNAME`/`DB_TEST_ADMIN_PASSWORD` when supplied, otherwise your configured migration/runtime credentials. It creates its own temporary services and never migrates the working database. On Linux, Playwright may also request missing system browser libraries; follow its reported dependency instructions.
 
 A quick backend-only check remains a direct command:
 
@@ -135,6 +138,8 @@ M1_FRONTEND=http://localhost:8001 node tools/m1/messenger-ui.mjs
 The browser check uses isolated mock data without editing `js/config.js`. It covers group controls, sending, drafts, search, emoji, attachments, themes, sender contrast and mobile layouts. Install Chromium with `npx --prefix tools/m1 playwright install chromium` if needed. Set `M1_ARTIFACT_DIR` to save screenshots.
 
 ## Further documentation
+
+- [Forum API, legacy migration, notifications and takedown operations](docs/forum_implementation.md)
 
 - [Detailed live testing and troubleshooting](LIVE_TESTING.md)
 - [Local setup automation and generated files](tools/local/README.md)

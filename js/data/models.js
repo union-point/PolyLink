@@ -16,10 +16,13 @@
  * @typedef {{id:string,postId:string,text:string,createdAt:string,author:Author}} Comment
  * @typedef {{id:string,title:string,content:string,category:string,sphere:string,
  * createdAt:string,author:Author,comments:Comment[]}} Post
- * @typedef {{id:string,title:string,categoryCode:string,categoryName:string,content:string,createdAt:string,
- * author:Author,replyCount:number}} Topic
- * @typedef {{id:string,topicId:string,content:string,createdAt:string,
- * author:Author,likeCount:number,liked:boolean}} Reply
+ * @typedef {{id:string|null,name:string,avatar:string,canOpenProfile:boolean}} ForumAuthor
+ * @typedef {{id:string,code:string,name:string}} ForumCategory
+ * @typedef {{id:string,title:string,categoryCode:string,categoryName:string,content:string,excerpt:string,
+ * createdAt:string,updatedAt:string|null,version:string,author:ForumAuthor,replyCount:number,
+ * canEdit:boolean,canDelete:boolean}} Topic
+ * @typedef {{id:string,topicId:string,content:string,createdAt:string,updatedAt:string|null,version:string,
+ * author:ForumAuthor,likeCount:number,liked:boolean,isTopicAuthor:boolean,canEdit:boolean,canDelete:boolean}} Reply
  * @typedef {{id:string,isGroup:boolean,closed:boolean,name:string,participants:Author[],
  * muted:boolean,blocked:boolean,unreadCount:number,lastMessage:Message|null}} Conversation
  * @typedef {{id:string,roomId:string,sender:Author,text:string,createdAt:string,
