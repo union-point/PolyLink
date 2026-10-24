@@ -8,7 +8,6 @@ start(async () => {
   initializePasswordControls();
   const notice=sessionStorage.getItem('polylink.logoutNotice');if(notice){const message=document.createElement('p');message.setAttribute('role','status');message.textContent=notice;document.querySelector('form').appendChild(message);sessionStorage.removeItem('polylink.logoutNotice');}
   const form = document.getElementById('login-form');
-  form.querySelector('.error-message').remove();
   form.onsubmit = event => {
     event.preventDefault();
     pending(form.querySelector('[type="submit"]'), form, async () => {

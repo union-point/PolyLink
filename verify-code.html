@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="hy">
 
 <head>
     <meta charset="UTF-8" />
@@ -12,14 +12,14 @@
     <div class="container">
         <div class="login-box">
             <div class="logo-container">
-                <img class="img" src="./image/logo.png" alt="Logo" class="logo-img">
+                <img class="img" src="./image/logo.png" alt="PolyLink">
                 <h1 class="logo-text">PolyLink</h1>
             </div>
             <p class="info-text">
                 Մենք ուղարկել ենք 6 նիշանոց հաստատման կոդ Ձեր էլ. փոստին։ Խնդրում ենք մուտքագրել այն ստորև։
             </p>
 
-            <form id="verify-form">
+            <form novalidate id="verify-form">
                 <div class="code-inputs">
                     <input type="text" class="code-input" maxlength="1" pattern="[0-9]" inputmode="numeric" />
                     <input type="text" class="code-input" maxlength="1" pattern="[0-9]" inputmode="numeric" />
@@ -32,7 +32,7 @@
                 <button type="submit" class="signin-btn btn-t">Հաստատել կոդը</button>
 
                 <p class="resend-text">
-                    Չե՞ք ստացել կոդը։ <span class="resend-link" id="resend-btn">Կրկին ուղարկել</span>
+                    Չե՞ք ստացել կոդը։ <button type="button" class="resend-link" id="resend-btn">Կրկին ուղարկել</button>
                     <span class="timer" id="timer"></span>
                 </p>
 

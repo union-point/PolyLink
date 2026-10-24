@@ -1,10 +1,10 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="hy">
 
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>PolyLink</title>
+  <title>Մուտք | PolyLink</title>
 
   <link rel="stylesheet" href="./css/auth.css" />
 
@@ -14,20 +14,20 @@
   <div class="container">
     <div class="login-box">
       <div class="logo-container">
-        <img class="img" src="./image/logo.png" alt="Logo" class="logo-img">
+        <img class="img" src="./image/logo.png" alt="PolyLink">
         <h1 class="logo-text">PolyLink</h1>
       </div>
-      <form id="login-form">
+      <form novalidate id="login-form">
         <label for="email">Էլ. փոստ</label>
-        <input type="text" id="email" placeholder="օրինակ@polytech.am" />
+        <input type="email" id="email" name="email" autocomplete="email" maxlength="255" required placeholder="name@polytechnic.am" />
 
         <label for="password">Գաղտնաբառ</label>
 
         <div class="password-wrapper">
-          <input type="password" id="password" placeholder="Մուտքագրեք Ձեր գաղտնաբառը" />
+          <input type="password" id="password" name="password" autocomplete="current-password" maxlength="128" required placeholder="Մուտքագրեք Ձեր գաղտնաբառը" />
           <button type="button" class="toggle-password" id="toggle-new">👁️</button>
         </div>
-        <p class="error-message">Սխալ Էլ. փոստ կամ Գաղտնաբառ</p>
+        
 
         <a href="forgot.html" class="forgot">Մոռացե՞լ եք գաղտնաբառը։</a>
 
@@ -40,7 +40,7 @@
     </div>
   </div>
 
-  <!---!!!--- remove after testing ---!!!----->
+
   <script type="module" src="./js/login.js"></script>
 
 

@@ -1,13 +1,18 @@
+import { authMessage } from './auth-messages.js';
 import { DataError } from '../data/errors.js';
 import { rememberChallenge } from '../services/workflow.js';
 
 export function initializePasswordControls(passwordId = 'password') {
   window.addEventListener('pagehide',()=>document.querySelectorAll('input[type=password]').forEach(input=>{input.value='';}));
   document.querySelectorAll('.toggle-password').forEach(button => {
+    button.setAttribute('aria-label', 'Ցույց տալ գաղտնաբառը');
+    button.setAttribute('aria-pressed', 'false');
     button.onclick = () => {
       const input = button.parentElement.querySelector('input');
       input.type = input.type === 'password' ? 'text' : 'password';
-      button.textContent = input.type === 'password' ? '👁️' : '🙈';
+      button.setAttribute('aria-label', input.type === 'password' ? 'Ցույց տալ գաղտնաբառը' : 'Թաքցնել գաղտնաբառը');
+      button.setAttribute('aria-pressed', String(input.type === 'text'));
+      button.textContent = input.type === 'password' ? '◉' : '◎';
     };
   });
   const input = document.getElementById(passwordId);
@@ -41,8 +46,8 @@ export function finishLogin(result) {
 // The HTTP login flow keeps password derivatives in memory while verification is inline.
 export async function inlineCode(auth, challenge, purpose, container){
   const panel=document.createElement('div');panel.dataset.inlineVerification='';
-  const label=document.createElement('label');label.textContent='Մուտքագրեք էլ․ փոստով ուղարկված կոդը';
-  const input=document.createElement('input');input.type='text';input.inputMode='numeric';input.autocomplete='one-time-code';input.maxLength=6;input.pattern='[0-9]{6}';input.setAttribute('aria-label','Վավերացման կոդ');
+  const label=document.createElement('label');label.htmlFor='inline-verification-code';label.textContent='Մուտքագրեք էլ․ փոստով ուղարկված կոդը';
+  const input=document.createElement('input');input.id='inline-verification-code';input.placeholder='000000';input.type='text';input.inputMode='numeric';input.autocomplete='one-time-code';input.maxLength=6;input.pattern='[0-9]{6}';input.setAttribute('aria-label','Վավերացման կոդ');
   const verify=document.createElement('button');verify.type='button';verify.textContent='Հաստատել';
   const resend=document.createElement('button');resend.type='button';resend.textContent='Ուղարկել նորից';
   const status=document.createElement('p');status.setAttribute('role','status');
@@ -57,23 +62,23 @@ export async function inlineCode(auth, challenge, purpose, container){
         const proof={challengeId:current.challengeId,code:input.value};
         const result=purpose==='EMAIL_VERIFY'?await auth.verifyEmail(proof):await auth.verifySecondFactor(proof);
         input.value='';panel.remove();resolve(result);
-      }catch(error){status.textContent=error.message;}
+      }catch(error){status.textContent=authMessage(error.message,error.code);}
       finally{verify.disabled=false;}
     };
     resend.onclick=async()=>{
       if(Date.now()<Date.parse(current.resendAfter)){status.textContent='Խնդրում ենք սպասել՝ նոր կոդ պահանջելուց առաջ։';return;}
       resend.disabled=true;
       try{current=await auth.resendChallenge({challengeId:current.challengeId});status.textContent='Նոր կոդն ուղարկված է։';}
-      catch(error){status.textContent=error.message;}
+      catch(error){status.textContent=authMessage(error.message,error.code);}
       finally{resend.disabled=false;}
     };
   });
 }
 
 export async function unlockIdentity(auth,user){
-  const panel=document.createElement('form');panel.dataset.identityUnlock='';
+  const panel=document.createElement('form');panel.noValidate=true;panel.dataset.identityUnlock='';
   panel.style.cssText='position:fixed;inset:15% 20%;z-index:5000;background:var(--card-background,#fff);padding:24px;border:1px solid #888;overflow:auto';
-  const label=document.createElement('label');label.textContent=user.storageUnavailable?'Secure browser storage is unavailable. Enter your password to use this page; navigation will require it again.':'Մուտք գործեք՝ այս դիտարկիչում տվյալները բացելու համար';
+  const label=document.createElement('label');label.textContent=user.storageUnavailable?'Այս դիտարկիչը չի կարող անվտանգ պահել մուտքի տվյալները։ Մուտքագրեք գաղտնաբառը՝ շարունակելու համար։':'Մուտք գործեք՝ այս դիտարկիչում տվյալները բացելու համար';
   const input=document.createElement('input');input.type='password';input.autocomplete='current-password';input.required=true;input.setAttribute('aria-label','Գաղտնաբառ');
   const button=document.createElement('button');button.type='submit';button.textContent='Մուտք գործել';
   const error=document.createElement('p');error.setAttribute('role','alert');panel.append(label,input,button,error);document.body.appendChild(panel);
@@ -81,7 +86,7 @@ export async function unlockIdentity(auth,user){
     panel.onsubmit=async event=>{
       event.preventDefault();button.disabled=true;
       try{let result=await auth.login({email:user.email,password:input.value});input.value='';if(result.status==='challenge')result=await inlineCode(auth,result,'LOGIN',panel);panel.remove();resolve(result.user);}
-      catch(failure){error.textContent=failure.message;}
+      catch(failure){error.textContent=authMessage(failure.message,failure.code);}
       finally{button.disabled=false;}
     };
   });

@@ -10,14 +10,10 @@ start(async () => {
   document.getElementById('confirm').name = 'confirmPassword';
   document.getElementById('firstname').name = 'firstName';
   document.getElementById('lastname').name = 'lastName';
-  form.querySelector('.error-message').remove();
-  const role = document.createElement('select'); role.name = 'role'; role.setAttribute('aria-label','Հաշվի դեր');
-  for (const [value,label] of [['graduate','Շրջանավարտ'],['lecturer','Դասախոս']]) { const option=document.createElement('option'); option.value=value; option.textContent=label; role.appendChild(option); }
-  form.querySelector('[type="submit"]').before(role);
   form.onsubmit = event => {
     event.preventDefault();
     pending(form.querySelector('[type="submit"]'), form, async () => {
-      const data = { firstName: document.getElementById('firstname').value, lastName: document.getElementById('lastname').value, email: document.getElementById('email').value, password: document.getElementById('password').value, role: role.value };
+      const data = { firstName: document.getElementById('firstname').value, lastName: document.getElementById('lastname').value, email: document.getElementById('email').value, password: document.getElementById('password').value };
       passwordsMatch(data.password, document.getElementById('confirm').value);
       const challenge = await auth.register(data);
       if(challenge.status==='enrollment') {

@@ -1,3 +1,4 @@
+import { authMessage, isAuthPage, validateAuthForm } from './auth-messages.js';
 import { auth } from '../services/index.js';
 
 export function applyTheme(theme) {
@@ -27,17 +28,22 @@ export function errorRegion(container) {
   return region;
 }
 export function showError(container, error) {
-  const region = errorRegion(container); region.setAttribute('role', 'alert'); region.textContent = error.message;
+  const region = errorRegion(container); region.setAttribute('role', 'alert'); region.textContent = isAuthPage() ? authMessage(error.message, error.code) : error.message;
   for (const [field, message] of Object.entries(error.fieldErrors || {})) {
     const element = [...container.querySelectorAll('input,select,textarea,[contenteditable]')].find(element => element.name === field || element.id === field || element.dataset.name === field);
-    if (element) { element.classList.add('error'); element.setAttribute('aria-invalid', 'true'); element.title = message; }
+    if (element) { element.classList.add('error'); element.setAttribute('aria-invalid', 'true'); element.title = isAuthPage() ? authMessage(message, 'VALIDATION') : message; }
   }
 }
 export async function pending(button, container, action) {
   if (button?.disabled) return false;
   if (button) { button.disabled = true; button.setAttribute('aria-busy', 'true'); }
   errorRegion(container).textContent = '';
-  try { await action(); return true; }
+  container.querySelectorAll('[aria-invalid]').forEach(input => { input.classList.remove('error'); input.removeAttribute('aria-invalid'); input.removeAttribute('title'); });
+  try {
+    const invalid = isAuthPage() && validateAuthForm(container);
+    if (invalid) throw invalid;
+    await action(); return true;
+  }
   catch (error) { showError(container, error); return false; }
   finally { if (button) { button.disabled = false; button.removeAttribute('aria-busy'); } }
 }
@@ -140,7 +146,7 @@ export async function bootstrap({ protectedPage = true, requireOnboarding = true
     location.replace('login.html');return null;
   }
   if (user && protectedPage && requireOnboarding && !user.onboardingComplete) { location.replace('profile_info.html'); return null; }
-  if(user.storageUnavailable){const notice=document.createElement('p');notice.dataset.storageNotice='';notice.setAttribute('role','status');notice.textContent='Secure browser storage is unavailable. You can use this page; navigating or reloading will require your password.';(document.querySelector('main')||document.body).prepend(notice);}
+  if(user.storageUnavailable){const notice=document.createElement('p');notice.dataset.storageNotice='';notice.setAttribute('role','status');notice.textContent='Այս դիտարկիչը չի կարող անվտանգ պահել մուտքի տվյալները։ Այլ էջ անցնելիս կամ էջը թարմացնելիս գաղտնաբառը կրկին կպահանջվի։';(document.querySelector('main')||document.body).prepend(notice);}
   const validateSession = (nextUser, error, event) => {
     if (leaving) return;
     if (error) { showError(document.querySelector('main') || document.body, error); return; }

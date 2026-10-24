@@ -10,7 +10,7 @@ start(async () => {
   initializePasswordControls('new-password');
   const form = document.getElementById('reset-form');
   let context;
-  try { if(config.dataMode==='http'){const operation=await auth.recoveryStatus();context={email:operation.email};if(operation.packagePrepared||operation.state==='COMPLETED'){const notice=document.createElement('p');notice.setAttribute('role','status');notice.textContent='Enter the same new password you chose earlier to finish recovery.';form.prepend(notice);}}else{context = requireChallenge('recovery'); if (!context.recoveryToken) throw new DataError('VALIDATION', 'Նախ հաստատեք վերականգնման կոդը։');} }
+  try { if(config.dataMode==='http'){const operation=await auth.recoveryStatus();context={email:operation.email};if(operation.packagePrepared||operation.state==='COMPLETED'){const notice=document.createElement('p');notice.setAttribute('role','status');notice.textContent='Վերականգնումն ավարտելու համար մուտքագրեք ավելի վաղ ընտրած նոր գաղտնաբառը։';form.prepend(notice);}}else{context = requireChallenge('recovery'); if (!context.recoveryToken) throw new DataError('VALIDATION', 'Նախ հաստատեք վերականգնման կոդը։');} }
   catch (error) { showError(form, error); form.querySelector('[type="submit"]').disabled = true; return; }
   document.getElementById('confirm-password').name = 'confirmPassword';
   form.onsubmit = event => {

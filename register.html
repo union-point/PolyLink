@@ -1,10 +1,10 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="hy">
 
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Register | Polytech Alumni Network</title>
+  <title>Գրանցում | PolyLink</title>
   <link rel="stylesheet" href="./css/auth.css" />
 
 </head>
@@ -13,23 +13,23 @@
   <div class="container">
     <div class="login-box">
       <div class="logo-container-horizontal">
-        <img class="pi-img" src="./image/logo.png" alt="Logo" class="logo-img">
+        <img class="pi-img" src="./image/logo.png" alt="PolyLink">
         <h1 class="pi-logo-text">PolyLink</h1>
       </div>
-      <form id="register-form">
-        <p class="error-message"></p>
+      <form novalidate id="register-form">
+        
 
         <label for="firstname">Անուն</label>
-        <input type="text" id="firstname" placeholder="Ձեր անունը" />
+        <input type="text" id="firstname" name="firstName" autocomplete="given-name" maxlength="100" required placeholder="Ձեր անունը" />
         <label for="lastname">Ազգանուն</label>
-        <input type="text" id="lastname" placeholder="Ձեր ազգանունը" />
+        <input type="text" id="lastname" name="lastName" autocomplete="family-name" maxlength="100" required placeholder="Ձեր ազգանունը" />
 
         <label for="email">«Պոլիտեխնիկի» էլ. փոստ</label>
-        <input type="text" id="email" placeholder="օրինակ@polytech.am" />
+        <input type="email" id="email" name="email" autocomplete="email" maxlength="255" required placeholder="name@polytechnic.am" />
 
         <label for="password"> Գաղտնաբառ</label>
         <div class="password-wrapper">
-          <input type="password" id="password" placeholder="Մուտքագրեք գաղտնաբառ" />
+          <input type="password" id="password" name="password" autocomplete="new-password" maxlength="128" required placeholder="Մուտքագրեք գաղտնաբառ" />
           <button type="button" class="toggle-password" id="toggle-new">👁️</button>
         </div>
         <div class="password-strength">
@@ -39,18 +39,18 @@
 
           <div class="strength-text" id="strength-text"></div>
 
-          <label for="confirm-password">Հաստատեք գաղտնաբառը</label>
+          <label for="confirm">Հաստատեք գաղտնաբառը</label>
         </div>
 
         <div class="password-wrapper">
-          <input type="password" id="confirm" placeholder="Կրկին մուտքագրեք գաղտնաբառը" />
+          <input type="password" id="confirm" name="confirmPassword" autocomplete="new-password" maxlength="128" required placeholder="Կրկին մուտքագրեք գաղտնաբառը" />
           <button type="button" class="toggle-password" id="toggle-confirm">👁️</button>
         </div>
 
         <div class="password-requirements">
           <h4>Գաղտնաբառի պահանջներ՝</h4>
-          <div class="requirement" id="req-length">Նվազագույնը 8 նիշ</div>
-          <div class="requirement" id="req-uppercase">Առնվազն 1 մեծատառ</div>
+          <div class="requirement" id="req-length">8–128 նիշ</div>
+          <div class="requirement" id="req-uppercase">Առնվազն 1 լատինական մեծատառ</div>
           <div class="requirement" id="req-number">Առնվազն 1 թիվ</div>
           <div class="requirement" id="req-special">Առնվազն 1 հատուկ նիշ (!@#$%^&*)</div>
         </div>
@@ -63,10 +63,7 @@
       </form>
     </div>
   </div>
-  <!-- add required in inputs after testing*/ 
 
-  ---!!!--- remove after testing   ---!!!---
-  -->
   <script type="module" src="./js/register.js"></script>
 
 

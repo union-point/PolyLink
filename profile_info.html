@@ -12,7 +12,7 @@
     <h2>Հաստատեք Ձեր տվյալները</h2>
     <p id="enrollment-email"></p>
     <p>Լրացրեք տվյալները՝ ըստ համալսարանի գրանցամատյանի։ Գաղտնաբառը կրկին կպահանջվի հաստատումից հետո։</p>
-    <form id="profile-info-form">
+    <form novalidate id="profile-info-form">
       <fieldset id="profile-fields" disabled>
         <label for="role">Ես եմ՝</label>
         <select id="role" name="role" required><option value="graduate">Շրջանավարտ</option><option value="lecturer">Դասախոս</option></select>
@@ -34,12 +34,12 @@
         <div class="bottom-t"><button type="button" id="save-profile">Պահպանել</button><button type="submit" id="submit-profile">Ստանալ կոդ</button></div>
       </fieldset>
     </form>
-    <form id="enrollment-code" hidden>
+    <form novalidate id="enrollment-code" hidden>
       <label for="verification-code">Էլ․ փոստով ուղարկված վեցանիշ կոդը</label>
       <input id="verification-code" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" maxlength="6" required>
       <button type="submit">Հաստատել</button><button type="button" id="resend-code">Ուղարկել նորից</button>
     </form>
-    <form id="enrollment-login" hidden>
+    <form novalidate id="enrollment-login" hidden>
       <p>Հաշիվը հաստատված է։ Մուտքագրեք Ձեր գաղտնաբառը՝ մուտքն ավարտելու համար։</p>
       <label for="password">Գաղտնաբառ</label><input type="password" id="password" autocomplete="current-password" required>
       <button type="submit">Մուտք գործել</button>

@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="hy">
 
 <head>
   <meta charset="UTF-8" />
@@ -12,16 +12,16 @@
   <div class="container">
     <div class="login-box">
       <div class="logo-container">
-        <img class="img" src="./image/logo.png" alt="Logo" class="logo-img">
+        <img class="img" src="./image/logo.png" alt="PolyLink">
         <h1 class="logo-text">PolyLink</h1>
       </div>
       <p class="info-text">
         Մուտքագրեք Ձեր գրանցված «Պոլիտեխնիկի» էլ. փոստի հասցեն։ Մենք կուղարկենք գաղտնաբառը վերականգնելու կոդը։
       </p>
 
-      <form id="forgot-form">
+      <form novalidate id="forgot-form">
         <label for="email">«Պոլիտեխնիկի» էլ. փոստ</label>
-        <input type="email" id="email" placeholder="օրինակ@polytech.am" />
+        <input type="email" id="email" name="email" autocomplete="email" maxlength="255" required placeholder="name@polytechnic.am" />
 
         <button type="submit" class="signin-btn btn-t">Ուղարկել վերականգնման կոդը</button>
 
