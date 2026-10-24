@@ -4,6 +4,8 @@ Approved by the user on 23 October 2026. These decisions take precedence over ol
 
 ## Email change
 
+Authorization policy addition approved on 24 October 2026: the proposed new email must use the exact normalized `polytechnic.am` domain, including for existing admitted accounts. Preserve any verified registry claim and role; changing a lecturer’s address does not require a new registry match. See [authorization plan](authorization_plan.md).
+
 - Require the current password and a verification code sent to the proposed new address.
 - Keep the current address unchanged until verification completes.
 - If email-based 2FA is enabled, additionally require a code sent to the current address. Without 2FA, no old-address code is required.

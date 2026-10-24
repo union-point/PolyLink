@@ -2,6 +2,8 @@
 
 Approved settings decisions are tracked in [settings decisions](settings_decisions.md) and supersede proposals here for the same behavior.
 
+Approved authorization decisions are tracked in [authorization plan](authorization_plan.md), approved on 24 October 2026, and supersede conflicting eligibility, enrollment, email-domain and registry-claim proposals below. Its approved decisions preserve existing admission, accept the v1 graduate check, release claims on deletion and retire invitation-based initial admission.
+
 Approved forum decisions are tracked in [forum decisions](forum_decisions.md) and supersede proposals here for the same behavior, including the career/professional scope and the independent `ForumCategories` lookup.
 
 Reviewed 15 October 2026. This lists behavior that is still undecided in `frontend_context.md` and `backend_design_context.md`. Each item is something an implementer would otherwise have to invent.
