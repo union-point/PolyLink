@@ -134,7 +134,11 @@ export async function bootstrap({ protectedPage = true, requireOnboarding = true
     const { unlockIdentity } = await import('./auth-ui.js');
     user = await unlockIdentity(auth, user);
   }
-  if (!user && protectedPage) { location.replace('login.html'); return null; }
+  if (!user && protectedPage) {
+    try { const enrollment=await auth.enrollment();if(enrollment.status==='enrollment'){location.replace('profile_info.html');return null;} }
+    catch(error){if(error.code!=='UNAUTHORIZED'&&error.code!=='UNSUPPORTED')throw error;}
+    location.replace('login.html');return null;
+  }
   if (user && protectedPage && requireOnboarding && !user.onboardingComplete) { location.replace('profile_info.html'); return null; }
   if(user.storageUnavailable){const notice=document.createElement('p');notice.dataset.storageNotice='';notice.setAttribute('role','status');notice.textContent='Secure browser storage is unavailable. You can use this page; navigating or reloading will require your password.';(document.querySelector('main')||document.body).prepend(notice);}
   const validateSession = (nextUser, error, event) => {

@@ -1,3 +1,5 @@
+import { createEnrollmentClient } from './enrollment-client.js';
+import { universityEmail } from '../data/validation.js';
 import { createRecoveryClient } from './recovery-client.js';
 import { sodium, derive, seal, open, aad } from '../crypto/sodium.js';
 import { saveDevice, openDevice, clearDevice, saveLoginChallenge, loadLoginChallenge, clearLoginChallenge } from '../crypto/device-store.js';
@@ -103,6 +105,7 @@ export function createIdentityClient(api){
   });
   const client={
     ...recovery,
+    ...createEnrollmentClient(api),
     async login({email,password,persistChallenge=false}){
       if(pending){pending.derived.login.fill(0);pending.derived.wrapping.fill(0);pending=null;}
       await clearLoginChallenge();
@@ -111,6 +114,9 @@ export function createIdentityClient(api){
         return await transition(async()=>{
         if(attemptRevision!==revision)throw changed();
         const result=await post('/auth/login',{email,scheme:'PLK1',loginSecret:s.to_base64(derived.login,s.base64_variants.URLSAFE_NO_PADDING)});
+        if(result.status==='enrollment'){
+          derived.login.fill(0);derived.wrapping.fill(0);await clear();return result;
+        }
         if(result.status==='challenge'){
           const attempt={derived,settings,challenge:result.challenge,persisted:persistChallenge};
           if(persistChallenge)await saveLoginChallenge(attempt);
@@ -127,9 +133,10 @@ export function createIdentityClient(api){
     },
     async register({email,password,firstName,lastName,role='graduate'}){
       validatePassword(password);
+      email=universityEmail(email);
       const s=await sodium(),settings={scheme:'PLK1',salt:s.to_base64(s.randombytes_buf(16),s.base64_variants.URLSAFE_NO_PADDING),opsLimit:2,memoryBytes:67108864};
       const derived=await derive(password,settings);
-      try{return await post('/auth/register',{email,firstName,lastName,role,derivation:settings,loginSecret:s.to_base64(derived.login,s.base64_variants.URLSAFE_NO_PADDING)});}
+      try{const result=await post('/auth/register',{email,firstName,lastName,role,derivation:settings,loginSecret:s.to_base64(derived.login,s.base64_variants.URLSAFE_NO_PADDING)});await clear();return result;}
       finally{derived.login.fill(0);derived.wrapping.fill(0);}
     },
     async verifyEmail({challengeId,code}){return post('/auth/email/verify',{challengeId,code});},
@@ -223,7 +230,7 @@ export function createIdentityClient(api){
       try{return await api.request({method,url,data:{...data,expectedCredential:session.versions.credential,loginSecret:s.to_base64(derived.login,s.base64_variants.URLSAFE_NO_PADDING)}});}
       finally{derived.login.fill(0);derived.wrapping.fill(0);}
     },
-    async changeEmail(data){return client.accountProof('/account/email-change/start',data);},
+    async changeEmail(data){return client.accountProof('/account/email-change/start',{...data,email:universityEmail(data.email)});},
     async verifyEmailChange(data){const result=await post('/account/email-change/verify',data);if(result.status==='completed'){await client.me();emit('auth.me');}return result;},
     async resendEmailChange(data){return post('/account/email-change/resend',data);},
     async setEmailFactor(data){return client.accountProof('/account/email-factor',data,'put');},

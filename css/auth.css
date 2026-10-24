@@ -563,3 +563,9 @@ select.error:focus {
 .strength-text.strong {
     color: #22c55e;
 }
+/* Restricted enrollment follows the existing auth page layout. */
+#profile-fields { border: 0; padding: 0; margin: 0; min-width: 0; }
+#profile-fields input, #profile-fields select, #profile-fields textarea { box-sizing: border-box; width: 100%; }
+#profile-fields label { display: block; margin-top: 14px; }
+#enrollment-code, #enrollment-login { margin-top: 24px; }
+[hidden] { display: none !important; }

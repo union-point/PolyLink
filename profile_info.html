@@ -1,86 +1,53 @@
 <!DOCTYPE html>
-<html lang="en">
-
+<html lang="hy">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Profile Information | Polytech Alumni Network</title>
-  <link rel="stylesheet" href="./css/auth.css" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Հաշվի հաստատում | PolyLink</title>
+  <link rel="stylesheet" href="./css/auth.css">
 </head>
-
 <body>
-  <div class="container">
-    <div class="logo-container-horizontal">
-      <img class="pi-img" src="./image/logo.png" alt="Logo">
-      <h1 class="pi-logo-text">PolyLink</h1>
-    </div>
-
+  <main class="container">
+    <div class="logo-container-horizontal"><img class="pi-img" src="./image/logo.png" alt=""><h1 class="pi-logo-text">PolyLink</h1></div>
+    <h2>Հաստատեք Ձեր տվյալները</h2>
+    <p id="enrollment-email"></p>
+    <p>Լրացրեք տվյալները՝ ըստ համալսարանի գրանցամատյանի։ Գաղտնաբառը կրկին կպահանջվի հաստատումից հետո։</p>
     <form id="profile-info-form">
-
-      <label>Ես եմ՝</label>
-      <div class="role-select">
-        <div class="role-btn active" data-role="graduate">Շրջանավարտ</div>
-        <div class="role-btn" data-role="teacher">Դասախոս</div>
-      </div>
-
-      <input type="hidden" id="role" value="graduate">
-
-      <label for="faculty" id="faculty-label" class="required">Ֆակուլտետ/Ինստիտուտ</label>
-      <select id="faculty">
-        <option>ՏՀՏԷ</option>
-        <option>ՄՄՏՀԴ</option>
-        <option>ԷԷ</option>
-        <option>ԼՔՏ</option>
-        <option>ԿՄ</option>
-        <option>ԻՔՏ</option>
-
-      </select>
-
-      <label for="specialization" class="required">Մասնագիտացում</label>
-      <select id="specialization">
-        <option>Ծրագրայի ճարտարագիտություն</option>
-        <option>Համակարգչային ճարտարագիտություն </option>
-        <option>Տեղեկատվական տեխնոլոգիաներ </option>
-        <option>Արհեստական բանականություն </option>
-
-      </select>
-
-      <label id="years-label" class="required">Ուսման տարիներ</label>
-      <div class="year-range-box">
-        <div class="year-item">
-          <span>Սկիզբ</span>
-          <input type="number" id="year-start" placeholder="2019" value="2021" required>
+      <fieldset id="profile-fields" disabled>
+        <label for="role">Ես եմ՝</label>
+        <select id="role" name="role" required><option value="graduate">Շրջանավարտ</option><option value="lecturer">Դասախոս</option></select>
+        <label for="firstName">Անուն</label><input id="firstName" name="firstName" maxlength="100" autocomplete="given-name" required>
+        <label for="lastName">Ազգանուն</label><input id="lastName" name="lastName" maxlength="100" autocomplete="family-name" required>
+        <div data-graduate>
+          <label for="diplomaNumber">Դիպլոմի համար</label><input id="diplomaNumber" name="diplomaNumber" maxlength="100" autocomplete="off">
+          <label for="specializationId">Մասնագիտացում</label><select id="specializationId" name="specializationId"></select>
+          <div class="year-range-box">
+            <div class="year-item"><label for="startYear">Ուսման սկիզբ</label><input id="startYear" name="startYear" type="number" min="1900" max="2200"></div>
+            <div class="year-item"><label for="endYear">Ուսման ավարտ</label><input id="endYear" name="endYear" type="number" min="1900" max="2200"></div>
+          </div>
         </div>
-
-        <div class="year-divider">—</div>
-
-        <div class="year-item">
-          <span>Ավարտ</span>
-          <input type="number" id="year-end" placeholder="2023" value="2025" required>
+        <div data-lecturer hidden>
+          <label for="departmentId">Ամբիոն</label><select id="departmentId" name="departmentId"></select>
+          <label for="professionId">Մասնագիտություն</label><select id="professionId" name="professionId"></select>
         </div>
-      </div>
-
-
-      <label for="photo" class="required">Ներբեռնել լուսանկար</label>
-
-      <div class="upload-box">
-        <span class="upload-icon" aria-hidden="true">↑</span>
-        <p>Քաշեք և գցեք կամ <span>ընտրեք ֆայլ</span></p>
-      </div>
-
-      <input type="file" id="photo" accept="image/*" hidden>
-
-      <label for="bio" class="required">Հակիրճ նկարագրություն</label>
-      <textarea id="bio" rows="4" placeholder="Պատմեք Ձեր մասին..." required></textarea>
-
-      <div class="bottom-t">
-        <button type="button" class="back-btn">Հետ</button>
-        <button type="button" class="forward-btn">Հաջորդը</button>
-      </div>
+        <label for="biography">Հակիրճ նկարագրություն (ոչ պարտադիր)</label><textarea id="biography" name="biography" maxlength="2000" rows="3"></textarea>
+        <div class="bottom-t"><button type="button" id="save-profile">Պահպանել</button><button type="submit" id="submit-profile">Ստանալ կոդ</button></div>
+      </fieldset>
     </form>
-  </div>
+    <form id="enrollment-code" hidden>
+      <label for="verification-code">Էլ․ փոստով ուղարկված վեցանիշ կոդը</label>
+      <input id="verification-code" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" maxlength="6" required>
+      <button type="submit">Հաստատել</button><button type="button" id="resend-code">Ուղարկել նորից</button>
+    </form>
+    <form id="enrollment-login" hidden>
+      <p>Հաշիվը հաստատված է։ Մուտքագրեք Ձեր գաղտնաբառը՝ մուտքն ավարտելու համար։</p>
+      <label for="password">Գաղտնաբառ</label><input type="password" id="password" autocomplete="current-password" required>
+      <button type="submit">Մուտք գործել</button>
+    </form>
+    <p id="enrollment-status" role="status"></p>
+    <button type="button" id="enrollment-logout">Դուրս գալ</button>
+    <a href="login.html">Շարունակել մուտքի էջից</a>
+  </main>
   <script type="module" src="./js/profile-info.js"></script>
 </body>
-
-
 </html>

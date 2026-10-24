@@ -3,12 +3,12 @@ import { upgradeChatState, preference, blocked as isBlocked, canSend, visibleMes
 import { validateImageBytes } from '../../crypto/images.js';
 import { transaction, nextId } from './store.js';
 import { DataError } from '../errors.js';
-import { email, password, required, validateEducation, validateCertificate, validatePost, validateImage, richContent } from '../validation.js';
+import { universityEmail, email, password, required, validateEducation, validateCertificate, validatePost, validateImage, richContent } from '../validation.js';
 
 const now = () => new Date().toISOString();
 const defaults = () => ({ isProfilePublic: true, showEmail: false, twoFactorEnabled: false, language: 'hy', emailEnabled: true, newListingNotifications: true, forumReplyNotifications: true, directMessageNotifications: true });
 const readOperations = new Set(['auth.me', 'profiles.get', 'profiles.education.list', 'profiles.certificates.list', 'posts.list', 'posts.comments.list', 'forum.categories', 'forum.list', 'forum.get', 'forum.replies.list', 'forum.replies.get', 'search.people', 'chat.list', 'chat.messages', 'chat.page', 'chat.participants', 'chat.loadDraft', 'settings.get', 'settings.export']);
-const publicOperations = new Set(['auth.me', 'auth.login', 'auth.register', 'auth.verifySecondFactor', 'auth.resendChallenge', 'auth.forgotPassword', 'auth.verifyRecovery', 'auth.resetPassword', 'auth.logout']);
+const publicOperations = new Set(['auth.enrollment','auth.enrollmentOptions','auth.saveEnrollment','auth.submitEnrollment','auth.logoutEnrollment','auth.verifyEmail','auth.me', 'auth.login', 'auth.register', 'auth.verifySecondFactor', 'auth.resendChallenge', 'auth.forgotPassword', 'auth.verifyRecovery', 'auth.resetPassword', 'auth.logout']);
 
 function find(records, id) {
   const item = records.find(record => record.id === String(id));
@@ -19,6 +19,24 @@ function me(state) {
   const user = state.users.find(user => user.id === state.sessionUserId && user.status === 'active');
   if (!user) throw new DataError('UNAUTHORIZED', 'Խնդրում ենք մուտք գործել։');
   return user;
+}
+function enrollmentUser(state) {
+  const user=state.users.find(user=>user.id===state.enrollmentUserId);
+  if(!user||!user.enrollment||Date.now()-user.enrollment.savedAt>=7*86400000)throw new DataError('UNAUTHORIZED','Մուտք գործեք՝ գրանցումը շարունակելու համար։');
+  return user;
+}
+function enrollmentState(state) {
+  const user=enrollmentUser(state),entry=user.enrollment;
+  return user.status==='active'?{status:'admitted',email:user.email}:{status:'enrollment',email:user.email,revision:entry.revision,profile:entry.profile,challenge:entry.challenge,expiresAt:new Date(entry.savedAt+7*86400000).toISOString()};
+}
+const enrollmentOptions={specializations:[{id:1,name:'Ծրագրային ճարտարագիտություն'}],departments:[{id:1,name:'Ծրագրային ապահովման ամբիոն'}],professions:[{id:1,name:'Դասախոս'}]};
+function checkRegistry(state,user) {
+  const p=user.enrollment.profile;
+  const normalize=value=>String(value??'').normalize('NFKC').replace(/[\s\p{Z}]+/gu,' ').trim().toLowerCase();
+  const graduate=p.role==='graduate';
+  const valid=graduate?normalize(p.firstName)==='demo'&&normalize(p.lastName)==='graduate'&&normalize(p.diplomaNumber)==='demo-2025'&&p.specializationId===1&&p.startYear===2021&&p.endYear===2025:normalize(p.firstName)==='demo'&&normalize(p.lastName)==='lecturer'&&user.email==='new.lecturer@polytechnic.am'&&p.departmentId===1&&p.professionId===1;
+  if(!valid||state.users.some(other=>other.id!==user.id&&other.registryClaim===(graduate?'graduate-1':'lecturer-1')))throw new DataError('REGISTRY_MISMATCH','Տվյալները չեն համապատասխանում ցուցադրական գրանցամատյանին։');
+  return graduate?'graduate-1':'lecturer-1';
 }
 function owner(state, item) {
   if (item.userId !== me(state).id) throw new DataError('FORBIDDEN', 'Այս գործողությունը հասանելի չէ։');
@@ -32,7 +50,7 @@ function profile(state, user) {
   const settings = state.settings[user.id] || defaults();
   const own = state.sessionUserId === user.id;
   if (user.status !== 'active' || (!own && !settings.isProfilePublic)) throw new DataError('NOT_FOUND', 'Պրոֆիլը հասանելի չէ։');
-  const { email: address, ...publicUser } = user;
+  const { email: address, enrollment, registryClaim, ...publicUser } = user;
   return { ...publicUser, ...(own || settings.showEmail ? { email: address } : {}),
     education: state.education.filter(record => record.userId === user.id),
     licenses: state.certificates.filter(record => record.userId === user.id) };
@@ -98,18 +116,55 @@ const operations = {
   'chat.leaveGroup':(state,id)=>{const room=roomForUser(state,id),own=me(state).id;if(!room.isGroup)throw new DataError('VALIDATION','This is not a group.');if(room.ownerId===own&&room.participants.length>1)throw new DataError('OWNER_TRANSFER_REQUIRED','Transfer ownership before leaving.');leaveMember(room,own);return {roomId:id};},
   'auth.me': state => state.sessionUserId ? profile(state, me(state)) : null,
   'auth.logout': state => { state.sessionUserId = null; return null; },
+  'auth.enrollment':enrollmentState,
+  'auth.enrollmentOptions':state=>{enrollmentUser(state);return enrollmentOptions;},
+  'auth.logoutEnrollment':state=>{state.enrollmentUserId=null;return null;},
+  'auth.saveEnrollment':(state,data)=>{
+    const user=enrollmentUser(state),entry=user.enrollment;
+    if(user.status!=='pending'||data.revision!==entry.revision)throw new DataError('REVISION_CONFLICT','Թարմացրեք էջը։');
+    if(!['graduate','lecturer'].includes(data.role))throw new DataError('VALIDATION','Ընտրեք դերը։');
+    required(data.firstName,'firstName',100);required(data.lastName,'lastName',100);
+    if(data.role==='graduate') {required(data.diplomaNumber,'diplomaNumber',100);if(!data.specializationId||!data.startYear||data.endYear<data.startYear)throw new DataError('VALIDATION','Լրացրեք ուսման տվյալները։');}
+    else if(!data.departmentId||!data.professionId)throw new DataError('VALIDATION','Ընտրեք ամբիոնը և մասնագիտությունը։');
+    entry.profile={...data};delete entry.profile.revision;entry.revision++;entry.savedAt=Date.now();delete entry.challenge;
+    state.challenges.filter(c=>c.userId===user.id&&c.purpose==='enrollment').forEach(c=>c.consumed=true);
+    return enrollmentState(state);
+  },
+  'auth.submitEnrollment':(state,{revision})=>{
+    const user=enrollmentUser(state),entry=user.enrollment;
+    if(user.status!=='pending'||revision!==entry.revision)throw new DataError('REVISION_CONFLICT','Թարմացրեք էջը։');
+    checkRegistry(state,user);
+    if(entry.challenge){const previous=find(state.challenges,entry.challenge.challengeId);if(Date.now()-previous.sentAt<60000)throw new DataError('RATE_LIMITED','Խնդրում ենք սպասել։');previous.consumed=true;}
+    entry.challenge=newChallenge(state,user.id,'enrollment');find(state.challenges,entry.challenge.challengeId).revision=entry.revision;
+    return entry.challenge;
+  },
+  'auth.verifyEmail':(state,{challengeId,code})=>{
+    const user=enrollmentUser(state),entry=user.enrollment;
+    if(user.status==='active'&&entry.completed===challengeId&&code==='123456')return enrollmentState(state);
+    const item=challenge(state,challengeId,'enrollment');
+    if(item.userId!==user.id||item.revision!==entry.revision)throw new DataError('UNAUTHORIZED','Անվավեր կոդ։');
+    const failure=checkCode(item,code);if(failure)return failure;
+    const claim=checkRegistry(state,user);item.consumed=true;entry.completed=challengeId;user.registryClaim=claim;
+    Object.assign(user,{firstName:entry.profile.firstName,lastName:entry.profile.lastName,role:entry.profile.role,status:'active',onboardingComplete:true});user.name=`${user.firstName} ${user.lastName}`;
+    return enrollmentState(state);
+  },
   'auth.register': (state, data) => {
-    const address = email(data.email);
-    if (state.users.some(user => user.email === address)) throw new DataError('CONFLICT', 'Տվյալ էլ․ փոստն արդեն գրանցված է։', { email: 'Արդեն գրանցված է' });
-    const user = { id: nextId(state, 'user'), firstName: required(data.firstName, 'firstName', 100), lastName: required(data.lastName, 'lastName', 100), email: address, role: 'graduate', status: 'active', onboardingComplete: false, jobTitle: '', description: '', avatar: 'image/logo.png', cover: 'image/background1.jpg', institute: '', specialization: '', graduationYear: '' };
-    user.name = `${user.firstName} ${user.lastName}`;
-    state.users.push(user); state.credentials[user.id] = data.digest; state.settings[user.id] = defaults();
-    state.sessionUserId = user.id;
-    return profile(state, user);
+    const address=universityEmail(data.email);
+    const expired=state.users.find(user=>user.email===address&&user.status==='pending'&&Date.now()-user.enrollment.savedAt>=7*86400000);
+    if(expired){expired.email=`expired-${expired.id}@deleted.invalid`;delete state.credentials[expired.id];delete expired.enrollment;expired.status='deleted';}
+    state.sessionUserId=null;state.enrollmentUserId=null;
+    if(!state.users.some(user=>user.email===address)) {
+      const user={id:nextId(state,'user'),firstName:required(data.firstName,'firstName',100),lastName:required(data.lastName,'lastName',100),email:address,role:data.role,status:'pending',onboardingComplete:false,jobTitle:'',description:'',avatar:'image/logo.png',cover:'image/background1.jpg',institute:'',specialization:'',graduationYear:''};
+      user.name=`${user.firstName} ${user.lastName}`;user.enrollment={revision:1,savedAt:Date.now(),profile:{firstName:user.firstName,lastName:user.lastName,role:user.role}};
+      state.users.push(user);state.credentials[user.id]=data.digest;state.settings[user.id]=defaults();state.enrollmentUserId=user.id;
+    }
+    return {status:'enrollment'};
   },
   'auth.login': (state, data) => {
-    const user = state.users.find(user => user.status==='active'&&user.email === data.email && state.credentials[user.id] === data.digest);
+    const user = state.users.find(user => ['active','pending'].includes(user.status)&&user.email === data.email && state.credentials[user.id] === data.digest);
     if (!user) throw new DataError('UNAUTHORIZED', 'Սխալ էլ․ փոստ կամ գաղտնաբառ։');
+    if(user.status==='pending'){state.sessionUserId=null;state.enrollmentUserId=user.id;enrollmentUser(state);return {status:'enrollment'};}
+    state.enrollmentUserId=null;
     if (state.settings[user.id]?.twoFactorEnabled) { state.sessionUserId = null; return { status: 'challenge', ...newChallenge(state, user.id, 'second-factor') }; }
     user.status = 'active'; state.sessionUserId = user.id;
     return { status: 'authenticated', user: profile(state, user) };
@@ -122,7 +177,8 @@ const operations = {
     const user = find(state.users, item.userId); user.status = 'active';
     return profile(state, user);
   },
-  'auth.resendChallenge': (state, id) => {
+  'auth.resendChallenge': (state, input) => {
+    const id=typeof input==='string'?input:input.challengeId;
     const item = find(state.challenges, id);
     if (item.consumed || Date.now() - item.sentAt < 60000) throw new DataError('VALIDATION', 'Խնդրում ենք սպասել մինչև նոր կոդ պահանջելը։');
     item.sentAt = Date.now(); item.expiresAt = Date.now() + 600000; item.attempts = 0; item.verified = false;
@@ -159,7 +215,8 @@ const operations = {
   },
   'profiles.onboard': (state, data) => {
     const user = me(state);
-    const role = data.role === 'teacher' ? 'lecturer' : data.role;
+    const role = data.role;
+    if(user.onboardingComplete&&role!==user.role)throw new DataError('FORBIDDEN','Հաշվի դերը չի կարող փոխվել։');
     if (!['graduate', 'lecturer'].includes(role)) throw new DataError('VALIDATION', 'Ընտրեք դերը։');
     required(data.description, 'description');
     if (role === 'graduate') {
@@ -288,6 +345,7 @@ const operations = {
     state.rooms = state.rooms.filter(room => room.participants.length);
     state.blocks = state.blocks.filter(item => item.userId !== id && item.targetId !== id);
     state.challenges = state.challenges.filter(item => item.userId !== id);
+    delete user.registryClaim; delete user.enrollment;
     Object.assign(user,{status:'deleted',name:'Deleted account',firstName:'Deleted',lastName:'account',email:`deleted-${id}@deleted.invalid`,avatar:'',cover:'',description:''}); delete state.credentials[id]; delete state.settings[id]; state.forumRequests=(state.forumRequests||[]).filter(item=>item.user!==id); state.sessionUserId = null;
     return null;
   },
@@ -346,7 +404,7 @@ export function createMockProvider() {
     if (['settings.changeEmail', 'settings.changePassword', 'settings.deactivate', 'settings.deleteAccount','settings.setEmailFactor','settings.export'].includes(operation)) {
       const user = await transaction(state => me(state)), data = args[0];
       if (operation === 'settings.changeEmail') {
-        const address = email(data.email); args = [{ email: address, oldDigest: await digest(user.email, data.password), newDigest: await digest(address, data.password) }];
+        const address = universityEmail(data.email); args = [{ email: address, oldDigest: await digest(user.email, data.password), newDigest: await digest(address, data.password) }];
       } else if (operation === 'settings.changePassword') args = [{ oldDigest: await digest(user.email, data.oldPassword), newDigest: await digest(user.email, password(data.newPassword)) }];
       else args = [{ ...data,digest: await digest(user.email, data.password) }];
     }

@@ -46,7 +46,8 @@ export function createTransport(axios){
     request.headers ||= {};request._sessionGeneration=generation;
     if(accessToken)request.headers.Authorization=`Bearer ${accessToken}`;
     if(request.url.startsWith('/auth/recovery/')&&!['/auth/recovery/request','/auth/recovery/verify'].includes(request.url))request.headers['X-CSRF-Token']=cookie('__Host-plk-recovery-csrf');
-    if(['/auth/refresh','/auth/logout'].includes(request.url))request.headers['X-CSRF-Token']=csrfCookie();
+    if(request.url.startsWith('/auth/enrollment')||request.url==='/auth/email/verify'||(request.url==='/auth/challenges/resend'&&cookie('__Host-plk-enrollment')))request.headers['X-CSRF-Token']=cookie('__Host-plk-enrollment-csrf');
+    if(['/auth/refresh','/auth/logout'].includes(request.url))request.headers['X-CSRF-Token']=request.url==='/auth/logout'&&cookie('__Host-plk-enrollment')?cookie('__Host-plk-enrollment-csrf'):csrfCookie();
     return request;
   });
   api.interceptors.response.use(response=>{

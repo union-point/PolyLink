@@ -12,6 +12,12 @@ export function email(value) {
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(text)) throw new DataError('VALIDATION', 'Անվավեր էլ․ հասցե։', { email: 'Անվավեր էլ․ հասցե' });
   return text;
 }
+// Match EnrollmentRules.universityEmail: trim, ROOT-style lowercase, exact ASCII domain.
+export function universityEmail(value) {
+  const address=email(value);
+  if (!/^[^@\s]+@polytechnic\.am$/.test(address)) throw new DataError('VALIDATION','Օգտագործեք polytechnic.am էլ․ հասցեն։',{email:'Պահանջվում է polytechnic.am հասցե'});
+  return address;
+}
 export function password(value) {
   const text = String(value ?? '');
   if (!text || text.length > 128) throw new DataError('VALIDATION', 'Խնդրում ենք ստուգել գաղտնաբառը։', { password: 'Պարտադիր դաշտ (առավելագույնը 128 նիշ)' });

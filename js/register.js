@@ -20,6 +20,9 @@ start(async () => {
       const data = { firstName: document.getElementById('firstname').value, lastName: document.getElementById('lastname').value, email: document.getElementById('email').value, password: document.getElementById('password').value, role: role.value };
       passwordsMatch(data.password, document.getElementById('confirm').value);
       const challenge = await auth.register(data);
+      if(challenge.status==='enrollment') {
+        document.getElementById('password').value='';document.getElementById('confirm').value='';clearWorkflow();finishLogin(challenge);return;
+      }
       if (challenge?.challengeId && typeof challenge.expiresAt === 'string') await inlineCode(auth, challenge, 'EMAIL_VERIFY', form);
       let result = await auth.login({ email: data.email, password: data.password });
       if (result.status === 'challenge' && typeof result.expiresAt === 'string') result = await inlineCode(auth, result, 'LOGIN', form);

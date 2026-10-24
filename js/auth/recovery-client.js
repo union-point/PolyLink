@@ -19,6 +19,11 @@ export function createRecoveryClient(api,{local,readVault,finish}){
       let operation=await status(),draft=load(),derived,key,pair;
       const s=await sodium(),b64=bytes=>s.to_base64(bytes,s.base64_variants.URLSAFE_NO_PADDING);
       try{
+        if(operation.state==='ENROLLMENT') {
+          const settings={scheme:'PLK1',salt:b64(s.randombytes_buf(16)),opsLimit:2,memoryBytes:67108864};derived=await derive(newPassword,settings);
+          await api.request({method:'put',url:'/auth/enrollment/password',data:{derivation:settings,loginSecret:b64(derived.login)}});
+          remove();return {status:'enrollment'};
+        }
         if(operation.state==='COMPLETED')return await finish(operation.email,newPassword);
         if(['CANCELLED','EXPIRED'].includes(operation.state))throw new DataError('RECOVERY_EXPIRED','Request a new recovery code.');
         if(operation.state==='READY'){

@@ -27,7 +27,8 @@ export function passwordsMatch(first, second) {
 }
 export function goToProfile(user) { location.href = user.onboardingComplete ? 'profile.html' : 'profile_info.html'; }
 export function finishLogin(result) {
-  if (result.status === 'challenge') { rememberChallenge('second-factor', result); location.href = '2fa-verify.html'; }
+  if (result.status === 'enrollment') { location.href='profile_info.html'; }
+  else if (result.status === 'challenge') { rememberChallenge('second-factor', result); location.href = '2fa-verify.html'; }
   else if (result.user && result.storageUnavailable) {
     const region=document.createElement('p');region.setAttribute('role','status');region.textContent='Այս դիտարկիչը չկարողացավ հիշել մուտքը։ Էջերի միջև անցնելիս կարող է կրկին պահանջվել գաղտնաբառը։';
     const button=document.createElement('button');button.type='button';button.textContent='Շարունակել';button.onclick=()=>goToProfile(result.user);

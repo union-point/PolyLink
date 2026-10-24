@@ -1,55 +1,60 @@
-import { profiles } from './services/index.js';
-import { start, bootstrap, pending, showError } from './shared/ui.js';
-import { validateImage } from './data/validation.js';
+import { auth } from './services/index.js';
+import { start, initializeTheme, pending, showError } from './shared/ui.js';
+import { finishLogin, inlineCode, initializePasswordControls } from './shared/auth-ui.js';
 
-const faculties = ['ՏՀՏԷ', 'ՄՄՏՀԴ', 'ԷԷ', 'ԼՔՏ', 'ԿՄ', 'ԻՔՏ'];
-const departments = ['Ծրագրային ապահովման ամբիոն', 'Համակարգչային համակարգերի ամբիոն', 'Տեղեկատվական տեխնոլոգիաների ամբիոն', 'Արհեստական բանականության ամբիոն', 'Մաթեմատիկայի ամբիոն', 'Ֆիզիկայի ամբիոն'];
 start(async () => {
-  const user = await bootstrap({ requireOnboarding: false }); if (!user) return;
-  const form = document.getElementById('profile-info-form');
-  const role = document.getElementById('role');
-  const select = document.getElementById('faculty');
-  let preview;
-  let image;
-  function setRole(value) {
-    role.value = value;
-    const teacher = value === 'teacher';
-    document.querySelectorAll('.role-btn').forEach(button => button.classList.toggle('active', button.dataset.role === value));
-    document.getElementById('years-label').style.display = teacher ? 'none' : 'block';
-    document.querySelector('.year-range-box').style.display = teacher ? 'none' : 'flex';
-    document.getElementById('faculty-label').textContent = teacher ? 'Ամբիոն' : 'Ֆակուլտետ/Ինստիտուտ';
-    ['year-start', 'year-end'].forEach(id => { document.getElementById(id).required = !teacher; });
-    select.replaceChildren(...(teacher ? departments : faculties).map(value => new Option(value, value)));
+  initializeTheme();initializePasswordControls();
+  const form=document.getElementById('profile-info-form'),fields=document.getElementById('profile-fields');
+  const codeForm=document.getElementById('enrollment-code'),loginForm=document.getElementById('enrollment-login');
+  const status=document.getElementById('enrollment-status');
+  let state,challenge,dirty=false;
+  const element=name=>document.getElementById(name);
+  function roleFields(){
+    const graduate=element('role').value==='graduate';
+    for(const [selector,enabled] of [['[data-graduate]',graduate],['[data-lecturer]',!graduate]]) {
+      const group=document.querySelector(selector);group.hidden=!enabled;
+      group.querySelectorAll('input,select').forEach(input=>{input.disabled=!enabled;input.required=enabled;});
+    }
   }
-  document.querySelectorAll('.role-btn').forEach(button => {
-    button.setAttribute('role', 'button'); button.tabIndex = 0;
-    button.onclick = () => setRole(button.dataset.role);
-    button.onkeydown = event => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); button.click(); } };
-  });
-  setRole(user.role === 'lecturer' ? 'teacher' : 'graduate');
-  document.querySelector('.back-btn').onclick = () => { location.href = 'register.html'; };
-  document.querySelector('.forward-btn').type = 'submit';
-  const photo = document.getElementById('photo'), box = document.querySelector('.upload-box');
-  box.setAttribute('role', 'button'); box.tabIndex = 0; box.setAttribute('aria-label', 'Ընտրել լուսանկար');
-  box.onclick = () => photo.click();
-  box.onkeydown = event => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); photo.click(); } };
-  function previewPhoto(file) {
-    try {
-      validateImage(file); image = file;
-      if (preview) URL.revokeObjectURL(preview); preview = URL.createObjectURL(file);
-      const picture = document.createElement('img'); picture.className = 'preview-photo'; picture.src = preview; picture.alt = 'Լուսանկարի նախադիտում'; box.replaceChildren(picture);
-    } catch (error) { showError(form, error); }
+  function render(next){
+    state=next;element('enrollment-email').textContent=state.email;
+    if(next.status==='admitted'){form.hidden=true;codeForm.hidden=true;loginForm.hidden=false;element('password').focus();return;}
+    for(const [key,value] of Object.entries(next.profile)) if(element(key))element(key).value=value??'';
+    roleFields();fields.disabled=false;dirty=false;challenge=next.challenge;codeForm.hidden=!challenge;
   }
-  photo.onchange = () => { if (photo.files[0]) previewPhoto(photo.files[0]); };
-  box.ondragover = event => event.preventDefault(); box.ondrop = event => { event.preventDefault(); if (event.dataTransfer.files[0]) previewPhoto(event.dataTransfer.files[0]); };
-  window.addEventListener('pagehide', () => { if (preview) URL.revokeObjectURL(preview); }, { once: true });
-  form.onsubmit = event => {
-    event.preventDefault();
-    pending(document.querySelector('.forward-btn'), form, async () => {
-      // Upload first: a failed upload must not falsely complete onboarding.
-      if (image) await profiles.upload('avatar', image);
-      await profiles.onboard({ role: role.value, institute: role.value === 'graduate' ? select.value : '', department: role.value === 'teacher' ? select.value : '', specialization: document.getElementById('specialization').value.trim(), description: document.getElementById('bio').value, startYear: document.getElementById('year-start').value, endYear: document.getElementById('year-end').value });
-      location.href = 'profile.html';
-    });
-  };
+  try{
+    const next=await auth.enrollment();
+    if(next.status==='enrollment'){
+      const options=await auth.enrollmentOptions();
+      for(const [field,list] of [['specializationId',options.specializations],['departmentId',options.departments],['professionId',options.professions]])
+        element(field).replaceChildren(new Option('Ընտրեք…',''),...list.map(item=>new Option(item.name,String(item.id))));
+    }
+    render(next);
+  }catch(error){showError(form,error);return;}
+  form.addEventListener('input',()=>{dirty=true;codeForm.hidden=true;});
+  element('role').onchange=roleFields;
+  function profile(){
+    const graduate=element('role').value==='graduate';
+    const numeric=name=>element(name).value?Number(element(name).value):null;
+    return {revision:state.revision,role:element('role').value,firstName:element('firstName').value,lastName:element('lastName').value,
+      diplomaNumber:graduate?element('diplomaNumber').value:null,specializationId:graduate?numeric('specializationId'):null,startYear:graduate?numeric('startYear'):null,endYear:graduate?numeric('endYear'):null,
+      departmentId:graduate?null:numeric('departmentId'),professionId:graduate?null:numeric('professionId'),biography:element('biography').value};
+  }
+  async function save(){render(await auth.saveEnrollment(profile()));status.textContent='Տվյալները պահպանված են։';}
+  element('save-profile').onclick=()=>{if(form.reportValidity())pending(element('save-profile'),form,save);};
+  form.onsubmit=event=>{event.preventDefault();pending(element('submit-profile'),form,async()=>{
+    if(dirty||!state.profile.diplomaNumber&&state.profile.role==='graduate'||!state.profile.professionId&&state.profile.role==='lecturer')await save();
+    challenge=await auth.submitEnrollment({revision:state.revision});codeForm.hidden=false;element('verification-code').focus();status.textContent='Կոդն ուղարկված է։';
+  });};
+  codeForm.onsubmit=event=>{event.preventDefault();pending(codeForm.querySelector('[type=submit]'),codeForm,async()=>{
+    const result=await auth.verifyEmail({challengeId:challenge.challengeId,code:element('verification-code').value});element('verification-code').value='';render(result);
+  });};
+  element('resend-code').onclick=()=>pending(element('resend-code'),codeForm,async()=>{challenge=await auth.resendChallenge({challengeId:challenge.challengeId});status.textContent='Նոր կոդն ուղարկված է։';});
+  loginForm.onsubmit=event=>{event.preventDefault();pending(loginForm.querySelector('[type=submit]'),loginForm,async()=>{
+    let result;
+    try{result=await auth.login({email:state.email,password:element('password').value});}finally{element('password').value='';}
+    if(result.status==='challenge')result=await inlineCode(auth,result,'LOGIN',loginForm);
+    finishLogin(result);
+  });};
+  element('enrollment-logout').onclick=()=>pending(element('enrollment-logout'),form,async()=>{await auth.logoutEnrollment();location.href='login.html';});
 });

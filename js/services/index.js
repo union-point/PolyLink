@@ -3,6 +3,7 @@ import { call, subscribe } from '../data/client.js';
 // Feature services are provider-independent. Controllers only import this facade.
 const operation = name => (...args) => call(name, ...args);
 export const auth = {
+  enrollment:operation('auth.enrollment'),enrollmentOptions:operation('auth.enrollmentOptions'),saveEnrollment:operation('auth.saveEnrollment'),submitEnrollment:operation('auth.submitEnrollment'),logoutEnrollment:operation('auth.logoutEnrollment'),
   me: operation('auth.me'), verifyEmail: operation('auth.verifyEmail'), login: operation('auth.login'), register: operation('auth.register'), logout: operation('auth.logout'),
   verifySecondFactor: operation('auth.verifySecondFactor'), resendChallenge: operation('auth.resendChallenge'),
   recoveryStatus: operation('auth.recoveryStatus'), forgotPassword: operation('auth.forgotPassword'), verifyRecovery: operation('auth.verifyRecovery'), resetPassword: operation('auth.resetPassword'),
