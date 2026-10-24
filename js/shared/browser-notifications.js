@@ -25,9 +25,12 @@ export function startBrowserNotifications(user){
           const result=await notifications.list({cursor,limit:100});
           if(stopped||!browserNotificationsEnabled(user))return;
           for(const item of result.items){
-            shown.get(item.roomId)?.close();
-            const notification=new Notification(item.title,{body:item.body,tag:`polylink-chat-${item.roomId}`});notification.sequence=item.sequence;shown.set(item.roomId,notification);
-            notification.onclick=()=>{window.focus();location.href=`message.html?room=${encodeURIComponent(item.roomId)}`;notification.close();};
+            const forum=item.kind==='FORUM_REPLY',key=forum?`forum:${item.topicId}`:item.roomId;
+            shown.get(key)?.close();
+            const notification=new Notification(item.title,{body:item.body,tag:forum?`polylink-forum-${item.topicId}`:`polylink-chat-${item.roomId}`});
+            if(!forum)notification.sequence=item.sequence;
+            shown.set(key,notification);
+            notification.onclick=()=>{window.focus();location.href=forum?`topic.html?id=${encodeURIComponent(item.topicId)}&reply=${encodeURIComponent(item.replyId)}`:`message.html?room=${encodeURIComponent(item.roomId)}`;notification.close();};
           }
           localStorage.setItem(key,result.nextCursor);
         });

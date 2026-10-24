@@ -37,6 +37,13 @@ public class ForumService {
         this.secrets = secrets;
     }
 
+    @org.springframework.scheduling.annotation.Scheduled(fixedDelay = 600000)
+    public void expireCreateRequests() {
+        db.update(
+                "DELETE TOP (1000) FROM forum.CreateRequests WHERE CreatedAt<?",
+                now().minusHours(24));
+    }
+
     /** Temporary admission exception; replace with verified onboarding when that flow ships. */
     public void requireAccess(Accounts.Account account) {
         account.requireAdmitted();
@@ -62,7 +69,7 @@ public class ForumService {
     }
 
     private int category(Object value) {
-        if (!(value instanceof String code) || code.length() > 32)
+        if (!(value instanceof String code) || !code.matches("[a-z][a-z0-9_-]{0,31}"))
             throw ForumFailure.invalid("categoryCode", "Ընտրեք կատեգորիան։");
         var ids =
                 db.queryForList(
