@@ -51,7 +51,9 @@ public class IdentityController {
             @Valid @RequestBody AuthDtos.Registration input,
             HttpServletRequest request,
             HttpServletResponse response) {
-        return enrollment.register(input, request.getRemoteAddr(), response);
+        var result = enrollment.register(input, request.getRemoteAddr(), response);
+        sessions.clear(response);
+        return result;
     }
 
     @GetMapping("/auth/enrollment")
@@ -105,9 +107,11 @@ public class IdentityController {
             HttpServletResponse response) {
         var account = enrollment.password(input, request.getRemoteAddr());
         if (account.admission().equals("PENDING")) {
+            sessions.clear(response);
             enrollmentSessions.issue(account.id(), account.credential(), response);
             return Map.of("status", "enrollment", "next", "profile_info.html");
         }
+        EnrollmentSessions.clear(response);
         if (account.emailFactor()) {
             limits.issue(account.email(), request.getRemoteAddr());
             String browser = secrets.token();
@@ -146,7 +150,8 @@ public class IdentityController {
             @Valid @RequestBody AuthDtos.ChallengeId input,
             HttpServletRequest request,
             HttpServletResponse response) {
-        if (!Sessions.cookie(request, EnrollmentSessions.COOKIE).isEmpty()) {
+        if (!Sessions.cookie(request, EnrollmentSessions.COOKIE).isEmpty()
+                && challenges.isEnrollment(input.challengeId())) {
             return enrollment.resend(input.challengeId(), request);
         }
         String browser = Sessions.cookie(request, Sessions.CHALLENGE);
@@ -174,7 +179,9 @@ public class IdentityController {
             HttpServletRequest request,
             HttpServletResponse response) {
         if (!input.isEmpty()) throw AuthFailure.invalid();
-        sessions.logout(request);
+        if (!Sessions.cookie(request, EnrollmentSessions.COOKIE).isEmpty())
+            enrollmentSessions.logout(request, response);
+        else sessions.logout(request);
         sessions.clear(response);
     }
 

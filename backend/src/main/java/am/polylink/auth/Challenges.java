@@ -187,6 +187,14 @@ public class Challenges {
         return true;
     }
 
+    public boolean isEnrollment(UUID id) {
+        return db.queryForObject(
+                        "SELECT COUNT(*) FROM auth.EmailChallenges WHERE ChallengeId=? AND Purpose='EMAIL_VERIFY'",
+                        Integer.class,
+                        id)
+                == 1;
+    }
+
     public Created resend(UUID id, String browser, String ip) {
         var rows =
                 db.queryForList(

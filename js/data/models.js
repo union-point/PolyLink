@@ -30,7 +30,7 @@
  * @typedef {{isProfilePublic:boolean,showEmail:boolean,twoFactorEnabled:boolean,
  * language:string,emailEnabled:boolean,newListingNotifications:boolean,
  * forumReplyNotifications:boolean,directMessageNotifications:boolean}} Settings
- * @typedef {{status:'authenticated',user:User}|{status:'challenge',challengeId:string,
+ * @typedef {{status:'enrollment',next?:string}|{status:'authenticated',user:User}|{status:'challenge',challengeId:string,
  * expiresAt?:number,resendAfter?:number}} LoginResult
  */
 export const categories = Object.freeze({ job: 'Աշխատանք', internship: 'Պրակտիկա', training: 'Դասընթաց' });

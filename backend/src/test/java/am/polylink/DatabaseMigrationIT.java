@@ -14,6 +14,72 @@ import org.springframework.jdbc.datasource.SingleConnectionDataSource;
 
 class DatabaseMigrationIT {
     @Test
+    void v14GrandfathersOnlyExistingAdmissionAndRetiresPendingInvitations() throws Exception {
+        inIsolatedDatabase(
+                connection -> {
+                    var source = new SingleConnectionDataSource(connection, true);
+                    SchemaCommand.migrations(source, "13").migrate();
+                    var db = new org.springframework.jdbc.core.JdbcTemplate(source);
+                    for (String state : java.util.List.of("ADMITTED", "DEACTIVATED", "PENDING")) {
+                        int user =
+                                db.queryForObject(
+                                        "INSERT dbo.Users(FirstName,LastName,Email,RoleId,LanguageId) OUTPUT inserted.UserId SELECT N'Rollout',N'Fixture',?,(SELECT RoleId FROM dbo.Roles WHERE Name=N'graduate'),(SELECT Id FROM dbo.Languages WHERE Code=N'en')",
+                                        Integer.class,
+                                        state + "@example.invalid");
+                        db.update(
+                                "INSERT auth.AccountSecurity(UserId,AdmissionStatus,EmailVerifiedAt,CredentialVersion,SchemeVersion,ClientSalt,ClientOpsLimit,ClientMemoryBytes,LoginVerifier,EmailFactorEnabled) VALUES (?,?,?,3,1,0x112233,2,67108864,'PRESERVED_VERIFIER',0)",
+                                user,
+                                state,
+                                state.equals("PENDING")
+                                        ? null
+                                        : java.time.OffsetDateTime.parse("2026-01-01T00:00:00Z"));
+                        if (state.equals("PENDING")) {
+                            var invite = java.util.UUID.randomUUID();
+                            db.update(
+                                    "INSERT auth.Invitations(InvitationId,Email,RoleCode,ExpiresAt) VALUES (?,?,'graduate',DATEADD(day,1,SYSDATETIMEOFFSET()))",
+                                    invite,
+                                    state + "@example.invalid");
+                            db.update(
+                                    "INSERT auth.PendingEnrollments(UserId,InvitationId,CredentialVersion,FirstName,LastName,RoleCode) VALUES (?,?,3,N'Rollout',N'Fixture','graduate')",
+                                    user,
+                                    invite);
+                        }
+                    }
+                    SchemaCommand.migrate(connection, "upgrade");
+                    assertThat(
+                                    db.queryForList(
+                                            "SELECT AdmissionStatus FROM auth.AccountSecurity WHERE GrandfatheredAdmission=1 ORDER BY AdmissionStatus",
+                                            String.class))
+                            .containsExactly("ADMITTED", "DEACTIVATED");
+                    assertThat(
+                                    db.queryForObject(
+                                            "SELECT COUNT(*) FROM auth.Invitations WHERE RevokedAt IS NOT NULL",
+                                            Integer.class))
+                            .isEqualTo(1);
+                    assertThat(
+                                    db.queryForObject(
+                                            "SELECT COUNT(*) FROM auth.RegistryClaims",
+                                            Integer.class))
+                            .isZero();
+                    assertThat(
+                                    db.queryForObject(
+                                            "SELECT COUNT(*) FROM auth.AccountSecurity WHERE CredentialVersion=3 AND LoginVerifier='PRESERVED_VERIFIER'",
+                                            Integer.class))
+                            .isEqualTo(3);
+                    assertThat(
+                                    db.queryForObject(
+                                            "SELECT COUNT(*) FROM auth.PendingEnrollments WHERE ProfileComplete=0 AND Revision=1",
+                                            Integer.class))
+                            .isEqualTo(1);
+                    assertThat(
+                                    db.queryForObject(
+                                            "SELECT COUNT(*) FROM dbo.LecturerRegistry WHERE FirstName IS NOT NULL OR LastName IS NOT NULL",
+                                            Integer.class))
+                            .isZero();
+                });
+    }
+
+    @Test
     void forumReviewRequiresExactMappingAndPreservesOriginalDates() throws Exception {
         inIsolatedDatabase(
                 connection -> {

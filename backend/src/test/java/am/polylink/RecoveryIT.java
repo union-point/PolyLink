@@ -47,6 +47,7 @@ class RecoveryIT {
     }
 
     JsonNode verify(IdentityIT.Enrolled a, IdentityIT.Browser browser) throws Exception {
+        browser.cookies.put("__Host-plk-enrollment", IdentityIT.secret());
         var challenge =
                 browser.json(browser.post("/auth/recovery/request", Map.of("email", a.email())));
         var response =

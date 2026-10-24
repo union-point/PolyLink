@@ -392,7 +392,7 @@ class EnrollmentIT {
         assertThat(a.browser.get("/auth/enrollment").statusCode()).isEqualTo(401);
         login(a);
         assertThat(a.browser.get("/auth/enrollment").statusCode()).isEqualTo(200);
-        assertThat(a.browser.post("/auth/enrollment/logout", Map.of()).statusCode()).isEqualTo(204);
+        assertThat(a.browser.post("/auth/logout", Map.of()).statusCode()).isEqualTo(204);
         assertThat(a.browser.get("/auth/enrollment").statusCode()).isEqualTo(401);
         login(a);
         db.update(

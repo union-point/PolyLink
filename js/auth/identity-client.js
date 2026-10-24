@@ -106,6 +106,7 @@ export function createIdentityClient(api){
   const client={
     ...recovery,
     ...createEnrollmentClient(api),
+    async verifyRecovery(data){const result=await recovery.verifyRecovery(data);if(result.status==='enrollment')await clear();return result;},
     async login({email,password,persistChallenge=false}){
       if(pending){pending.derived.login.fill(0);pending.derived.wrapping.fill(0);pending=null;}
       await clearLoginChallenge();

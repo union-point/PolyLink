@@ -176,9 +176,11 @@ public class RecoveryService {
                         Sessions.cookie(request, Sessions.CHALLENGE),
                         request.getRemoteAddr());
         if (proven.admission().equals("PENDING")) {
+            sessions.clear(response);
             enrollmentSessions.issue(proven.id(), proven.credential(), response);
             return Map.of("status", "enrollment");
         }
+        EnrollmentSessions.clear(response);
         String token = secrets.token(), csrf = secrets.token();
         UUID operation = UUID.randomUUID();
         var result =

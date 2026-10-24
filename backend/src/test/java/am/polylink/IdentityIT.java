@@ -698,7 +698,11 @@ class IdentityIT {
                                 .collect(java.util.stream.Collectors.joining("; ")));
             if (csrf) {
                 String csrfName =
-                        path.startsWith("/auth/enrollment")
+                        path.equals("/auth/logout")
+                                                && !cookies.getOrDefault(
+                                                                "__Host-plk-enrollment", "")
+                                                        .isEmpty()
+                                        || path.startsWith("/auth/enrollment")
                                         || path.equals("/auth/email/verify")
                                         || path.equals("/auth/challenges/resend")
                                                 && !cookies.getOrDefault(

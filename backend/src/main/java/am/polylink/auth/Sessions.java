@@ -294,6 +294,7 @@ public class Sessions {
     private static String csrf(HttpServletRequest request) {
         String header = request.getHeader("X-CSRF-Token");
         if (header == null
+                || header.isEmpty()
                 || !Secrets.equal(Secrets.hash(header), Secrets.hash(cookie(request, CSRF))))
             throw AuthFailure.denied();
         return header;
