@@ -1,22 +1,14 @@
 import { forum } from '../services/index.js';
-import { bootstrap, stateMessage, dateTime } from '../shared/ui.js';
-import { escapeHtml as e, plainText } from '../shared/content.js';
-import { majors } from '../data/models.js';
+import { bootstrap, dateTime } from '../shared/ui.js';
+import { escapeHtml as e } from '../shared/content.js';
+import { authorHtml, categoryOptions, paginatedList } from './view.js';
 
 export async function initializeForumList() {
   if (!await bootstrap()) return;
-  const list = document.getElementById('topics-container'), filter = document.getElementById('major-filter');
-  let generation = 0;
-  async function load() {
-    const current = ++generation; stateMessage(list, 'Բեռնվում է...');
-    try {
-      const topics = await forum.list({ major: filter.value === 'all' ? '' : filter.value });
-      if (current !== generation) return;
-      if (!topics.length) { stateMessage(list, 'Թեմաներ չկան'); return; }
-      list.innerHTML = topics.map(topic => `<div class="topic" data-major="${e(topic.major)}"><div class="topic-header"><h3><a href="topic.html?id=${encodeURIComponent(topic.id)}">${e(topic.title)}</a></h3><span class="topic-badge">${e(majors[topic.major] || topic.major)}</span></div>
-        <p>${e(plainText(topic.content).slice(0, 220))}</p><div class="topic-meta"><span>Ավելացրեց՝ ${e(topic.author.name)}</span><span>${e(dateTime(topic.createdAt))}</span><span>${topic.replyCount} պատասխան</span></div></div>`).join('');
-    } catch (error) { if (current === generation) stateMessage(list, error.message, { retry: load }); }
-  }
-  filter.onchange = load;
-  await load();
+  const list = document.getElementById('topics-container'), filter = document.getElementById('category-filter');
+  categoryOptions(filter,await forum.categories(),{all:true});
+  const pages = paginatedList(list,cursor=>forum.list({categoryCode:filter.value,cursor:cursor||'',limit:20}),topics=>{
+    list.innerHTML=topics.map(topic=>`<article class="topic" data-topic-id="${e(topic.id)}"><div class="topic-header"><h3><a href="topic.html?id=${encodeURIComponent(topic.id)}">${e(topic.title)}</a></h3><span class="topic-badge">${e(topic.categoryName)}</span></div><p>${e(topic.excerpt)}</p><div class="topic-meta"><span>Ավելացրեց՝ ${authorHtml(topic.author)}</span><span>${e(dateTime(topic.createdAt))}</span><span>${topic.replyCount} պատասխան</span></div></article>`).join('');
+  });
+  filter.onchange=()=>pages.refresh();await pages.refresh();
 }

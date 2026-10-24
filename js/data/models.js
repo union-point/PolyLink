@@ -16,7 +16,7 @@
  * @typedef {{id:string,postId:string,text:string,createdAt:string,author:Author}} Comment
  * @typedef {{id:string,title:string,content:string,category:string,sphere:string,
  * createdAt:string,author:Author,comments:Comment[]}} Post
- * @typedef {{id:string,title:string,major:string,content:string,createdAt:string,
+ * @typedef {{id:string,title:string,categoryCode:string,categoryName:string,content:string,createdAt:string,
  * author:Author,replyCount:number}} Topic
  * @typedef {{id:string,topicId:string,content:string,createdAt:string,
  * author:Author,likeCount:number,liked:boolean}} Reply
