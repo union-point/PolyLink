@@ -1,9 +1,10 @@
+import { normalizeCategory, normalizeForumTopic, normalizeReply, normalizeForumPage } from '../../forum/contracts.js';
 import { createEncryptedChat } from '../../chat/encrypted-client.js';
 import { createIdentityClient } from '../../auth/identity-client.js';
 import { loadTransport } from './transport.js';
 import { routes } from './routes.js';
 import { DataError } from '../errors.js';
-import { unwrap, list, normalizeUser, normalizePost, normalizeComment, normalizeEducation, normalizeCertificate, normalizeTopic } from './normalize.js';
+import { unwrap, list, normalizeUser, normalizePost, normalizeComment, normalizeEducation, normalizeCertificate } from './normalize.js';
 
 export function createHttpProvider(transportPromise = loadTransport()) {
   // Prevent an unhandled rejection when a CDN fails before the first operation.
@@ -29,7 +30,10 @@ export function createHttpProvider(transportPromise = loadTransport()) {
       if (!routes[operation]) throw new DataError('UNSUPPORTED', 'Այս գործառույթի backend պայմանագիրը դեռ սահմանված չէ։');
       const api = await transport;
       let body;
-      try { body = unwrap(await api.request(routes[operation](...args))); }
+      try {
+        const response = await api.request(routes[operation](...args));
+        body = operation.startsWith('forum.') ? response : unwrap(response);
+      }
       catch (error) { if (operation === 'auth.me' && error?.response?.status === 401) return null; throw error; }
       if (operation === 'profiles.upload' && !(body?.id ?? body?.UserId)) {
         if (typeof body?.url !== 'string' || !body.url) throw new DataError('CONTRACT', 'API պատասխանը չի պարունակում լուսանկարի հասցեն։');
@@ -48,8 +52,11 @@ export function createHttpProvider(transportPromise = loadTransport()) {
       if (operation.startsWith('posts.comments.')) return normalizeComment(body);
       if (operation.startsWith('profiles.education.')) return operation.endsWith('.list') ? list(body, normalizeEducation) : normalizeEducation(body);
       if (operation.startsWith('profiles.certificates.')) return operation.endsWith('.list') ? list(body, normalizeCertificate) : normalizeCertificate(body);
-      if (operation === 'forum.list') return list(body, normalizeTopic).filter(topic => !args[0]?.major || topic.major === args[0].major);
-      if (operation.startsWith('forum.')) return normalizeTopic(body);
+      if (operation === 'forum.categories') return list(body, normalizeCategory);
+      if (operation === 'forum.list') return normalizeForumPage(body, normalizeForumTopic);
+      if (operation === 'forum.replies.list') return normalizeForumPage(body, normalizeReply);
+      if (operation.startsWith('forum.replies.')) return normalizeReply(body);
+      if (operation.startsWith('forum.')) return normalizeForumTopic(body);
       if (operation === 'search.people') return list(body, normalizeUser).filter(user => (!args[0]?.institute || user.institute === args[0].institute) && (!args[0]?.specialization || user.specialization === args[0].specialization) && (!args[0]?.year || user.graduationYear === String(args[0].year)));
       return body;
     },

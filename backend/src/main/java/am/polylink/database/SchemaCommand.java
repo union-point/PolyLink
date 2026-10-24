@@ -13,9 +13,9 @@ public final class SchemaCommand {
     private SchemaCommand() {}
 
     public static void main(String[] args) throws Exception {
-        if (args.length != 1
+        if ((args.length != 1 && args.length != 2)
                 || !java.util.Set.of("inventory", "fresh", "upgrade").contains(args[0])) {
-            throw new IllegalArgumentException("Use inventory, fresh or upgrade");
+            throw new IllegalArgumentException("Use inventory, fresh or upgrade [--target=12]");
         }
         String database = required("DB_NAME");
         // Properties keep credentials and database names out of JDBC URL interpolation/logging.
@@ -38,18 +38,26 @@ public final class SchemaCommand {
                 System.out.println(inventory(connection));
                 return;
             }
-            migrate(connection, args[0]);
+            if (args.length == 2 && !args[1].equals("--target=12"))
+                throw new IllegalArgumentException(
+                        "Only --target=12 is supported for forum review");
+            migrate(connection, args[0], args.length == 2 ? "12" : null);
         }
     }
 
     public static void migrate(Connection connection, String mode) throws Exception {
+        migrate(connection, mode, null);
+    }
+
+    public static void migrate(Connection connection, String mode, String target) throws Exception {
         if (!java.util.Set.of("fresh", "upgrade").contains(mode)) {
             throw new IllegalArgumentException("Use fresh or upgrade");
         }
         var flyway =
                 migrations(
                         new org.springframework.jdbc.datasource.SingleConnectionDataSource(
-                                connection, true));
+                                connection, true),
+                        target);
         boolean history = exists(connection, "dbo", "flyway_schema_history");
         if (mode.equals("fresh")) {
             if (tableCount(connection) != 0 || !inventory(connection).equals("{}")) {
@@ -68,7 +76,7 @@ public final class SchemaCommand {
         flyway.validate();
         assertCurrentSchema(connection);
         System.out.println(
-                "Schema migrated and validated through V11; account settings are available.");
+                "Schema migrated and validated through V" + appliedVersion(connection) + ".");
     }
 
     public static String inventory(Connection connection) throws Exception {
@@ -102,6 +110,18 @@ public final class SchemaCommand {
 
     private static void assertSchema(Connection connection, int version) throws Exception {
         var mapper = JsonMapper.builder().build();
+        if (version >= 12) {
+            var expectedForum =
+                    mapper.readTree(
+                            resource(
+                                    "db/inventory/forum-schema-v"
+                                            + (version >= 13 ? 13 : 12)
+                                            + ".json"));
+            if (!expectedForum.equals(mapper.readTree(inventory(connection))))
+                throw new IllegalStateException(
+                        "Schema differs from the inspected baseline; reviewed forum inventory required");
+            return;
+        }
         var expected = mapper.readTree(resource("db/inventory/legacy-schema.json"));
         if (version >= 8) {
             var tables = (tools.jackson.databind.node.ArrayNode) expected.path("tables");
@@ -143,14 +163,20 @@ public final class SchemaCommand {
     }
 
     public static Flyway migrations(javax.sql.DataSource source) {
-        return Flyway.configure()
-                .dataSource(source)
-                .locations("classpath:db/migration")
-                .schemas("dbo")
-                .baselineOnMigrate(false)
-                .baselineVersion("1")
-                .cleanDisabled(true)
-                .load();
+        return migrations(source, null);
+    }
+
+    public static Flyway migrations(javax.sql.DataSource source, String target) {
+        var configuration =
+                Flyway.configure()
+                        .dataSource(source)
+                        .locations("classpath:db/migration")
+                        .schemas("dbo")
+                        .baselineOnMigrate(false)
+                        .baselineVersion("1")
+                        .cleanDisabled(true);
+        if (target != null) configuration.target(target);
+        return configuration.load();
     }
 
     private static boolean exists(Connection connection, String schema, String table)

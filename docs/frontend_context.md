@@ -1,141 +1,99 @@
 # PolyLink frontend context
 
-Reviewed 14 October 2026. This describes the **current refactored source**, not the original disconnected demo. PolyLink is a static, Armenian-language, multi-page university networking frontend. The backend does not exist; its target database is Microsoft SQL Server. No framework, bundler, package installation or build step is required. Existing HTML/CSS remains the visual baseline.
+Reviewed 24 October 2026 against the current source. PolyLink is an Armenian-language, static multi-page frontend using native ES modules. No frontend framework or build step is required for manual use. A real Java/Spring Boot backend now implements identity, encrypted messaging, account settings and the career forum; profile editing and publications remain primarily mock features.
 
-## Architecture and boundaries
+## Architecture and provider boundary
 
 ```text
-HTML page → ES-module controller → js/services/index.js
-                                   ↓
-                              js/data/client.js
-                              ↙             ↘
-               mock/provider.js          http/provider.js
-                    ↓                    routes + normalize
-              IndexedDB store                  ↓
-                                        Axios transport
+HTML → page controller → js/services/index.js → js/data/client.js
+                                                ├─ mock/provider.js → IndexedDB
+                                                └─ http/provider.js
+                                                    ├─ auth/identity-client.js
+                                                    ├─ auth/recovery-client.js
+                                                    ├─ chat/encrypted-client.js
+                                                    └─ http/routes.js → transport.js → backend
 ```
 
-- `js/config.js`: one provider switch (`dataMode: 'mock'` by default), HTTP base URL `http://localhost:3004`, pinned Axios 1.13.2 CDN, mock database name/schema version.
-- `js/services/index.js`: named async facades for auth, profiles/education/certificates, posts/comments, forum/replies, search, chat and settings. Methods resolve application DTOs, never Axios response objects. Services expose operations beyond those currently surfaced as buttons.
-- `js/data/client.js`: lazily imports exactly one provider, normalizes failures and exposes subscription/mock-control boundaries. There is no HTTP-to-mock fallback.
-- `js/data/mock/store.js`: one IndexedDB `state` store containing `dataset`; serialized read/write transactions avoid stale cross-tab overwrites. Actions inside transactions are synchronous. IDs come from a persisted sequence, not array lengths.
-- `js/data/mock/seed.js`: one coherent fixture graph: six people, three posts, six topics, direct rooms and a group room. Fictional demo credentials are separate from user DTOs.
-- `js/data/mock/provider.js`: domain validation, ownership, privacy, membership, challenge state, media hydration and operation dispatch. Blob records persist; object URLs are page-local. Notifications use local listeners and BroadcastChannel, including incoming-message injection.
-- `js/data/http/transport.js`: lazily loads Axios only in HTTP mode, attaches namespaced bearer token, includes cookies, uses a 15-second timeout and one shared refresh request for concurrent 401s. A retried 401 or failed refresh clears the token. Auth requests do not enter refresh loops.
-- `js/data/http/routes.js`: central route/payload mapping. Writes allowlist mutable fields and encode path IDs. Browser FormData supplies multipart boundaries.
-- `js/data/http/normalize.js`: unwraps bare/enveloped bodies, maps selected SQL-style names to DTO fields and converts numeric IDs to strings. Missing record identities, invalid role/onboarding state and non-array lists fail as `CONTRACT` errors.
-- `js/data/errors.js`: `DataError {code,message,fieldErrors,retryable}`; Axios status mapping: 400 validation, 401 unauthorized, 403 forbidden, 404 not found, 409 conflict; network/5xx failures may be retried.
-- `js/shared/ui.js`: initial loading/disabled shell, retry on initialization failure, session guard, navigation/logout, themes, pending/error states, toasts, confirmation overlays and dates. Controls become available after initial reads. Pending mutations retain forms on failure.
-- `js/shared/content.js`: escaped plain text, URL scheme checks and a narrow HTML allowlist. Titles, names and comments remain text; post/topic/reply rich bodies are sanitized. These browser checks do not replace server enforcement.
+- `js/config.js` selects one provider and configures the API URL, pinned Axios 1.13.2 CDN and mock database. The current working copy selects `http`; check this file before following real-app instructions. The API URL is `http://localhost:3004`. Do not silently change a user's provider selection.
+- `js/services/index.js` exposes asynchronous auth, profile, publication, forum, search, chat, settings and notification facades. Controllers must use these boundaries rather than Axios or IndexedDB directly.
+- `js/data/client.js` lazily loads one provider. HTTP errors never trigger a mock fallback. An adapter route alone does not establish server support.
+- `js/data/http/provider.js` dispatches auth/security to the identity client, chat to the encrypted client and full export to `account-export.js`; ordinary resource routes use DTO normalization.
+- `js/data/http/transport.js` loads Axios only in HTTP mode. Access tokens stay in memory; old localStorage access tokens are removed. Refresh uses credentialed cookies, CSRF proof, shared in-tab refresh and Web Locks when available. Generation checks reject responses from a superseded session. Requests normally time out after 15 seconds.
+- `js/data/errors.js` supplies `DataError`; transport errors preserve server codes and map status/network failures. Unsupported operations fail visibly.
+- `js/shared/ui.js` owns themes, session guards, loading/retry, pending controls and error feedback. `shared/content.js` escapes plain text, validates URL schemes and sanitizes allowed rich HTML. Server validation remains necessary.
 
-Removed legacy `js/api/`, `js/core/`, duplicate profile theme/utilities and public render fixtures remain recoverable in Git history. They are not live integration points. Product controllers must not import Axios or access IndexedDB directly.
+## Implemented flows and page ownership
 
-## Pages, flows and component ownership
-
-| Page | Controller and behavior |
+| Page / modules | Current behavior |
 | --- | --- |
-| `login.html` | `login.js`: async credentials; authenticated result navigates to owner profile or unfinished onboarding; second-factor result navigates to `2fa-verify.html`. Failed login stays on the form. |
-| `register.html` | `register.js`: name/email/password and confirmation; registers, then signs in. No mock university eligibility verification is claimed. |
-| `profile_info.html` | `profile-info.js`: graduate institute/study years or lecturer department, specialization, biography and optional image. UI `teacher` maps to domain `lecturer`. Upload must succeed before onboarding is completed. |
-| `forgot.html` → `verify-code.html` → `reset-password.html` | Recovery challenge → six-digit verification → proof-bound reset → login. `services/workflow.js` keeps namespaced transient challenge state in sessionStorage; password values are not persisted there. |
-| `2fa-verify.html` | Six digits, paste/backspace, resend timer and challenge verification; expired/consumed flows cannot sign in. |
-| `profile.html` | `profile/profile-main.js`: owner profile reads; `profile-editor.js` intro save/cancel; `profile-sections.js` education/certificate/post CRUD and media; `profile-modal.js` asynchronous modal save; `profile-keyboard.js` shortcuts/focus. |
-| `user.html?id=...` | `user/user-main.js`: public projection, education/certificates/posts, optional disclosed email; contact opens/reuses a direct room and navigates to `message.html?room=...`. Self-contact disabled. No persisted selected-user ID. |
-| `events.html` | `posts.js`, `shared/posts.js`: announcements, category/sphere filters, rich editor and plain comments. This is not an event calendar or RSVP flow. |
-| `forum.html` | `forum/list-page.js` via `forum.js`: topic list and professional classification filter; ID-based links. |
-| `new-topic.html` | `forum/create-page.js`: validated publication, then forum list. |
-| `topic.html?id=...` | `forum/topic-page.js`: actual topic, flat replies, helpful likes, reply totals, newest/oldest/popular sorting and inline link formatting. A legacy link without ID selects topic 1. |
-| `search.html` | `search.js`: debounced query plus institute/specialization/graduation-year filters; profile/contact actions use durable IDs. |
-| `message.html?room=...` | `chat.js`, `chat/render.js`: distinct direct/group histories, text/image sends, contact/history search, emoji, clipboard, unread counts and menu mute/block/hide/profile actions. Drafts/selected attachments are per-room in-memory; committed messages persist. |
-| `settings.html` | `settings.js`: privacy/email disclosure, 2FA, notification/language preferences, local theme, current-password email/password changes, JSON export, deactivate/delete confirmation. Failed preference saves roll back the control. |
-| `help.html`, `terms.html`, `privacy.html` | `help.js`: shared public-page initialization, keyboard FAQ, policy/resource navigation. Support form explicitly says submission is unavailable and retains the draft. |
-| `tutorials.html` | `tutorials.js`: category filters and keyboard cards; unavailable video feedback, not pretend playback. |
-| `dev-tools.html` | Developer-only mock reset/logout, latency, next-operation failures, 2FA preference and incoming-message injection. Not a product navigation destination. |
+| `login.html`, `register.html`, `2fa-verify.html`; `login.js`, `register.js`, `2fa-verify.js` | HTTP invitation registration, verified email, optional email login factor and automatic backed-up key setup. Browser password derivation precedes HTTP authentication. Mock accounts and fixed codes are separate. |
+| `forgot.html`, `verify-code.html`, `reset-password.html`; `auth/recovery-client.js` | HTTP account/history recovery with local or platform-assisted vault unlock, resumable recovery authorization, atomic commit and identity rotation. No recovery key is shown to the user. |
+| `profile_info.html`; `profile-info.js` | Graduate/lecturer onboarding form; UI teacher maps to lecturer. The profile-write routes remain adapter expectations without implemented server controllers. |
+| `profile.html`; `profile/profile-main.js`, editor/sections/modal/render modules | Owner profile, education/certificate/publication editing and media work in mock mode. Full initialization can fail in HTTP mode when it requests unimplemented publication/child-resource APIs. |
+| `user.html?id=...`; `user/user-main.js` | Profile projection and direct contact. HTTP public-profile read exists, but child publication reads remain unavailable. Closed profiles cannot be opened by another member. |
+| `search.html`; `search.js`, `chat/direct-contact.js` | Real member search and Search → Connect → encrypted direct room. Closed profiles remain discoverable with `canOpenProfile=false`; search does not expose email. |
+| `message.html?room=...`; `chat.js`, `chat/render.js`, `chat/history.js`, `chat/groups.js` | HTTP/mock direct/group histories, text/images, paginated history, local search, drafts, emoji, unread state, mute/block/hide, group creation and owner/member controls. |
+| `settings.html`; `settings.js`, `settings-security.js`, `account-export.js` | Persisted privacy/language/notification preferences, staged email change, password-authorized email factor, password change, full ZIP export, deactivate/delete. Browser notifications and theme are local preferences. |
+| `events.html`; `posts.js`, `shared/posts.js` | Announcement CRUD, category/sphere filters, rich content and plain comments in mock mode; server publication API is not implemented. This is not an event calendar. |
+| `forum.html`, `new-topic.html`, `topic.html`; `forum/*` | HTTP/mock categories, cursor topics and flat replies, likes, owner edits/deletion, manual refresh and stale-edit review. Enable the backend forum only after V13. |
+| Help/policies/tutorials | Public static content and UI filters. Support submission and unavailable video playback show explicit feedback. |
+| `dev-tools.html` | Mock-only reset, latency/failure injection and incoming-message controls; not a production administration page. |
 
-Profile/public cards share `profile/profile-render.js` for education, certificates, announcements and lazy comments. Feed rendering shares DTO/content helpers but has its own card layout. Forum controllers are split by page; chat has separate rendering. Large profile form templates and page-specific DOM selectors remain; this is incremental extraction, not a full component-system rewrite.
+## Identity and encryption
 
-Member pages require a session and completed onboarding; onboarding itself permits an unfinished profile. Auth/help/policy/tutorial pages are public. Cross-tab mock logout/reset and browser cached-page restoration revalidate member access. Theme changes propagate between tabs. A fresh/reset dataset automatically signs in owner 1; logout suppresses auto sign-in until reset.
+`js/auth/identity-client.js` owns session restoration, email challenges, key setup, password changes and security transitions. `auth/password-policy.js` enforces 8–128 characters with uppercase, digit and special character. Passwords retain whitespace. HTTP sends a derived `loginSecret`, not the entered password. `auth/recovery-client.js` uses the implemented `/auth/recovery/*` protocol, replacing historical email/code/reset routes.
 
-## Application DTOs and validation
+`js/crypto/sodium.js`, `derive-worker.js` and pinned local vendor assets implement PLK1 primitives and browser derivation. `device-store.js` stores protected browser key material; `outbox-store.js` persists an encrypted outbox. `chat/encrypted-client.js` handles room keys, local encryption/decryption, replay-safe sends, recovery rotation and subscriptions. `crypto/images.js` prepares encrypted images. Never send decrypted message bodies or private keys as ordinary chat DTOs.
 
-All identities are opaque strings. Profile dates use `YYYY-MM`, years are strings, timestamps are ISO UTC strings. DTOs omit credential hashes, recovery secrets and registry records.
+The model is platform-trusted recovery backed by OpenBao Transit. Do not describe it as excluding the platform from recovery access. Key publication, credential changes and recovery use explicit versions and prepare/commit transitions. Ordinary reload can restore a session and unlock history with usable secure browser storage; storage failure and crypto-locked states must remain visible. Cross-tab identity events invalidate stale state.
 
-| DTO | Required shape / significant fields |
+## HTTP capability map
+
+The source of truth is the implemented controllers plus the identity/encrypted clients, not only `routes.js`. There is no implicit `/api` prefix.
+
+| Capability | Implemented HTTP boundary |
 | --- | --- |
-| User | `id,firstName,lastName,name,jobTitle,description,avatar,cover,role,onboardingComplete,institute,specialization,graduationYear,education[],licenses[]`; `email` is owner/disclosure-only; optional `passwordChangedAt`, lecturer `department`. |
-| Education | `id,institution,degree,institute,specialization,startDate,endDate|null,logo`; provider-owned owner association. |
-| Certificate | `id,name,organization,issueDate|null,credentialUrl,logo`. Canonical fields replace original public `title/issuer/date/credential`. |
-| Author | `id,name,avatar`; every post/comment/topic/reply author and message sender needs stable identity. |
-| Post / Comment | Post: `id,title,content,category,sphere,createdAt,author,comments[]`; Comment: `id,postId,text,createdAt,author`. |
-| Topic / Reply | Topic: `id,title,content,major,createdAt,author,replyCount`; Reply: `id,topicId,content,createdAt,author,likeCount,liked`. |
-| Conversation | `id,isGroup,closed,name,participants[],muted,blocked,unreadCount,lastMessage|null`. |
-| Message | `id,roomId,sender,text,createdAt,attachment|null`; attachment `{url,name,type}`. |
-| Settings | Booleans `isProfilePublic,showEmail,twoFactorEnabled,emailEnabled,newListingNotifications,forumReplyNotifications,directMessageNotifications`; `language: hy/en/ru`. |
-| Auth results | Login `{status:'authenticated',user}` or `{status:'challenge',challengeId,expiresAt?,resendAfter?}`; challenge `{challengeId,expiresAt?,resendAfter?}`; recovery verification `{recoveryToken}`. |
+| Identity | `/auth/parameters`, register, email/verify, login, login/verify, challenges/resend, refresh, logout, me; `/keys/me`, `/keys/setup/prepare`, `/keys/setup/commit`. |
+| Password and recovery | `/auth/password-change/prepare`, `/commit`; `/auth/recovery/request`, `/verify`, `/status`, `/unlock`, `/prepare`, `/commit`, `/login`. |
+| Discovery/profile | `GET /search`, `GET /users/{id}`, owner identity through `/auth/me`. Profile visibility and email disclosure are enforced by the server. |
+| Messaging | `/chat/direct`, `/chat/rooms`, room messages/keys/activation/read/mute/hide, blocks, binary attachment upload/download and own-message export. Cursor pages are processed by the encrypted client. |
+| Groups | Prepare/create, participant list/prepare/add/remove, leave, rename and owner transfer. Membership intervals bound accessible message sequences. |
+| Settings | `GET/PATCH /settings`; email-change start/verify/resend and email-factor under `/account`; `/notifications` cursor polling. |
+| Export/lifecycle | `/account/export/authorize`, `/data`, `/messages`, `/files/{id}`; `/account/deactivate`, `/account/delete`. |
+| Forum | `/forum/categories`, paginated `/forum/topics`, topic/reply CRUD and desired-state likes; content versions and 24-hour create deduplication. |
+| Adapter-only expectations | Profile update/onboarding/media, education/certificate CRUD and post/comment CRUD require future server implementation. |
 
-Mutation inputs exclude generated IDs/authors/owner IDs/timestamps. Profile intro uses first/last name, headline and biography. Onboarding uses `role,institute,department,specialization,description,startYear,endYear`; images are separate uploads. Education/certificate inputs are the mutable DTO fields above. Post inputs are `title,content,category,sphere`; comments `{text}`; topics `{title,content,major}`; replies `{content}`; chat send `{text,file?}`; preference updates are partial Settings.
+Ordinary DTO normalization accepts bare/data envelopes, requires list arrays and stable string identities, and validates role/onboarding fields. Legacy SQL display projections need explicit mappings. Posts use `job/internship/training`; spheres use `programming/engineering/data-science/marketing`; forum categories use database-backed stable codes. Rich body fields are sanitized; comments/messages are plain text. Profile month dates use `YYYY-MM`, nullable end dates mean ongoing. Auth and encrypted chat have separate versioned contracts: do not force their pages into the legacy full-array normalizer.
 
-Mock validation: names ≤100 characters, titles ≤255, nonempty rich text ≤20,000 visible characters, plain comments/messages ≤5,000. Passwords retain whitespace and require 8–128 characters, ASCII uppercase, digit and special character. Education end must not precede start; null end is ongoing. Onboarding validates integer study years 1900–2200 and chronological order. PNG/JPEG/WebP/GIF images must be nonempty and ≤5 MiB. Certificate links require HTTP(S). Server validation/precision policies remain specifications to agree.
+## Settings, privacy and lifecycle
 
-Category codes: `job`, `internship`, `training`. Feed spheres: `programming`, `engineering`, `data-science`, `marketing`. Forum major codes: `informatics`, `mechanics`, `electronics`, `civil`, `energy`, `management`. Display labels are Armenian; stable codes must not be replaced with localized SQL lookup names.
+[Approved decisions](settings_decisions.md) and [settings API](settings_backend.md) supersede the older mock assumptions.
 
-## HTTP route inventory and response contracts
+- Seven preference fields are patched strictly; `twoFactorEnabled` is changed through a password-authorized security action. Email disclosure defaults off; notification preferences default on. Language stores `hy/en/ru`, while the effective interface remains Armenian with an explicit fallback explanation. Theme stays browser-local.
+- Email changes require the password and a new-address code; when email factor is enabled, an old-address code precedes it. The address changes only after verification; sessions remain valid. Replacement requests invalidate previous codes. No old-mailbox bypass is offered.
+- Browser notifications require an explicit local opt-in, browser permission and Web Locks. Polling runs every 15 seconds with backoff and coordinates tabs. It stops when site tabs close; there is no background Web Push. Message notifications contain a sender name and generic label, not plaintext. Direct messages and forum replies produce live notification events; announcement delivery remains deferred.
+- Full export requires the password and a short-lived session-bound header grant. The browser builds a ZIP with JSON and separate files, decrypting own messages/images locally. The source limit is 100 MiB; missing or undecryptable items are recorded in `manifest.json`. Reads are paginated live reads, not a point-in-time snapshot. Legacy external file URLs remain references with explicit unavailability reporting.
+- HTTP deactivation retains data and requires operator readmission. Deletion removes personal data and own encrypted message bodies/files while retaining discussion content with a neutral author and required tombstones. Backup retention remains a separate release concern.
 
-These are client expectations, **not a tested server API**. Routes below are implemented only by the HTTP adapter. Base URL is configured centrally, with no implicit `/api` prefix. JSON requests unless noted; successful resource reads/writes may return a bare DTO or `{data: DTO}` / `{success:true,data:DTO}`. `{success:false,message,fieldErrors}` is an error. Deletes resolve null; lists require arrays, including empty arrays. Current adapter filters full returned lists locally and has no pagination envelope support.
+## Mock persistence and limits
 
-| Method/path | Input | Body consumed |
-| --- | --- | --- |
-| POST `/auth/login` | `{email,password}` | `{accessToken,user?}`; if absent user, adapter reads `/auth/me`; or challenge result. |
-| POST `/auth/register` | `{email,password,firstName,lastName}` | Body unused; page then logs in. |
-| POST `/auth/logout` | No body | Body unused; clear access token after successful request. |
-| POST `/auth/refresh` | `{}`, credentialed cookie | `{accessToken}` or `{data:{accessToken}}`; bypasses shared response interceptor. |
-| GET `/auth/me` | None | User or null/terminal 401; role and boolean `onboardingComplete` required. |
-| POST `/auth/forgot-password` | `{email}` | Challenge with `challengeId`; legacy empty response is insufficient for current flow. |
-| POST `/auth/verify-code` | `{email,code}` | `{recoveryToken}`; the legacy path does not currently transmit challengeId. |
-| POST `/auth/reset-password` | `{email,code,newPassword}` | Body unused; current legacy route omits recoveryToken. Proof-bound server contract must be reconciled. |
-| GET `/users/{id}` | Encoded ID; no ID uses `/auth/me` | User with child arrays. |
-| PUT `/users/me` | First/last name, jobTitle, description | Updated User. |
-| PUT `/users/profile` | FormData onboarding fields | Updated User. |
-| POST `/users/me/photo`, `/users/me/banner` | FormData `photo` / `banner`: File | Updated User, or `{url}` followed by `/auth/me`; no invented field name fallback. |
-| GET/POST `/users/me/education` | None / mutable Education fields | Education[] / created Education with ID. |
-| PUT/DELETE `/users/me/education/{id}` | Mutable fields / none | Updated Education / ignored body. |
-| GET/POST `/users/me/licenses` | None / mutable Certificate fields | Certificate[] / created Certificate with ID. |
-| PUT/DELETE `/users/me/licenses/{id}` | Mutable fields / none | Updated Certificate / ignored body. |
-| GET `/posts`, `/users/{id}/posts` | No query; selected user in path | Post[]; category/sphere filtering local. Original unused `/users/me/posts` intent is replaced by the identified-user read. |
-| POST `/posts`; PUT/DELETE `/posts/{id}` | Post fields / none for delete | Created/updated Post / ignored body. |
-| GET/POST `/posts/{postId}/comments` | None / `{text}` | Comment[] / created Comment. |
-| PUT/DELETE `/posts/{postId}/comments/{id}` | `{text}` / none | Updated Comment / ignored body; not currently surfaced as edit/delete controls. |
-| GET/POST `/forum/topics` | None / Topic fields | Topic[] / created Topic; major filtering local. |
-| GET/PUT/DELETE `/forum/topics/{id}` | ID, Topic fields for update | Topic / updated Topic / ignored body. Edit/delete service exists without product controls. |
-| GET `/search` | Axios `params:{q}` | User[]; institute/specialization/year filtering local. |
+The mock provider uses one IndexedDB dataset with serialized synchronous transaction actions, persisted ID sequences, blob media and page-local object URLs. BroadcastChannel distributes changes. A fresh/reset dataset auto-signs in the demo owner; logout suppresses this until reset. This is demo behavior only.
 
-**Unmapped operations fail `UNSUPPORTED` before requesting:** second-factor verification/resend, recovery resend, all forum reply/like operations, all chat operations, all settings/security/account lifecycle/export operations. Original source declared DELETE `/users/me`, but its confirmation/retention contract was undefined; settings deletion is deliberately not mapped to it. Backend reference/eligibility APIs are also undefined. Add agreed mappings and DTO normalization in the data layer; page controllers should not change for equivalent service semantics.
+Demo credentials: `demo.alumni@polytechnic.am`, `demo.lecturer@polytechnic.am`, and `demo.user5@polytechnic.am` through `demo.user8@polytechnic.am`, password `DemoPass123!`. Mock code: `123456`, ten-minute expiry, five attempts and a 60-second resend interval. Mock data is origin-specific. Neither mock reset nor switching providers provisions real accounts or keys.
 
-## Mock rules, persistence and scenarios
+Mock validation includes names ≤100, titles ≤255, rich text ≤20,000 visible characters, comments/messages ≤5,000 and nonempty PNG/JPEG/WebP/GIF ≤5 MiB. These are not a substitute for PLK1 packet/upload limits or server validation. Mock study-year conversion uses September/June conventions, not verified academic dates. Mock lifecycle and fixture eligibility must not define production security.
 
-- Owner writes check actual session identity; comments validate their parent post; forum likes are per-user; chat reads/sends require membership. Closed/inactive public profiles are not returned by people search. Email disclosure is independent of login identity. Closing a profile currently hides its profile/search entry, not all published discussion content.
-- Direct contact reuses a room for the same pair. Hiding a conversation is per-user, with a visibility timestamp cutoff; it does not erase everyone’s messages. Reopening/incoming can reveal the room again. Blocking prevents direct sends in either direction; group blocking controls are unavailable. Room mute is stored separately.
-- Six-digit mock code is `123456`; challenge expires after ten minutes, permits five attempts and has a 60-second resend interval. Reset/credential changes consume applicable challenges. These are demo rules, not production OTP/security implementation.
-- Mock deactivation ends the session and valid login reactivates. Account deletion removes owned resources/replies/comments/likes/messages/media/challenges and membership, retaining other users’ records. A direct room with one survivor becomes read-only. Production retention policy must be separately approved.
-- Export includes own profile/settings/posts/comments/topics/replies/sent messages and own media data URLs with stable references; no password hashes, tokens, challenges or other participants’ message bodies.
-- Images persist as IndexedDB blobs. Session/dataset are origin-specific: `localhost` and `127.0.0.1`, or different ports, are separate demos. Reset changes only mock dataset/URLs, not unrelated browser storage or HTTP credentials; local theme and transient workflow are separate.
-- Demo accounts: `demo.alumni@polytechnic.am`, `demo.lecturer@polytechnic.am`, `demo.user5@polytechnic.am` through `demo.user8@polytechnic.am`; password `DemoPass123!`.
-- Run `python3 server.py --port 8001`, open `http://127.0.0.1:8001/profile.html`; `dev-tools.html` provides reset, latency and named one-shot failures. No API server is needed. Offline means backend-free; CDN fonts can still require internet.
+## Running and verification
 
-## Pain points and remaining constraints
+Follow the [root setup](../README.md) and [backend setup](../backend/README.md), apply migrations explicitly through V11, and select `http` to use real services. Serve with `python3 server.py --port 8001`; use `localhost` consistently for frontend, cookies and API configuration. Use separate browser profiles for different accounts. Frontend-only mock use needs no API server.
 
-| Area | Current state / implication |
-| --- | --- |
-| Original mixed globals, commented imports, duplicate auth initialization and DOM-only saves | Removed/replaced with modules, coherent service DTOs and durable mock operations. Do not revive legacy wrappers. |
-| Original duplicate biography/certificate blocks and fixture-only public/feed records | Deduplicated and rendered from the shared fixture graph. Record counts are derived. |
-| Large profile form templates and page selectors | Still tightly coupled to existing HTML; preserve selector contracts when changing markup. Shared renderers reduce duplication but there is no general component framework. |
-| Rich editing | Uses legacy browser `document.execCommand`; constrained HTML sanitization remains essential. No image-rich editor or general arbitrary HTML contract. |
-| Lookup/search controls | Fixed frontend labels/options, no reference-data API; exact text matching and limited year options can exclude other values. Resolve reference IDs and pagination before HTTP scale-up. |
-| Onboarding academic dates | Mock uses September/June as demo conventions for year input; do not treat these as authoritative graduation days. Registry eligibility and lecturer verification are not mocked as official checks. |
-| Language and notifications | Saved preferences only; no translation catalogs, email/push delivery, reliable presence or encryption. |
-| HTTP integration | Only route adapter scaffolding verified with injected responses; no live backend, chat realtime contract or production session policy. Unknown capabilities fail visibly. |
-| Styling/accessibility | Original desktop layout retained with added focus/pending/error behavior. Actual 390px mobile viewport verification could not be confirmed by the available browser override; do not report mobile acceptance as passed. |
-| Concurrency | IndexedDB writes serialize; page controllers guard several stale reads. There is no production optimistic concurrency/version/ETag contract or message idempotency protocol. |
-| Documentation | This file and `backend_design_context.md` are current references. `docs/REFACTOR.md` records incremental acceptance evidence and limitations. Historical Git versions show the original defects. |
+[Settings acceptance recorded on 24 October](settings_backend.md) reports nine database-free backend tests, 42 integration tests, 41 contract/client tests and M1–M6 browser phases passing. These are recorded results, not checks rerun for this documentation update. Messenger checks cover HTTP/mock controls and mobile layouts; OS notification presentation and native macOS execution are not established by those results.
 
-Desktop flows, persistence, failures/retry, auth/recovery/2FA, profile CRUD/media, feed/forum/search/chat/settings and cached-session navigation were checked incrementally. Temporary adapter checks used actual pinned Axios for refresh/error/contract behavior and disposable mock business logic for lifecycle invariants; no Node project test/build toolchain was added. See `docs/REFACTOR.md` for precise scope and unverified boundaries.
+Remaining work includes server profile/publication editing, reference-data authority, general registry claims, translation catalogs, background notification delivery, old-mailbox recovery and M7 production restore/retention gates. Keep selectors stable in the existing HTML, retain sanitization around legacy `document.execCommand`, and use milestone documents for detailed crypto/transport contracts.
+
+
+## Implemented forum
+
+`js/forum/` uses backend categories, server filtering and cursor pagination, manual refresh, an accessible shared rich-text editor, author actions and draft-preserving edit-conflict review. Topics/replies have separate strict normalizers; page envelopes bypass generic unwrapping. `major` survives only as an upgrade input for old mock records. Mock mode implements the same version, pagination, desired-state like and create-retry contracts. Real reply notifications route to the linked discussion. See `forum_implementation.md` for API/access/deployment rules and `tools/m1/forum-live.mjs` / `forum-ui.mjs` for live and mock acceptance.
+
+The forum implementation was additionally verified on 24 October 2026 with the full suite: 12 local-tool tests, 48 client/contract tests, 11 backend unit tests, 48 SQL integration tests, existing M1–M6 browser phases and live/mock forum browsers. See the forum verification record for the exact scope and platform limits.

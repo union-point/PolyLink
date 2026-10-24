@@ -22,8 +22,9 @@ export const posts = {
   comments: { list: operation('posts.comments.list'), create: operation('posts.comments.create'), update: operation('posts.comments.update'), delete: operation('posts.comments.delete') },
 };
 export const forum = {
+  categories: operation('forum.categories'),
   list: operation('forum.list'), get: operation('forum.get'), create: operation('forum.create'), update: operation('forum.update'), delete: operation('forum.delete'),
-  replies: { list: operation('forum.replies.list'), create: operation('forum.replies.create'), like: operation('forum.replies.like') },
+  replies: { get: operation('forum.replies.get'), update: operation('forum.replies.update'), delete: operation('forum.replies.delete'), list: operation('forum.replies.list'), create: operation('forum.replies.create'), like: operation('forum.replies.like') },
 };
 export const search = { people: operation('search.people') };
 export const chat = {

@@ -1,13 +1,30 @@
 #!/usr/bin/env python3
 """Real SQL/OpenBao TLS/SMTP acceptance in uniquely named disposable resources."""
-import argparse, base64, json, os, pathlib, secrets, socket, ssl, subprocess, tempfile, time, urllib.request, uuid, shutil
+import argparse, base64, json, os, pathlib, secrets, socket, ssl, subprocess, tempfile, time, urllib.error, urllib.request, uuid, shutil
 
 ROOT=pathlib.Path(__file__).resolve().parents[2]
 def run(args,**kw): return subprocess.run(args,check=True,**kw)
 def free_port():
     with socket.socket() as sock:sock.bind(('127.0.0.1',0));return sock.getsockname()[1]
+def wait_for_active(request):
+    """Unsealing Raft completes before leader election; wait before provisioning."""
+    for attempt in range(100):
+        try:
+            health = request('sys/health')
+            if (health['initialized'] and not health['sealed']
+                    and not health['standby'] and not health.get('performance_standby', False)):
+                return
+        except urllib.error.HTTPError as error:
+            if error.code not in (429, 472, 473, 501, 503):
+                raise
+        except urllib.error.URLError:
+            pass
+        if attempt < 99:
+            time.sleep(.1)
+    raise TimeoutError('OpenBao did not become active after unsealing')
+
 def main():
-    parser=argparse.ArgumentParser(description=__doc__);parser.add_argument('--browser',action='store_true');parser.add_argument('--messenger',action='store_true');parser.add_argument('--continuity',action='store_true');parser.add_argument('--recovery',action='store_true');parser.add_argument('--messenger-ui',action='store_true');parser.add_argument('--messenger-ui-only',action='store_true');parser.add_argument('--groups',action='store_true');parser.add_argument('--groups-only',action='store_true');args=parser.parse_args();args.groups=args.groups or args.groups_only;args.messenger_ui=args.messenger_ui or (args.groups and not args.groups_only);args.messenger_ui=args.messenger_ui or args.messenger_ui_only;args.recovery=args.recovery or (args.messenger_ui and not args.messenger_ui_only);args.continuity=args.continuity or args.recovery;args.messenger=args.messenger or args.continuity or args.messenger_ui or args.groups
+    parser=argparse.ArgumentParser(description=__doc__);parser.add_argument('--forum',action='store_true');parser.add_argument('--browser',action='store_true');parser.add_argument('--messenger',action='store_true');parser.add_argument('--continuity',action='store_true');parser.add_argument('--recovery',action='store_true');parser.add_argument('--messenger-ui',action='store_true');parser.add_argument('--messenger-ui-only',action='store_true');parser.add_argument('--groups',action='store_true');parser.add_argument('--groups-only',action='store_true');args=parser.parse_args();args.groups=args.groups or args.groups_only;args.messenger_ui=args.messenger_ui or (args.groups and not args.groups_only);args.messenger_ui=args.messenger_ui or args.messenger_ui_only;args.recovery=args.recovery or (args.messenger_ui and not args.messenger_ui_only);args.continuity=args.continuity or args.recovery;args.messenger=args.messenger or args.continuity or args.messenger_ui or args.groups
     password=os.environ.get('DB_TEST_ADMIN_PASSWORD')
     if not password:raise SystemExit('Set DB_TEST_ADMIN_PASSWORD for an isolated SQL Server administrator.')
     name='polylink_m1_'+uuid.uuid4().hex;bao=name+'-bao';mail=name+'-mail';database_created=False
@@ -23,7 +40,7 @@ def main():
             req=urllib.request.Request(base+'/v1/'+path,data=None if body is None else json.dumps(body).encode(),headers=headers,method=method)
             with urllib.request.urlopen(req,context=ctx,timeout=10) as response:
                 raw=response.read();return json.loads(raw) if raw else None
-        env=os.environ.copy();env.update(DB_NAME=name,M1_DB_NAME=name,DB_PASSWORD=password,MIGRATION_DB_PASSWORD=password,MIGRATION_DB_USERNAME=env.get('DB_TEST_ADMIN_USERNAME','sa'),DB_TRUST_SERVER_CERTIFICATE='true',AUTH_HMAC_KEY=secrets.token_urlsafe(32),AUTH_REPLAY_KEY=secrets.token_urlsafe(32),OPENBAO_URL=base,OPENBAO_TOKEN_FILE=str(temp/'backend.token'),SMTP_HOST='localhost',SMTP_PORT=str(smtp),M1_MAILPIT_URL=f'http://localhost:{mailapi}')
+        env=os.environ.copy();env.update(FORUM_ENABLED='true',DB_NAME=name,M1_DB_NAME=name,DB_PASSWORD=password,MIGRATION_DB_PASSWORD=password,MIGRATION_DB_USERNAME=env.get('DB_TEST_ADMIN_USERNAME','sa'),DB_TRUST_SERVER_CERTIFICATE='true',AUTH_HMAC_KEY=secrets.token_urlsafe(32),AUTH_REPLAY_KEY=secrets.token_urlsafe(32),OPENBAO_URL=base,OPENBAO_TOKEN_FILE=str(temp/'backend.token'),SMTP_HOST='localhost',SMTP_PORT=str(smtp),M1_MAILPIT_URL=f'http://localhost:{mailapi}')
         java_home=pathlib.Path(env['JAVA_HOME']) if env.get('JAVA_HOME') else pathlib.Path(shutil.which('java')).resolve().parent.parent
         trust=temp/'trust.jks';shutil.copyfile(java_home/'lib/security/cacerts',trust);keytool=java_home/'bin/keytool'
         run([str(keytool),'-importcert','-noprompt','-alias','openbao-test','-file',str(cert),'-keystore',str(trust),'-storepass','changeit'],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
@@ -37,6 +54,7 @@ def main():
                     if attempt==99:raise
                     time.sleep(.1)
             admin=request('sys/init',{'secret_shares':1,'secret_threshold':1});request('sys/unseal',{'key':admin['keys_base64'][0]})
+            wait_for_active(request)
             root=admin['root_token'];request('sys/mounts/transit',{'type':'transit'},root)
             request('transit/keys/polylink-vault',{'type':'aes256-gcm96','derived':True,'exportable':False,'allow_plaintext_backup':False},root)
             request('sys/policies/acl/polylink-backend',{'policy':(ROOT/'infra/openbao/backend-policy.hcl').read_text()},root,method='PUT')
@@ -56,11 +74,11 @@ def main():
                 run([str(java),'--class-path',cp,str(helper)],cwd=ROOT,env=child,stdout=subprocess.DEVNULL)
             admin_sql('CREATE DATABASE ['+name+'] COLLATE SQL_Latin1_General_CP1_CI_AS');database_created=True
             run(maven+['exec:java','-Dexec.mainClass=am.polylink.database.SchemaCommand','-Dexec.args=fresh'],cwd=ROOT,env=env)
-            run(maven+['-Pdatabase-tests','verify']+(['-Dit.test=GroupIT,MessengerStateIT'] if args.groups_only else ['-Dit.test=MessengerStateIT'] if args.messenger_ui_only else []),cwd=ROOT,env=env)
-            if args.browser or args.messenger:
+            run(maven+['-Pdatabase-tests','verify']+(['-Dit.test=ForumIT'] if args.forum else ['-Dit.test=GroupIT,MessengerStateIT'] if args.groups_only else ['-Dit.test=MessengerStateIT'] if args.messenger_ui_only else []),cwd=ROOT,env=env)
+            if args.browser or args.messenger or args.forum:
                 import browser_check
-                browser_check.run(ROOT,env,admin_sql,request,root,messenger=args.messenger,continuity=args.continuity,recovery=args.recovery,messenger_ui=args.messenger_ui,messenger_ui_only=args.messenger_ui_only,groups=args.groups,groups_only=args.groups_only)
-            print(('M6 focused' if args.groups_only else 'M1–M6' if args.groups else 'M5 focused' if args.messenger_ui_only else 'M1–M5' if args.messenger_ui else 'M1/M2/M3/M4' if args.recovery else 'M1/M2/M3' if args.continuity else 'M1/M2' if args.messenger else 'M1')+' SQL, TLS Transit, SMTP and HTTP acceptance passed.')
+                browser_check.run(ROOT,env,admin_sql,request,root,messenger=args.messenger,continuity=args.continuity,recovery=args.recovery,messenger_ui=args.messenger_ui,messenger_ui_only=args.messenger_ui_only,groups=args.groups,groups_only=args.groups_only,forum=args.forum)
+            print(('Forum' if args.forum else 'M6 focused' if args.groups_only else 'M1–M6' if args.groups else 'M5 focused' if args.messenger_ui_only else 'M1–M5' if args.messenger_ui else 'M1/M2/M3/M4' if args.recovery else 'M1/M2/M3' if args.continuity else 'M1/M2' if args.messenger else 'M1')+' SQL, TLS Transit, SMTP and HTTP acceptance passed.')
         finally:
             if database_created:admin_sql('ALTER DATABASE ['+name+'] SET SINGLE_USER WITH ROLLBACK IMMEDIATE; DROP DATABASE ['+name+']')
             subprocess.run(['docker','rm','-f',bao,mail],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)

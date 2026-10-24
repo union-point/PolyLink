@@ -2,6 +2,8 @@
 
 Approved settings decisions are tracked in [settings decisions](settings_decisions.md) and supersede proposals here for the same behavior.
 
+Approved forum decisions are tracked in [forum decisions](forum_decisions.md) and supersede proposals here for the same behavior, including the career/professional scope and the independent `ForumCategories` lookup.
+
 Reviewed 15 October 2026. This lists behavior that is still undecided in `frontend_context.md` and `backend_design_context.md`. Each item is something an implementer would otherwise have to invent.
 
 The documents already name most of these gaps. What is missing is one answer per item, specific enough to implement without copying the mock. Mock rules are demo behavior, not production policy. Every recommendation below is a proposal for review, not an approved product decision or an implemented backend contract. Applying a recommendation may require coordinated schema, API, mock, and page changes.
@@ -145,6 +147,8 @@ Each item states the gap/current evidence and then a recommended solution. Recom
 
 ## Posts and forum
 
+Forum scope update, 24 October 2026: authors may edit and delete their own replies; deleting a reply removes its likes. The first version excludes a moderator role and moderation UI. An accountable abuse-handling/removal procedure must be defined before public launch. These [approved decisions](forum_decisions.md) supersede the older reply/moderation proposals below.
+
 - **Which fields are required.** **Criticality: Medium.** The UI requires a title; SQL allows a null title. Sphere may be empty in the client and is not checked against `programming`, `engineering`, `data-science`, and `marketing`. Category must be `job`, `internship`, or `training`. Confirm that sphere is optional, reject unknown category and sphere codes, and reject a blank title.
 
   **Recommended solution:** Require trimmed nonblank title and sanitized nonblank content; require a known category and allow sphere to be null/empty or one known code. Make SQL title non-null and enforce application-level blank checks, with the same validation on create and update.
@@ -162,6 +166,8 @@ Each item states the gap/current evidence and then a recommended solution. Recom
   **Recommended solution:** Adopt the listed tag set with safe absolute href and generated rel as the only link attributes; normalize permitted relative links against a configured public base URL. Sanitize server-side and again on display. Specify the current trimmed textContent/UTF-16 counting rule for the 20,000 limit, add a 128 KiB UTF-8 raw-markup request cap, reject empty text, and keep titles/names/comments escaped plain text.
 
 - **Forum classification.** **Criticality: High.** Major codes (`informatics`, `mechanics`, `electronics`, `civil`, `energy`, `management`) have no foreign key. Decide whether they are their own lookup, or are actually specializations or spheres. Topic create requires one of these codes.
+
+  **Resolved 24 October 2026:** Use the independent `ForumCategories` lookup and one required category per topic. See [approved forum decisions](forum_decisions.md). Schema/API/frontend implementation is still pending.
 
   **Recommended solution:** Create an independent forum-major lookup using the six current stable codes; require one valid major per topic. Keep it separate from education specialization and post sphere until an explicit institutional mapping is supplied.
 

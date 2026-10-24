@@ -1,0 +1,18 @@
+.forum-editor { width:100%; min-width:0; }
+.forum-toolbar,.forum-page-controls,.forum-owner-actions,.forum-edit-actions,.forum-link { display:flex; flex-wrap:wrap; align-items:center; gap:10px; margin:12px 0; }
+.forum-richtext { min-height:140px; max-height:65vh; overflow:auto; padding:14px; border:1px solid var(--border-color,#bbb); border-radius:8px; background:var(--card-background,#fff); color:var(--font-color-primary,#223); white-space:pre-wrap; overflow-wrap:anywhere; }
+.forum-richtext:focus { outline:2px solid var(--primary-blue,#326be7); outline-offset:2px; }
+.forum-editor-hint { font-size:.85rem; opacity:.8; }
+.forum-toolbar button,.forum-page-controls button,.forum-owner-actions button,.forum-edit-actions button,.forum-link button,.forum-edit-dialog button { border:1px solid var(--border-color,#bbb); border-radius:6px; padding:8px 12px; background:var(--card-background,#fff); color:var(--font-color-primary,#223); cursor:pointer; }
+.forum-page-controls button:disabled { opacity:.55; cursor:wait; }
+.forum-page-controls [role] { flex-basis:100%; overflow-wrap:anywhere; }
+.forum-link[hidden],[data-conflict][hidden],[data-latest][hidden],button[hidden] { display:none; }
+.forum-edit-dialog { margin:auto; width:min(680px,calc(100% - 32px)); max-height:90dvh; overflow:auto; box-sizing:border-box; border:1px solid var(--border-color,#bbb); border-radius:12px; padding:24px; color:var(--font-color-primary,#223); background:var(--card-background,#fff); }
+.forum-edit-dialog::backdrop { background:rgba(0,0,0,.55); }
+.forum-edit-dialog label { display:block; margin:12px 0; }
+.forum-edit-dialog input,.forum-edit-dialog select,.forum-link input { max-width:100%; width:100%; box-sizing:border-box; margin:6px 0; padding:10px; color:inherit; background:var(--card-background,#fff); border:1px solid var(--border-color,#bbb); border-radius:6px; }
+[data-latest],.forum-linked-reply { padding:14px; border:1px solid var(--border-color,#bbb); margin:14px 0; border-radius:8px; overflow-wrap:anywhere; }
+.post-content,.reply-text,.forum-richtext { overflow-wrap:anywhere; }
+@media(max-width:600px) { .forum-edit-dialog{padding:16px;} .reply-actions{flex-wrap:wrap;} }
+
+.topic-meta a,.topic-author-info a,.reply-author a,.forum-linked-reply a { color:var(--primary-blue,#0a66c2); }

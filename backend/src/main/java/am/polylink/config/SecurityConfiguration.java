@@ -22,6 +22,7 @@ public class SecurityConfiguration {
             HttpSecurity http,
             @Value("${polylink.identity.enabled:false}") boolean enabled,
             @Value("${polylink.messenger.enabled:false}") boolean messenger,
+            @Value("${polylink.forum.enabled:false}") boolean forum,
             @Value("${polylink.frontend-origins:http://localhost:8001}") String allowedOrigins)
             throws Exception {
         var origins = Set.copyOf(Arrays.asList(allowedOrigins.split(",")));
@@ -144,6 +145,32 @@ public class SecurityConfiguration {
                                 .permitAll();
                         authorize
                                 .requestMatchers(HttpMethod.PUT, "/account/email-factor")
+                                .permitAll();
+                    }
+                    if (enabled && forum) {
+                        authorize
+                                .requestMatchers(
+                                        HttpMethod.GET,
+                                        "/forum/categories",
+                                        "/forum/topics",
+                                        "/forum/topics/*",
+                                        "/forum/topics/*/replies",
+                                        "/forum/replies/*")
+                                .permitAll();
+                        authorize
+                                .requestMatchers(
+                                        HttpMethod.POST, "/forum/topics", "/forum/topics/*/replies")
+                                .permitAll();
+                        authorize
+                                .requestMatchers(
+                                        HttpMethod.PATCH, "/forum/topics/*", "/forum/replies/*")
+                                .permitAll();
+                        authorize
+                                .requestMatchers(
+                                        HttpMethod.DELETE, "/forum/topics/*", "/forum/replies/*")
+                                .permitAll();
+                        authorize
+                                .requestMatchers(HttpMethod.PUT, "/forum/replies/*/like")
                                 .permitAll();
                     }
                     authorize.anyRequest().denyAll();

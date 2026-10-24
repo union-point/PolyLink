@@ -22,7 +22,7 @@ export function normalizeUser(value) {
 }
 export function normalizeComment(value) { return { id: id(value.id ?? value.CommentId), postId: id(value.postId ?? value.PostId), text: value.text ?? value.Content ?? '', createdAt: value.createdAt ?? value.CreatedAt, author: normalizeAuthor(value.author) }; }
 export function normalizePost(value) { return { id: id(value.id ?? value.PostId), title: value.title ?? value.Title ?? '', content: value.content ?? value.Content ?? '', category: value.category ?? value.postTypeCode ?? '', sphere: value.sphere ?? value.sphereCode ?? '', createdAt: value.createdAt ?? value.CreatedAt, author: normalizeAuthor(value.author), comments: (value.comments || []).map(normalizeComment) }; }
-export function normalizeTopic(value) { return { id: id(value.id ?? value.TopicId), title: value.title ?? value.Title ?? '', content: value.content ?? value.Content ?? '', major: value.major ?? '', createdAt: value.createdAt ?? value.CreatedAt, author: normalizeAuthor(value.author), replyCount: Number(value.replyCount ?? value.ReplyCount ?? 0) }; }
+
 export function list(value, normalize) {
   if (!Array.isArray(value)) throw new DataError('CONTRACT', 'API պատասխանի ցուցակի ձևաչափը սխալ է։');
   return value.map(normalize);
