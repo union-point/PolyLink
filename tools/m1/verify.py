@@ -1,11 +1,28 @@
 #!/usr/bin/env python3
 """Real SQL/OpenBao TLS/SMTP acceptance in uniquely named disposable resources."""
-import argparse, base64, json, os, pathlib, secrets, socket, ssl, subprocess, tempfile, time, urllib.request, uuid, shutil
+import argparse, base64, json, os, pathlib, secrets, socket, ssl, subprocess, tempfile, time, urllib.error, urllib.request, uuid, shutil
 
 ROOT=pathlib.Path(__file__).resolve().parents[2]
 def run(args,**kw): return subprocess.run(args,check=True,**kw)
 def free_port():
     with socket.socket() as sock:sock.bind(('127.0.0.1',0));return sock.getsockname()[1]
+def wait_for_active(request):
+    """Unsealing Raft completes before leader election; wait before provisioning."""
+    for attempt in range(100):
+        try:
+            health = request('sys/health')
+            if (health['initialized'] and not health['sealed']
+                    and not health['standby'] and not health.get('performance_standby', False)):
+                return
+        except urllib.error.HTTPError as error:
+            if error.code not in (429, 472, 473, 501, 503):
+                raise
+        except urllib.error.URLError:
+            pass
+        if attempt < 99:
+            time.sleep(.1)
+    raise TimeoutError('OpenBao did not become active after unsealing')
+
 def main():
     parser=argparse.ArgumentParser(description=__doc__);parser.add_argument('--forum',action='store_true');parser.add_argument('--browser',action='store_true');parser.add_argument('--messenger',action='store_true');parser.add_argument('--continuity',action='store_true');parser.add_argument('--recovery',action='store_true');parser.add_argument('--messenger-ui',action='store_true');parser.add_argument('--messenger-ui-only',action='store_true');parser.add_argument('--groups',action='store_true');parser.add_argument('--groups-only',action='store_true');args=parser.parse_args();args.groups=args.groups or args.groups_only;args.messenger_ui=args.messenger_ui or (args.groups and not args.groups_only);args.messenger_ui=args.messenger_ui or args.messenger_ui_only;args.recovery=args.recovery or (args.messenger_ui and not args.messenger_ui_only);args.continuity=args.continuity or args.recovery;args.messenger=args.messenger or args.continuity or args.messenger_ui or args.groups
     password=os.environ.get('DB_TEST_ADMIN_PASSWORD')
@@ -37,6 +54,7 @@ def main():
                     if attempt==99:raise
                     time.sleep(.1)
             admin=request('sys/init',{'secret_shares':1,'secret_threshold':1});request('sys/unseal',{'key':admin['keys_base64'][0]})
+            wait_for_active(request)
             root=admin['root_token'];request('sys/mounts/transit',{'type':'transit'},root)
             request('transit/keys/polylink-vault',{'type':'aes256-gcm96','derived':True,'exportable':False,'allow_plaintext_backup':False},root)
             request('sys/policies/acl/polylink-backend',{'policy':(ROOT/'infra/openbao/backend-policy.hcl').read_text()},root,method='PUT')
