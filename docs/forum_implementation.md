@@ -16,6 +16,7 @@ Enable `FORUM_ENABLED=true` after explicitly applying V13. Forum access does not
 | DELETE | `/forum/topics/{id}` | `expectedVersion` query |
 | GET | `/forum/topics/{id}/replies` | `sort`, `cursor`, `limit` |
 | POST | `/forum/topics/{id}/replies` | `content`, `requestId` |
+| GET | `/forum/replies/{id}` | latest reply for conflict review or a notification link |
 | PATCH | `/forum/replies/{id}` | `content`, `expectedVersion` |
 | DELETE | `/forum/replies/{id}` | `expectedVersion` query |
 | PUT | `/forum/replies/{id}/like` | `liked` boolean |

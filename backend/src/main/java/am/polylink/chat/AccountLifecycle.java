@@ -117,6 +117,9 @@ public class AccountLifecycle {
                             caller,
                             caller);
                     if (delete) {
+                        chat.db.update(
+                                "IF OBJECT_ID(N'forum.CreateRequests') IS NOT NULL DELETE forum.CreateRequests WHERE UserId=?",
+                                caller);
                         for (String table :
                                 java.util.List.of(
                                         "Education",

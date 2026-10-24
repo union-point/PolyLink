@@ -7,7 +7,7 @@ def run(args,**kw): return subprocess.run(args,check=True,**kw)
 def free_port():
     with socket.socket() as sock:sock.bind(('127.0.0.1',0));return sock.getsockname()[1]
 def main():
-    parser=argparse.ArgumentParser(description=__doc__);parser.add_argument('--browser',action='store_true');parser.add_argument('--messenger',action='store_true');parser.add_argument('--continuity',action='store_true');parser.add_argument('--recovery',action='store_true');parser.add_argument('--messenger-ui',action='store_true');parser.add_argument('--messenger-ui-only',action='store_true');parser.add_argument('--groups',action='store_true');parser.add_argument('--groups-only',action='store_true');args=parser.parse_args();args.groups=args.groups or args.groups_only;args.messenger_ui=args.messenger_ui or (args.groups and not args.groups_only);args.messenger_ui=args.messenger_ui or args.messenger_ui_only;args.recovery=args.recovery or (args.messenger_ui and not args.messenger_ui_only);args.continuity=args.continuity or args.recovery;args.messenger=args.messenger or args.continuity or args.messenger_ui or args.groups
+    parser=argparse.ArgumentParser(description=__doc__);parser.add_argument('--forum',action='store_true');parser.add_argument('--browser',action='store_true');parser.add_argument('--messenger',action='store_true');parser.add_argument('--continuity',action='store_true');parser.add_argument('--recovery',action='store_true');parser.add_argument('--messenger-ui',action='store_true');parser.add_argument('--messenger-ui-only',action='store_true');parser.add_argument('--groups',action='store_true');parser.add_argument('--groups-only',action='store_true');args=parser.parse_args();args.groups=args.groups or args.groups_only;args.messenger_ui=args.messenger_ui or (args.groups and not args.groups_only);args.messenger_ui=args.messenger_ui or args.messenger_ui_only;args.recovery=args.recovery or (args.messenger_ui and not args.messenger_ui_only);args.continuity=args.continuity or args.recovery;args.messenger=args.messenger or args.continuity or args.messenger_ui or args.groups
     password=os.environ.get('DB_TEST_ADMIN_PASSWORD')
     if not password:raise SystemExit('Set DB_TEST_ADMIN_PASSWORD for an isolated SQL Server administrator.')
     name='polylink_m1_'+uuid.uuid4().hex;bao=name+'-bao';mail=name+'-mail';database_created=False
@@ -23,7 +23,7 @@ def main():
             req=urllib.request.Request(base+'/v1/'+path,data=None if body is None else json.dumps(body).encode(),headers=headers,method=method)
             with urllib.request.urlopen(req,context=ctx,timeout=10) as response:
                 raw=response.read();return json.loads(raw) if raw else None
-        env=os.environ.copy();env.update(DB_NAME=name,M1_DB_NAME=name,DB_PASSWORD=password,MIGRATION_DB_PASSWORD=password,MIGRATION_DB_USERNAME=env.get('DB_TEST_ADMIN_USERNAME','sa'),DB_TRUST_SERVER_CERTIFICATE='true',AUTH_HMAC_KEY=secrets.token_urlsafe(32),AUTH_REPLAY_KEY=secrets.token_urlsafe(32),OPENBAO_URL=base,OPENBAO_TOKEN_FILE=str(temp/'backend.token'),SMTP_HOST='localhost',SMTP_PORT=str(smtp),M1_MAILPIT_URL=f'http://localhost:{mailapi}')
+        env=os.environ.copy();env.update(FORUM_ENABLED='true',DB_NAME=name,M1_DB_NAME=name,DB_PASSWORD=password,MIGRATION_DB_PASSWORD=password,MIGRATION_DB_USERNAME=env.get('DB_TEST_ADMIN_USERNAME','sa'),DB_TRUST_SERVER_CERTIFICATE='true',AUTH_HMAC_KEY=secrets.token_urlsafe(32),AUTH_REPLAY_KEY=secrets.token_urlsafe(32),OPENBAO_URL=base,OPENBAO_TOKEN_FILE=str(temp/'backend.token'),SMTP_HOST='localhost',SMTP_PORT=str(smtp),M1_MAILPIT_URL=f'http://localhost:{mailapi}')
         java_home=pathlib.Path(env['JAVA_HOME']) if env.get('JAVA_HOME') else pathlib.Path(shutil.which('java')).resolve().parent.parent
         trust=temp/'trust.jks';shutil.copyfile(java_home/'lib/security/cacerts',trust);keytool=java_home/'bin/keytool'
         run([str(keytool),'-importcert','-noprompt','-alias','openbao-test','-file',str(cert),'-keystore',str(trust),'-storepass','changeit'],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
@@ -56,7 +56,7 @@ def main():
                 run([str(java),'--class-path',cp,str(helper)],cwd=ROOT,env=child,stdout=subprocess.DEVNULL)
             admin_sql('CREATE DATABASE ['+name+'] COLLATE SQL_Latin1_General_CP1_CI_AS');database_created=True
             run(maven+['exec:java','-Dexec.mainClass=am.polylink.database.SchemaCommand','-Dexec.args=fresh'],cwd=ROOT,env=env)
-            run(maven+['-Pdatabase-tests','verify']+(['-Dit.test=GroupIT,MessengerStateIT'] if args.groups_only else ['-Dit.test=MessengerStateIT'] if args.messenger_ui_only else []),cwd=ROOT,env=env)
+            run(maven+['-Pdatabase-tests','verify']+(['-Dit.test=ForumIT'] if args.forum else ['-Dit.test=GroupIT,MessengerStateIT'] if args.groups_only else ['-Dit.test=MessengerStateIT'] if args.messenger_ui_only else []),cwd=ROOT,env=env)
             if args.browser or args.messenger:
                 import browser_check
                 browser_check.run(ROOT,env,admin_sql,request,root,messenger=args.messenger,continuity=args.continuity,recovery=args.recovery,messenger_ui=args.messenger_ui,messenger_ui_only=args.messenger_ui_only,groups=args.groups,groups_only=args.groups_only)
