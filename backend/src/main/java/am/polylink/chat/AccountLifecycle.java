@@ -118,6 +118,12 @@ public class AccountLifecycle {
                             caller);
                     if (delete) {
                         chat.db.update(
+                                "INSERT auth.RegistryClaimAudit(UserId,AlumniRegistryId,LecturerRegistryId,Action,Actor) SELECT UserId,AlumniRegistryId,LecturerRegistryId,'RELEASE',? FROM auth.RegistryClaims WHERE UserId=?",
+                                restoring ? "deletion-replay" : "account-deletion",
+                                caller);
+                        chat.db.update("DELETE auth.RegistryClaims WHERE UserId=?", caller);
+                        chat.db.update("DELETE auth.EnrollmentSessions WHERE UserId=?", caller);
+                        chat.db.update(
                                 "IF OBJECT_ID(N'forum.CreateRequests') IS NOT NULL DELETE forum.CreateRequests WHERE UserId=?",
                                 caller);
                         for (String table :

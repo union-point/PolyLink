@@ -117,6 +117,18 @@ public final class SchemaCommand {
                                     "db/inventory/forum-schema-v"
                                             + (version >= 13 ? 13 : 12)
                                             + ".json"));
+            if (version >= 14) {
+                for (var table : expectedForum.path("tables"))
+                    if (table.path("name").asText().equals("LecturerRegistry")) {
+                        var columns = (tools.jackson.databind.node.ArrayNode) table.path("columns");
+                        for (String name : java.util.List.of("FirstName", "LastName"))
+                            columns.add(
+                                    mapper.readTree(
+                                            "{\"name\":\""
+                                                    + name
+                                                    + "\",\"type\":\"nvarchar\",\"maxLength\":200,\"precision\":0,\"scale\":0,\"nullable\":true,\"collation\":\"SQL_Latin1_General_CP1_CI_AS\"}"));
+                    }
+            }
             if (!expectedForum.equals(mapper.readTree(inventory(connection))))
                 throw new IllegalStateException(
                         "Schema differs from the inspected baseline; reviewed forum inventory required");

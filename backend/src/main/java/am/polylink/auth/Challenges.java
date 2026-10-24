@@ -150,6 +150,43 @@ public class Challenges {
         return user;
     }
 
+    /** Called under the enrollment account/session lock and within its admission transaction. */
+    public boolean checkEnrollment(
+            AuthDtos.CodeProof proof,
+            String browser,
+            Accounts.Account account,
+            Long revision,
+            boolean retry) {
+        var rows =
+                Rows.query(
+                        db,
+                        "SELECT * FROM auth.EmailChallenges WITH(UPDLOCK,HOLDLOCK) WHERE ChallengeId=?",
+                        proof.challengeId());
+        if (rows.isEmpty()) return false;
+        var row = rows.getFirst();
+        if (!"EMAIL_VERIFY".equals(row.get("Purpose"))
+                || !Objects.equals(row.get("UserId"), account.id())
+                || !Secrets.equal((byte[]) row.get("BrowserHash"), Secrets.hash(browser))
+                || ((Number) row.get("CredentialVersion")).longValue() != account.credential()
+                || !account.email().equals(row.get("EmailSnapshot"))
+                || ((Number) row.get("FailedAttempts")).intValue() >= 5) return false;
+        if (retry) {
+            if (row.get("ConsumedAt") == null) return false;
+        } else if (row.get("ConsumedAt") != null
+                || !Objects.equals(row.get("EnrollmentRevision"), revision)
+                || !((OffsetDateTime) row.get("ExpiresAt")).isAfter(OffsetDateTime.now(clock)))
+            return false;
+        if (!Secrets.equal(
+                (byte[]) row.get("CodeMac"),
+                codeMac(proof.challengeId(), "EMAIL_VERIFY", account.credential(), proof.code()))) {
+            db.update(
+                    "UPDATE auth.EmailChallenges SET FailedAttempts=FailedAttempts+1 WHERE ChallengeId=?",
+                    proof.challengeId());
+            return false;
+        }
+        return true;
+    }
+
     public Created resend(UUID id, String browser, String ip) {
         var rows =
                 db.queryForList(
@@ -169,6 +206,8 @@ public class Challenges {
                                             id);
                             if (records.isEmpty()) throw AuthFailure.denied();
                             var row = records.getFirst();
+                            if ("EMAIL_VERIFY".equals(row.get("Purpose")))
+                                throw AuthFailure.denied();
                             var now = OffsetDateTime.now(clock);
                             if (row.get("ConsumedAt") != null
                                     || !Secrets.equal(

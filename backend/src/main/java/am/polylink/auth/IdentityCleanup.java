@@ -10,10 +10,12 @@ import org.springframework.stereotype.Component;
 public class IdentityCleanup {
     private final JdbcTemplate db;
     private final Clock clock;
+    private final EnrollmentService enrollment;
 
-    public IdentityCleanup(JdbcTemplate db, Clock clock) {
+    public IdentityCleanup(JdbcTemplate db, Clock clock, EnrollmentService enrollment) {
         this.db = db;
         this.clock = clock;
+        this.enrollment = enrollment;
     }
 
     @Scheduled(fixedDelay = 60000, initialDelay = 60000)
@@ -22,6 +24,15 @@ public class IdentityCleanup {
         try {
             db.update(
                     "UPDATE auth.Sessions SET ReplayPacket=NULL,PreviousRefreshHash=NULL,ReplayUntil=NULL WHERE ReplayUntil<=?",
+                    now);
+            for (int user :
+                    db.queryForList(
+                            "SELECT TOP(100) p.UserId FROM auth.PendingEnrollments p JOIN auth.AccountSecurity a ON a.UserId=p.UserId WHERE a.AdmissionStatus='PENDING' AND p.SavedAt<=? ORDER BY p.SavedAt",
+                            Integer.class,
+                            now.minusDays(7))) enrollment.expire(user);
+            db.update(
+                    "DELETE auth.EnrollmentSessions WHERE AbsoluteExpiresAt<=? OR IdleExpiresAt<=? OR RevokedAt IS NOT NULL",
+                    now,
                     now);
             db.update("DELETE auth.AccessTokens WHERE ExpiresAt<=?", now);
             db.update("DELETE auth.EmailChallenges WHERE ExpiresAt<?", now.minusDays(1));

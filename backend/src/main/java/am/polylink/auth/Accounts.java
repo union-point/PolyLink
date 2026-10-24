@@ -50,7 +50,7 @@ public class Accounts {
                     "emailFactorEnabled",
                     emailFactor,
                     "onboardingComplete",
-                    true,
+                    verified && admission.equals("ADMITTED"),
                     "email",
                     email);
         }

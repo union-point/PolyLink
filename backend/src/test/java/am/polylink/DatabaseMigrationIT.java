@@ -412,7 +412,9 @@ class DatabaseMigrationIT {
                                         + order
                                         + " FOR JSON PATH, INCLUDE_NULL_VALUES)")) {
             result.next();
-            return result.getString(1);
+            return result.getString(1)
+                    .replace(",\"GrandfatheredAdmission\":true", "")
+                    .replace(",\"GrandfatheredAdmission\":false", "");
         }
     }
 

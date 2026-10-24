@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.*;
 public class IdentityController {
     private final PasswordChanges passwords;
     private final EnrollmentService enrollment;
+    private final EnrollmentSessions enrollmentSessions;
     private final Challenges challenges;
     private final Sessions sessions;
     private final KeyVaultService vault;
@@ -21,6 +22,7 @@ public class IdentityController {
     public IdentityController(
             PasswordChanges passwords,
             EnrollmentService enrollment,
+            EnrollmentSessions enrollmentSessions,
             Challenges challenges,
             Sessions sessions,
             KeyVaultService vault,
@@ -29,6 +31,7 @@ public class IdentityController {
             org.springframework.jdbc.core.JdbcTemplate db) {
         this.passwords = passwords;
         this.enrollment = enrollment;
+        this.enrollmentSessions = enrollmentSessions;
         this.challenges = challenges;
         this.sessions = sessions;
         this.vault = vault;
@@ -48,18 +51,51 @@ public class IdentityController {
             @Valid @RequestBody AuthDtos.Registration input,
             HttpServletRequest request,
             HttpServletResponse response) {
-        String browser = secrets.token();
-        var created = enrollment.register(input, request.getRemoteAddr(), browser);
-        Sessions.cookie(response, Sessions.CHALLENGE, browser, true, 600);
-        return created.response();
+        return enrollment.register(input, request.getRemoteAddr(), response);
+    }
+
+    @GetMapping("/auth/enrollment")
+    public Map<String, Object> enrollment(HttpServletRequest request) {
+        return enrollment.state(request);
+    }
+
+    @GetMapping("/auth/enrollment/options")
+    public Map<String, Object> enrollmentOptions(HttpServletRequest request) {
+        return enrollment.options(request);
+    }
+
+    @PutMapping("/auth/enrollment/profile")
+    public Map<String, Object> enrollmentProfile(
+            @Valid @RequestBody EnrollmentDtos.Profile input, HttpServletRequest request) {
+        return enrollment.save(input, request);
+    }
+
+    @PostMapping("/auth/enrollment/submit")
+    public Map<String, Object> enrollmentSubmit(
+            @Valid @RequestBody EnrollmentDtos.Revision input, HttpServletRequest request) {
+        return enrollment.submit(input.revision(), request);
+    }
+
+    @PutMapping("/auth/enrollment/password")
+    public Map<String, Object> enrollmentPassword(
+            @Valid @RequestBody EnrollmentDtos.Password input, HttpServletRequest request) {
+        return enrollment.resetPassword(input, request);
+    }
+
+    @PostMapping("/auth/enrollment/logout")
+    @ResponseStatus(org.springframework.http.HttpStatus.NO_CONTENT)
+    public void enrollmentLogout(
+            @RequestBody Map<String, Object> input,
+            HttpServletRequest request,
+            HttpServletResponse response) {
+        if (!input.isEmpty()) throw AuthFailure.invalid();
+        enrollmentSessions.logout(request, response);
     }
 
     @PostMapping("/auth/email/verify")
     public Map<String, Object> verifyEmail(
             @Valid @RequestBody AuthDtos.CodeProof input, HttpServletRequest request) {
-        enrollment.verifyEmail(
-                input, Sessions.cookie(request, Sessions.CHALLENGE), request.getRemoteAddr());
-        return Map.of();
+        return enrollment.verifyEmail(input, request);
     }
 
     @PostMapping("/auth/login")
@@ -68,6 +104,10 @@ public class IdentityController {
             HttpServletRequest request,
             HttpServletResponse response) {
         var account = enrollment.password(input, request.getRemoteAddr());
+        if (account.admission().equals("PENDING")) {
+            enrollmentSessions.issue(account.id(), account.credential(), response);
+            return Map.of("status", "enrollment", "next", "profile_info.html");
+        }
         if (account.emailFactor()) {
             limits.issue(account.email(), request.getRemoteAddr());
             String browser = secrets.token();
@@ -80,6 +120,7 @@ public class IdentityController {
         }
         var issued = sessions.create(account.id(), account.credential(), false);
         sessions.attach(response, issued);
+        EnrollmentSessions.clear(response);
         return issued.response();
     }
 
@@ -96,6 +137,7 @@ public class IdentityController {
                         request.getRemoteAddr());
         var issued = sessions.create(account.id(), account.credential(), true);
         sessions.attach(response, issued);
+        EnrollmentSessions.clear(response);
         return issued.response();
     }
 
@@ -104,6 +146,9 @@ public class IdentityController {
             @Valid @RequestBody AuthDtos.ChallengeId input,
             HttpServletRequest request,
             HttpServletResponse response) {
+        if (!Sessions.cookie(request, EnrollmentSessions.COOKIE).isEmpty()) {
+            return enrollment.resend(input.challengeId(), request);
+        }
         String browser = Sessions.cookie(request, Sessions.CHALLENGE);
         var created = challenges.resend(input.challengeId(), browser, request.getRemoteAddr());
         Sessions.cookie(response, Sessions.CHALLENGE, browser, true, 600);
@@ -118,6 +163,7 @@ public class IdentityController {
         if (!input.isEmpty()) throw AuthFailure.invalid();
         var issued = sessions.refresh(request);
         sessions.attach(response, issued);
+        EnrollmentSessions.clear(response);
         return issued.response();
     }
 

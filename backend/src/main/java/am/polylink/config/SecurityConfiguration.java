@@ -60,6 +60,8 @@ public class SecurityConfiguration {
                                         "/auth/recovery/login",
                                         "/auth/parameters",
                                         "/auth/register",
+                                        "/auth/enrollment/submit",
+                                        "/auth/enrollment/logout",
                                         "/auth/email/verify",
                                         "/auth/login",
                                         "/auth/login/verify",
@@ -78,10 +80,19 @@ public class SecurityConfiguration {
                                         HttpMethod.GET,
                                         "/auth/recovery/status",
                                         "/auth/me",
+                                        "/auth/enrollment",
+                                        "/auth/enrollment/options",
                                         "/keys/me",
                                         "/users/*")
                                 .permitAll();
                     }
+                    if (enabled)
+                        authorize
+                                .requestMatchers(
+                                        HttpMethod.PUT,
+                                        "/auth/enrollment/profile",
+                                        "/auth/enrollment/password")
+                                .permitAll();
                     if (enabled && messenger) {
                         authorize
                                 .requestMatchers(

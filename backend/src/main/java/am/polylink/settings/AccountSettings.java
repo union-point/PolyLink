@@ -121,7 +121,7 @@ public class AccountSettings {
                 tx.execute(
                         s -> {
                             var a = proof(caller, input.loginSecret(), input.expectedCredential());
-                            String email = Accounts.email(input.email());
+                            String email = EnrollmentRules.universityEmail(input.email());
                             if (email.equals(a.email()) || accounts.find(email).isPresent())
                                 throw new AuthFailure(
                                         409, "EMAIL_UNAVAILABLE", "This email cannot be used.");
@@ -153,6 +153,7 @@ public class AccountSettings {
         var rows = Rows.query(db, "SELECT * FROM auth.EmailChanges WHERE UserId=?", a.id());
         if (rows.isEmpty()) throw AuthFailure.invalid();
         var r = rows.getFirst();
+        EnrollmentRules.universityEmail((String) r.get("NewEmail"));
         if (id == null
                 || !id.toString().equalsIgnoreCase(r.get("RequestId").toString())
                 || !caller.familyId().toString().equalsIgnoreCase(r.get("FamilyId").toString())

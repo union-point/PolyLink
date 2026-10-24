@@ -44,7 +44,7 @@ public class ForumService {
                 now().minusHours(24));
     }
 
-    /** Temporary admission exception; replace with verified onboarding when that flow ships. */
+    /** Admission is set only by registry enrollment or the grandfathered rollout policy. */
     public void requireAccess(Accounts.Account account) {
         account.requireAdmitted();
         if (!Set.of("graduate", "lecturer").contains(account.role()))

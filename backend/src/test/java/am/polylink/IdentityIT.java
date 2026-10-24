@@ -94,7 +94,7 @@ class IdentityIT {
         var factor =
                 Map.of("enabled", true, "loginSecret", user.secret, "expectedCredential", version);
         assertThat(b.call("PUT", "/account/email-factor", factor).statusCode()).isEqualTo(200);
-        String email = "changed-" + UUID.randomUUID() + "@example.invalid";
+        String email = "changed-" + UUID.randomUUID() + "@polytechnic.am";
         var start =
                 b.post(
                         "/account/email-change/start",
@@ -192,7 +192,7 @@ class IdentityIT {
         var input =
                 Map.of(
                         "email",
-                        "first-" + UUID.randomUUID() + "@example.invalid",
+                        "first-" + UUID.randomUUID() + "@polytechnic.am",
                         "loginSecret",
                         user.secret,
                         "expectedCredential",
@@ -289,7 +289,7 @@ class IdentityIT {
     }
 
     @Test
-    void invitationsVerificationAndTwoAccountsHaveIndependentAuthority() throws Exception {
+    void grandfatheredAccountsHaveIndependentAuthority() throws Exception {
         var one = enroll("graduate");
         var two = enroll("lecturer");
         assertThat(one.browser.get("/auth/me").statusCode()).isEqualTo(200);
@@ -297,7 +297,7 @@ class IdentityIT {
         assertThat(one.browser.get("/keys/me").statusCode()).isEqualTo(404);
         assertThat(
                         db.queryForObject(
-                                "SELECT COUNT(*) FROM auth.Invitations WHERE ConsumedUserId IN (?,?)",
+                                "SELECT COUNT(*) FROM auth.AccountSecurity WHERE UserId IN (?,?) AND GrandfatheredAdmission=1",
                                 Integer.class,
                                 one.id,
                                 two.id))
@@ -322,7 +322,7 @@ class IdentityIT {
         String email = "not-invited-" + UUID.randomUUID() + "@example.invalid";
         var response =
                 denied.post("/auth/register", registration(email, "graduate", secret(), salt()));
-        assertThat(response.statusCode()).isEqualTo(200);
+        assertThat(response.statusCode()).isEqualTo(400);
         assertThat(
                         db.queryForObject(
                                 "SELECT COUNT(*) FROM dbo.Users WHERE Email=?",
@@ -487,97 +487,6 @@ class IdentityIT {
     }
 
     @Test
-    void replacingPendingRegistrationCannotReuseAnOldProofOrMutateLegacyProfile() throws Exception {
-        String email = "pending-" + UUID.randomUUID() + "@example.invalid";
-        int role =
-                db.queryForObject(
-                        "SELECT RoleId FROM dbo.Roles WHERE Name=N'graduate'", Integer.class);
-        int language =
-                db.queryForObject("SELECT Id FROM dbo.Languages WHERE Code=N'en'", Integer.class);
-        int user =
-                db.queryForObject(
-                        "INSERT dbo.Users(FirstName,LastName,Email,RoleId,LanguageId) OUTPUT inserted.UserId VALUES (N'Legacy',N'Original',?,?,?)",
-                        Integer.class,
-                        email,
-                        role,
-                        language);
-        db.update(
-                "INSERT auth.Invitations(InvitationId,Email,RoleCode,ExpiresAt) VALUES (?,?,?,?)",
-                UUID.randomUUID(),
-                email,
-                "lecturer",
-                OffsetDateTime.now().plusDays(1));
-        var original = new Browser();
-        var first =
-                original.json(
-                        original.post(
-                                "/auth/register",
-                                registration(email, "lecturer", secret(), salt())));
-        String firstId = first.path("challengeId").asText(), firstCode = mailCode(email);
-        var replacement = new Browser();
-        assertThat(
-                        replacement
-                                .post(
-                                        "/auth/register",
-                                        registration(email, "lecturer", secret(), salt()))
-                                .statusCode())
-                .isEqualTo(200);
-        assertThat(
-                        db.queryForObject(
-                                "SELECT FirstName FROM dbo.Users WHERE UserId=?",
-                                String.class,
-                                user))
-                .isEqualTo("Legacy");
-        assertThat(
-                        original.post(
-                                        "/auth/email/verify",
-                                        Map.of("challengeId", firstId, "code", firstCode))
-                                .statusCode())
-                .isEqualTo(401);
-        db.update(
-                "UPDATE auth.EmailChallenges SET ResendAfter=? WHERE ChallengeId=?",
-                OffsetDateTime.now().minusSeconds(1),
-                firstId);
-        assertThat(
-                        original.post("/auth/challenges/resend", Map.of("challengeId", firstId))
-                                .statusCode())
-                .isEqualTo(409);
-        assertThat(
-                        db.queryForObject(
-                                "SELECT AdmissionStatus FROM auth.AccountSecurity WHERE UserId=?",
-                                String.class,
-                                user))
-                .isEqualTo("PENDING");
-        var fresh =
-                original.json(
-                        original.post(
-                                "/auth/register",
-                                registration(email, "lecturer", secret(), salt())));
-        assertThat(
-                        original.post(
-                                        "/auth/email/verify",
-                                        Map.of(
-                                                "challengeId",
-                                                fresh.path("challengeId").asText(),
-                                                "code",
-                                                mailCode(email)))
-                                .statusCode())
-                .isEqualTo(200);
-        assertThat(
-                        db.queryForObject(
-                                "SELECT FirstName FROM dbo.Users WHERE UserId=?",
-                                String.class,
-                                user))
-                .isEqualTo("Synthetic");
-        assertThat(
-                        db.queryForObject(
-                                "SELECT r.Name FROM dbo.Users u JOIN dbo.Roles r ON r.RoleId=u.RoleId WHERE u.UserId=?",
-                                String.class,
-                                user))
-                .isEqualTo("lecturer");
-    }
-
-    @Test
     void unavailableTransitCannotPublishAnIdentity() throws Exception {
         var account = enroll("graduate");
         var payload = packageFor(account);
@@ -637,38 +546,23 @@ class IdentityIT {
         String email = "m1-" + UUID.randomUUID() + "@example.invalid",
                 secret = secret(),
                 salt = salt();
+        // Admitted crypto fixtures are independent of new enrollment and model rollout accounts.
+        int user =
+                db.queryForObject(
+                        "INSERT dbo.Users(FirstName,LastName,Email,RoleId,LanguageId) OUTPUT inserted.UserId SELECT N'Synthetic',N'Fixture',?,(SELECT RoleId FROM dbo.Roles WHERE Name=?),(SELECT Id FROM dbo.Languages WHERE Code=N'en')",
+                        Integer.class,
+                        email,
+                        role);
+        var encoder =
+                new org.springframework.security.crypto.argon2.Argon2PasswordEncoder(
+                        16, 32, 1, 65536, 3);
         db.update(
-                "INSERT auth.Invitations(InvitationId,Email,RoleCode,ExpiresAt) VALUES (?,?,?,?)",
-                UUID.randomUUID(),
-                email,
-                role,
-                OffsetDateTime.now().plusDays(1));
+                "INSERT auth.AccountSecurity(UserId,AdmissionStatus,EmailVerifiedAt,CredentialVersion,SchemeVersion,ClientSalt,ClientOpsLimit,ClientMemoryBytes,LoginVerifier,EmailFactorEnabled,GrandfatheredAdmission) VALUES (?,'ADMITTED',SYSDATETIMEOFFSET(),1,1,?,2,67108864,?,0,1)",
+                user,
+                java.util.Base64.getUrlDecoder().decode(salt),
+                encoder.encode(secret));
+        db.update("INSERT dbo.UserNotificationSettings(UserId) VALUES (?)", user);
         var request = registration(email, role, secret, salt);
-        var response = browser.post("/auth/register", request);
-        assertThat(response.statusCode()).as("registration: %s", response.body()).isEqualTo(200);
-        var challenge = browser.json(response);
-        assertThat(
-                        browser.post(
-                                        "/auth/login",
-                                        Map.of(
-                                                "email",
-                                                email,
-                                                "scheme",
-                                                "PLK1",
-                                                "loginSecret",
-                                                secret))
-                                .statusCode())
-                .isEqualTo(401);
-        assertThat(
-                        browser.post(
-                                        "/auth/email/verify",
-                                        Map.of(
-                                                "challengeId",
-                                                challenge.path("challengeId").asText(),
-                                                "code",
-                                                mailCode(email)))
-                                .statusCode())
-                .isEqualTo(200);
         var login =
                 browser.post(
                         "/auth/login",
@@ -804,9 +698,16 @@ class IdentityIT {
                                 .collect(java.util.stream.Collectors.joining("; ")));
             if (csrf) {
                 String csrfName =
-                        path.startsWith("/auth/recovery/")
-                                ? "__Host-plk-recovery-csrf"
-                                : "__Host-plk-refresh-csrf";
+                        path.startsWith("/auth/enrollment")
+                                        || path.equals("/auth/email/verify")
+                                        || path.equals("/auth/challenges/resend")
+                                                && !cookies.getOrDefault(
+                                                                "__Host-plk-enrollment", "")
+                                                        .isEmpty()
+                                ? "__Host-plk-enrollment-csrf"
+                                : path.startsWith("/auth/recovery/")
+                                        ? "__Host-plk-recovery-csrf"
+                                        : "__Host-plk-refresh-csrf";
                 if (cookies.containsKey(csrfName))
                     request.header("X-CSRF-Token", cookies.get(csrfName));
             }

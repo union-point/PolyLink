@@ -28,6 +28,8 @@ public class RecoveryService {
     private final TransactionTemplate tx;
     private final JsonMapper mapper;
     private final Clock clock;
+    private final EnrollmentService enrollment;
+    private final EnrollmentSessions enrollmentSessions;
 
     public RecoveryService(
             JdbcTemplate db,
@@ -41,7 +43,9 @@ public class RecoveryService {
             PasswordEncoder encoder,
             TransactionTemplate tx,
             JsonMapper mapper,
-            Clock clock) {
+            Clock clock,
+            EnrollmentService enrollment,
+            EnrollmentSessions enrollmentSessions) {
         this.db = db;
         this.accounts = accounts;
         this.sessions = sessions;
@@ -54,6 +58,8 @@ public class RecoveryService {
         this.tx = tx;
         this.mapper = mapper;
         this.clock = clock;
+        this.enrollment = enrollment;
+        this.enrollmentSessions = enrollmentSessions;
     }
 
     private OffsetDateTime now() {
@@ -138,13 +144,15 @@ public class RecoveryService {
     public Map<String, Object> request(String email, String ip, HttpServletResponse response) {
         email = Accounts.email(email);
         limits.issue(email, ip);
+        enrollment.expireEmail(email);
         var account =
                 accounts.find(email)
                         .filter(
                                 a ->
-                                        a.verified()
-                                                && "ADMITTED".equals(a.admission())
-                                                && a.vaultKey() > 0)
+                                        ("PENDING".equals(a.admission())
+                                                || (a.verified()
+                                                        && "ADMITTED".equals(a.admission())
+                                                        && a.vaultKey() > 0)))
                         .orElse(null);
         String browser = secrets.token();
         var challenge =
@@ -167,6 +175,10 @@ public class RecoveryService {
                         "RECOVERY",
                         Sessions.cookie(request, Sessions.CHALLENGE),
                         request.getRemoteAddr());
+        if (proven.admission().equals("PENDING")) {
+            enrollmentSessions.issue(proven.id(), proven.credential(), response);
+            return Map.of("status", "enrollment");
+        }
         String token = secrets.token(), csrf = secrets.token();
         UUID operation = UUID.randomUUID();
         var result =
@@ -204,6 +216,10 @@ public class RecoveryService {
     }
 
     public Map<String, Object> status(HttpServletRequest request) {
+        if (!Sessions.cookie(request, EnrollmentSessions.COOKIE).isEmpty()) {
+            var pending = enrollment.state(request);
+            return Map.of("state", "ENROLLMENT", "email", pending.get("email"));
+        }
         return status(capability(request, false));
     }
 

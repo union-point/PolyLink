@@ -4,6 +4,7 @@ SET QUOTED_IDENTIFIER ON;
 GO
 ALTER TABLE dbo.LecturerRegistry ADD FirstName nvarchar(100) NULL, LastName nvarchar(100) NULL;
 ALTER TABLE auth.AccountSecurity ADD GrandfatheredAdmission bit NOT NULL CONSTRAINT DF_GrandfatheredAdmission DEFAULT 0;
+GO
 UPDATE auth.AccountSecurity SET GrandfatheredAdmission=1
 WHERE AdmissionStatus='ADMITTED' OR (AdmissionStatus='DEACTIVATED' AND EmailVerifiedAt IS NOT NULL);
 UPDATE auth.Invitations SET RevokedAt=SYSDATETIMEOFFSET() WHERE ConsumedUserId IS NULL AND RevokedAt IS NULL;
@@ -19,6 +20,7 @@ ALTER TABLE auth.PendingEnrollments ADD
     ProfessionId int NULL REFERENCES dbo.Professions(ProfessionId),
     Biography nvarchar(2000) NULL,
     ProfileComplete bit NOT NULL CONSTRAINT DF_EnrollmentComplete DEFAULT 0;
+GO
 ALTER TABLE auth.PendingEnrollments ADD CONSTRAINT CK_EnrollmentYears CHECK
     ((StartYear IS NULL AND EndYear IS NULL) OR (StartYear BETWEEN 1900 AND 2200 AND EndYear BETWEEN StartYear AND 2200));
 ALTER TABLE auth.EmailChallenges ADD EnrollmentRevision bigint NULL;
