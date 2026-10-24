@@ -8,7 +8,7 @@ import { universityEmail, email, password, required, validateEducation, validate
 const now = () => new Date().toISOString();
 const defaults = () => ({ isProfilePublic: true, showEmail: false, twoFactorEnabled: false, language: 'hy', emailEnabled: true, newListingNotifications: true, forumReplyNotifications: true, directMessageNotifications: true });
 const readOperations = new Set(['auth.me', 'profiles.get', 'profiles.education.list', 'profiles.certificates.list', 'posts.list', 'posts.comments.list', 'forum.categories', 'forum.list', 'forum.get', 'forum.replies.list', 'forum.replies.get', 'search.people', 'chat.list', 'chat.messages', 'chat.page', 'chat.participants', 'chat.loadDraft', 'settings.get', 'settings.export']);
-const publicOperations = new Set(['auth.enrollment','auth.enrollmentOptions','auth.saveEnrollment','auth.submitEnrollment','auth.logoutEnrollment','auth.verifyEmail','auth.me', 'auth.login', 'auth.register', 'auth.verifySecondFactor', 'auth.resendChallenge', 'auth.forgotPassword', 'auth.verifyRecovery', 'auth.resetPassword', 'auth.logout']);
+const publicOperations = new Set(['auth.uploadEnrollmentAvatar','auth.removeEnrollmentAvatar','auth.enrollment','auth.enrollmentOptions','auth.saveEnrollment','auth.submitEnrollment','auth.logoutEnrollment','auth.verifyEmail','auth.me', 'auth.login', 'auth.register', 'auth.verifySecondFactor', 'auth.resendChallenge', 'auth.forgotPassword', 'auth.verifyRecovery', 'auth.resetPassword', 'auth.logout']);
 
 function find(records, id) {
   const item = records.find(record => record.id === String(id));
@@ -27,7 +27,7 @@ function enrollmentUser(state) {
 }
 function enrollmentState(state) {
   const user=enrollmentUser(state),entry=user.enrollment;
-  return user.status==='active'?{status:'admitted',email:user.email}:{status:'enrollment',email:user.email,revision:entry.revision,profile:entry.profile,challenge:entry.challenge,expiresAt:new Date(entry.savedAt+7*86400000).toISOString()};
+  return user.status==='active'?{status:'admitted',email:user.email}:{status:'enrollment',email:user.email,revision:entry.revision,profile:entry.profile,avatar:user.avatar,challenge:entry.challenge,expiresAt:new Date(entry.savedAt+7*86400000).toISOString()};
 }
 const enrollmentOptions={specializations:[{id:1,name:'Ծրագրային ճարտարագիտություն'}],departments:[{id:1,name:'Ծրագրային ապահովման ամբիոն'}],professions:[{id:1,name:'Դասախոս'}]};
 function checkRegistry(state,user) {
@@ -116,7 +116,14 @@ const operations = {
   'chat.leaveGroup':(state,id)=>{const room=roomForUser(state,id),own=me(state).id;if(!room.isGroup)throw new DataError('VALIDATION','This is not a group.');if(room.ownerId===own&&room.participants.length>1)throw new DataError('OWNER_TRANSFER_REQUIRED','Transfer ownership before leaving.');leaveMember(room,own);return {roomId:id};},
   'auth.me': state => state.sessionUserId ? profile(state, me(state)) : null,
   'auth.logout': state => { state.sessionUserId = null; return null; },
-  'auth.enrollment':enrollmentState,
+  'auth.uploadEnrollmentAvatar':(state,content)=>{
+    const user=enrollmentUser(state),id=nextId(state,'media');
+    state.media=state.media.filter(item=>`media:${item.id}`!==user.avatar);
+    state.media.push({id,userId:user.id,blob:new Blob([Uint8Array.from(atob(content),c=>c.charCodeAt(0))],{type:'image/jpeg'})});
+    user.avatar=`media:${id}`;return {url:user.avatar};
+  },
+  'auth.removeEnrollmentAvatar':state=>{const user=enrollmentUser(state);state.media=state.media.filter(item=>`media:${item.id}`!==user.avatar);user.avatar='';return null;},
+  'auth.enrollment':state=>({...enrollmentState(state),avatar:enrollmentUser(state).avatar}),
   'auth.enrollmentOptions':state=>{enrollmentUser(state);return enrollmentOptions;},
   'auth.logoutEnrollment':state=>{state.enrollmentUserId=null;return null;},
   'auth.saveEnrollment':(state,data)=>{
@@ -154,7 +161,7 @@ const operations = {
     if(expired){expired.email=`expired-${expired.id}@deleted.invalid`;delete state.credentials[expired.id];delete expired.enrollment;expired.status='deleted';}
     state.sessionUserId=null;state.enrollmentUserId=null;
     if(!state.users.some(user=>user.email===address)) {
-      const user={id:nextId(state,'user'),firstName:required(data.firstName,'firstName',100),lastName:required(data.lastName,'lastName',100),email:address,role:data.role,status:'pending',onboardingComplete:false,jobTitle:'',description:'',avatar:'image/logo.png',cover:'image/background1.jpg',institute:'',specialization:'',graduationYear:''};
+      const user={id:nextId(state,'user'),firstName:required(data.firstName,'firstName',100),lastName:required(data.lastName,'lastName',100),email:address,role:data.role||'graduate',status:'pending',onboardingComplete:false,jobTitle:'',description:'',avatar:'image/logo.png',cover:'image/background1.jpg',institute:'',specialization:'',graduationYear:''};
       user.name=`${user.firstName} ${user.lastName}`;user.enrollment={revision:1,savedAt:Date.now(),profile:{firstName:user.firstName,lastName:user.lastName,role:user.role}};
       state.users.push(user);state.credentials[user.id]=data.digest;state.settings[user.id]=defaults();state.enrollmentUserId=user.id;
     }

@@ -82,6 +82,7 @@ public class SecurityConfiguration {
                                         "/auth/me",
                                         "/auth/enrollment",
                                         "/auth/enrollment/options",
+                                        "/auth/avatars/*",
                                         "/keys/me",
                                         "/users/*")
                                 .permitAll();
@@ -91,7 +92,12 @@ public class SecurityConfiguration {
                                 .requestMatchers(
                                         HttpMethod.PUT,
                                         "/auth/enrollment/profile",
-                                        "/auth/enrollment/password")
+                                        "/auth/enrollment/password",
+                                        "/auth/enrollment/avatar")
+                                .permitAll();
+                    if (enabled)
+                        authorize
+                                .requestMatchers(HttpMethod.DELETE, "/auth/enrollment/avatar")
                                 .permitAll();
                     if (enabled && messenger) {
                         authorize

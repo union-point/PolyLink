@@ -190,6 +190,14 @@ public class EnrollmentService {
         result.put("revision", revision(row));
         result.put("profile", profile);
         result.put(
+                "avatar",
+                Objects.toString(
+                        db.queryForObject(
+                                "SELECT ProfilePhotoUrl FROM dbo.Users WHERE UserId=?",
+                                String.class,
+                                caller.account().id()),
+                        ""));
+        result.put(
                 "expiresAt",
                 ((OffsetDateTime) row.get("SavedAt")).plusDays(7).toInstant().toString());
         var codes =
