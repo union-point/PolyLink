@@ -25,6 +25,7 @@ try {
     assert.match(await page.locator('[data-status]').innerText(), /[Ա-ֆ]/u);
     for (const [id, value] of Object.entries({ firstname: 'Demo', lastname: role === 'graduate' ? 'Graduate' : 'Lecturer', email: `new.${role}@polytechnic.am`, password: 'Demo enrollment!4', confirm: 'Demo enrollment!4' })) await page.locator('#' + id).fill(value);
     await page.locator('[type=submit]').click(); await page.waitForURL('**/profile_info.html'); await ready(page);
+    assert.equal(await page.locator('#firstName,#lastName').count(),0);
     await page.locator(`[name=role][value=${role}]`).check();
     assert.equal(await page.locator('[data-lecturer]').isVisible(), role === 'lecturer');
     const picture = await page.evaluate(() => { const c = document.createElement('canvas'); c.width = c.height = 64; c.getContext('2d').fillRect(0, 0, 64, 64); return c.toDataURL('image/png').split(',')[1]; });
@@ -40,6 +41,17 @@ try {
     await fits(page);
     await page.locator('#save-profile').click(); await page.getByText('Տվյալները պահպանված են։', { exact: true }).waitFor();
     assert((await page.locator('#avatar-preview').getAttribute('src')).startsWith('blob:'));
+    assert.equal(await page.locator('#diplomaNumber').getAttribute('placeholder'), 'օրինակ՝ AB123456');
+    for (const [width,height] of [[1366,768],[1280,720],[1024,600],[390,844],[375,667],[320,700],[360,640]]) {
+      await page.setViewportSize({width,height});
+      const layout = await page.evaluate(() => ({width:document.documentElement.scrollWidth,height:document.documentElement.scrollHeight,viewport:innerHeight}));
+      assert(layout.width<=width, 'No horizontal overflow');
+      assert(layout.height<=height, `Onboarding fits ${width}×${height}: ${JSON.stringify(layout)}`);
+    }
+    await page.setViewportSize({width:390,height:844});
+    assert.match(await page.evaluate(()=>getComputedStyle(document.body).backgroundImage), /background\.jpg/);
+    const savedProfile = await page.evaluate(async()=>{const {auth}=await import('/js/services/index.js');return (await auth.enrollment()).profile;});
+    assert.equal(savedProfile.firstName,'Demo'); assert.equal(savedProfile.lastName,role==='graduate'?'Graduate':'Lecturer');
     if (process.env.M1_AUTH_SCREENSHOTS) {
       await page.screenshot({ path: `${process.env.M1_AUTH_SCREENSHOTS}-${role}-mobile.png`, fullPage: true });
       await page.setViewportSize({ width: 1280, height: 1000 }); await page.screenshot({ path: `${process.env.M1_AUTH_SCREENSHOTS}-${role}-desktop.png`, fullPage: true });
@@ -47,6 +59,10 @@ try {
     }
     await page.locator('#submit-profile').click(); await page.locator('#enrollment-code:not([hidden])').waitFor();
     assert(await page.locator('#profile-info-form').isHidden()); await fits(page);
+    await page.setViewportSize({width:360,height:640});
+    if(process.env.M1_AUTH_SCREENSHOTS) await page.screenshot({path:`${process.env.M1_AUTH_SCREENSHOTS}-code-small.png`,fullPage:true});
+    assert(await page.evaluate(()=>document.documentElement.scrollHeight<=innerHeight),'Verification fits 360×640');
+    await page.setViewportSize({width:390,height:844});
     assert(await page.locator('#resend-code').isDisabled());
     await page.evaluate(() => { const now = Date.now; Date.now = () => now() + 61000; });
     await page.waitForFunction(() => !document.getElementById('resend-code').disabled);
@@ -89,5 +105,5 @@ try {
   });
   assert(!localized.includes('request')); assert.match(localized, /[Ա-ֆ]/u);
   assert.deepEqual(errors, []); await context.close();
-  console.log('Auth UI passed: both onboarding roles, avatar persistence, Armenian validation, year order, code retry, resend cooldown, return to editing, full password recovery and six auth pages at 320px.');
+  console.log('Auth UI passed: both onboarding roles, preserved registration names, seven single-viewport layouts, avatar persistence, Armenian validation, code retry, resend cooldown, return to editing, full password recovery and six auth pages at 320px.');
 } finally { await browser.close(); }

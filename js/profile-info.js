@@ -28,12 +28,13 @@ start(async () => {
       else item.removeAttribute('aria-current');
     });
     const text = {
-      profile: ['Լրացրեք Ձեր պրոֆիլը', 'Նշեք Ձեր կարգավիճակը և լրացրեք տվյալները՝ ըստ համալսարանի գրանցամատյանի։'],
+      profile: ['Լրացրեք Ձեր պրոֆիլը', ''],
       code: ['Հաստատեք Ձեր էլ․ փոստը', 'Մնացել է մեկ քայլ՝ հաշիվը հաստատելու համար։'],
       login: ['Ձեր պրոֆիլը պատրաստ է', 'Բարի գալուստ PolyLink համայնք։'],
     }[name];
     element('step-title').textContent = text[0];
     element('step-description').textContent = text[1];
+    element('step-description').hidden = !text[1];
   }
   function roleFields() {
     const graduate = selectedRole() === 'graduate';
@@ -79,7 +80,7 @@ start(async () => {
     if (graduate && numeric('endYear') < numeric('startYear'))
       throw new DataError('VALIDATION', 'Ուսման ավարտը չի կարող լինել սկզբից առաջ։', { endYear: 'Ստուգեք ուսման տարիները։' });
     return {
-      revision: state.revision, role: selectedRole(), firstName: element('firstName').value.trim(), lastName: element('lastName').value.trim(),
+      revision: state.revision, role: selectedRole(), firstName: state.profile.firstName, lastName: state.profile.lastName,
       diplomaNumber: graduate ? element('diplomaNumber').value.trim() : null,
       specializationId: graduate ? numeric('specializationId') : null, startYear: graduate ? numeric('startYear') : null, endYear: graduate ? numeric('endYear') : null,
       departmentId: graduate ? null : numeric('departmentId'), professionId: graduate ? null : numeric('professionId'), biography: element('biography').value.trim(),

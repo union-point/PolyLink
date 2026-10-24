@@ -10,45 +10,40 @@
   <main class="container">
     <header class="enrollment-header">
       <a class="brand" href="login.html" aria-label="PolyLink՝ մուտքի էջ"><img src="./image/logo.png" alt=""><span>PolyLink</span></a>
-      <span class="eyebrow">Բարի գալուստ համայնք</span>
+      <ol class="enrollment-steps" aria-label="Գրանցման քայլերը">
+      <li data-step="profile" aria-current="step"><span class="step-number">1</span><span class="step-label">Պրոֆիլ</span></li>
+      <li data-step="code"><span class="step-number">2</span><span class="step-label">Էլ․ փոստ</span></li>
+      <li data-step="login"><span class="step-number">3</span><span class="step-label">Մուտք</span></li>
+      </ol>
     </header>
-    <ol class="enrollment-steps" aria-label="Գրանցման քայլերը">
-      <li data-step="profile" aria-current="step"><span>1</span>Պրոֆիլ</li>
-      <li data-step="code"><span>2</span>Էլ․ փոստ</li>
-      <li data-step="login"><span>3</span>Մուտք</li>
-    </ol>
     <div class="enrollment-intro"><h1 id="step-title">Լրացրեք Ձեր պրոֆիլը</h1>
-      <p id="step-description">Նշեք Ձեր կարգավիճակը և լրացրեք տվյալները՝ ըստ համալսարանի գրանցամատյանի։</p>
+      <p id="step-description" hidden></p>
       <p id="enrollment-email" class="email-badge"></p>
     </div>
     <form novalidate id="profile-info-form">
       <fieldset id="profile-fields" disabled>
+        <div class="profile-basics">
         <fieldset class="role-fieldset"><legend>Ձեր կարգավիճակը</legend>
           <div class="role-segments">
             <label><input type="radio" name="role" value="graduate" checked><span>Շրջանավարտ</span></label>
             <label><input type="radio" name="role" value="lecturer"><span>Դասախոս</span></label>
           </div>
         </fieldset>
-        <section class="profile-section" aria-labelledby="personal-title">
-          <h2 id="personal-title">Անձնական տվյալներ</h2>
-          <label for="avatar-file">Պրոֆիլի լուսանկար <span class="optional">(ոչ պարտադիր)</span></label>
+        <section class="avatar-section" aria-label="Պրոֆիլի լուսանկար">
+          <div class="avatar-heading"><label for="avatar-file">Պրոֆիլի լուսանկար <span class="optional">(ոչ պարտադիր)</span></label><button type="button" id="remove-avatar" class="text-button" aria-label="Հեռացնել լուսանկարը" hidden>Հեռացնել</button></div>
           <div class="avatar-dropzone" id="avatar-dropzone">
             <img id="avatar-preview" src="./image/logo.png" alt="Լուսանկարի նախադիտում">
-            <div class="avatar-copy"><strong>Ավելացրեք Ձեր լուսանկարը</strong><p>Քաշեք պատկերն այստեղ կամ ընտրեք ֆայլը։</p><small id="avatar-help">JPG կամ PNG, առավելագույնը՝ 5 ՄԲ։</small></div>
+            <div class="avatar-copy"><strong>Ավելացրեք Ձեր լուսանկարը</strong><p>Քաշեք պատկերն այստեղ կամ ընտրեք ֆայլը։</p><small id="avatar-help">JPG կամ PNG, առավելագույնը՝ 5 ՄԲ։</small><p id="avatar-status" role="status"></p></div>
             <input type="file" id="avatar-file" accept="image/jpeg,image/png" aria-describedby="avatar-help avatar-status">
           </div>
-          <div class="avatar-actions"><p id="avatar-status" role="status"></p><button type="button" id="remove-avatar" class="text-button" hidden>Հեռացնել լուսանկարը</button></div>
-          <div class="form-grid">
-            <div><label for="firstName">Անուն</label><input id="firstName" name="firstName" placeholder="Ձեր անունը" maxlength="100" autocomplete="given-name" required></div>
-            <div><label for="lastName">Ազգանուն</label><input id="lastName" name="lastName" placeholder="Ձեր ազգանունը" maxlength="100" autocomplete="family-name" required></div>
-          </div>
         </section>
-        <section class="profile-section" aria-labelledby="university-title">
+        <div class="biography-field"><label for="biography">Ձեր մասին <span class="optional">(ոչ պարտադիր)</span></label><textarea id="biography" name="biography" placeholder="Ձեր փորձն ու հետաքրքրությունները" maxlength="2000" rows="2"></textarea></div>
+        </div>
+        <section class="university-section" aria-labelledby="university-title">
           <h2 id="university-title">Համալսարանի տվյալներ</h2>
           <div data-graduate>
-            <label for="diplomaNumber">Դիպլոմի համար</label><input id="diplomaNumber" name="diplomaNumber" placeholder="Մուտքագրեք դիպլոմում նշված համարը" aria-describedby="diploma-help" maxlength="100" autocomplete="off">
-            <small id="diploma-help" class="field-hint">Համարը գրեք ճիշտ այնպես, ինչպես նշված է Ձեր դիպլոմում։</small>
-            <label for="specializationId">Մասնագիտացում</label><select id="specializationId" name="specializationId"></select>
+            <div class="university-field"><label for="diplomaNumber">Դիպլոմի համար</label><input id="diplomaNumber" name="diplomaNumber" placeholder="օրինակ՝ AB123456" maxlength="100" autocomplete="off"></div>
+            <div class="university-field"><label for="specializationId">Մասնագիտացում</label><select id="specializationId" name="specializationId"></select></div>
             <div class="form-grid">
               <div><label for="startYear">Ուսման սկիզբ</label><input id="startYear" name="startYear" type="number" placeholder="2021" min="1900" max="2200"></div>
               <div><label for="endYear">Ուսման ավարտ</label><input id="endYear" name="endYear" type="number" placeholder="2025" min="1900" max="2200"></div>
@@ -59,7 +54,6 @@
             <label for="professionId">Մասնագիտություն</label><select id="professionId" name="professionId"></select>
           </div>
         </section>
-        <label for="biography">Ձեր մասին <span class="optional">(ոչ պարտադիր)</span></label><textarea id="biography" name="biography" placeholder="Մի քանի խոսք Ձեր փորձի և հետաքրքրությունների մասին" maxlength="2000" rows="3"></textarea>
         <div class="form-actions"><button type="button" class="secondary-btn" id="save-profile">Պահպանել</button><button type="submit" class="signin-btn" id="submit-profile">Շարունակել</button></div>
       </fieldset>
     </form>
