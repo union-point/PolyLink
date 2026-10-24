@@ -20,6 +20,7 @@ const messages = {
   NOT_FOUND: 'Պահանջված տվյալները չեն գտնվել։ Վերադարձեք և կրկին փորձեք։',
 };
 const translations = {
+  'Incorrect code': 'Հաստատման կոդը սխալ է։ Ստուգեք այն և կրկին փորձեք։',
   'Use 8–128 characters, including an uppercase letter, number and symbol.': 'Գաղտնաբառը պետք է պարունակի 8–128 նիշ, առնվազն մեկ լատինական մեծատառ, թիվ և հատուկ նիշ։',
   'Enter the same new password used to prepare this recovery.': 'Մուտքագրեք այն նոր գաղտնաբառը, որն ընտրել եք վերականգնման սկզբում։',
   'The current password is incorrect.': 'Ընթացիկ գաղտնաբառը սխալ է։',

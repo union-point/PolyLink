@@ -70,7 +70,7 @@ try{
   }),true,'Navigation context stores encrypted derivatives with a non-extractable key');
   await page.reload();await ready();
   await code('000000');await page.locator('[type=submit]').click();
-  await page.getByRole('alert').filter({hasText:'Incorrect code'}).waitFor();
+  await page.getByRole('alert').filter({hasText:'Հաստատման կոդը սխալ է։'}).waitFor();
   assert(page.url().endsWith('/2fa-verify.html'));
   await page.locator('#resend-btn').click();
   await page.waitForFunction(()=>JSON.parse(sessionStorage.getItem('polylink.http.workflow')).challengeId==='resent-code');

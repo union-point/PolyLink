@@ -7,8 +7,11 @@ export function loadWorkflow() {
   try { return JSON.parse(sessionStorage.getItem(key)) || {}; }
   catch { return {}; }
 }
-export function saveWorkflow(data) { sessionStorage.setItem(key, JSON.stringify(data)); }
-export function clearWorkflow() { sessionStorage.removeItem(key); }
+export function saveWorkflow(data) {
+  try { sessionStorage.setItem(key, JSON.stringify(data)); }
+  catch { throw new DataError('STORAGE_UNAVAILABLE', 'Կոդի հաստատումը շարունակելու համար թույլատրեք տվյալների պահպանումն այս դիտարկիչում։'); }
+}
+export function clearWorkflow() { try { sessionStorage.removeItem(key); } catch {} }
 export function requireChallenge(purpose) {
   const data = loadWorkflow();
   if (data.purpose !== purpose || !data.challengeId || (data.expiresAt && (typeof data.expiresAt==='string'?Date.parse(data.expiresAt):data.expiresAt) <= Date.now())) throw new DataError('VALIDATION', 'Նախ պահանջեք նոր վավերացման կոդ։');

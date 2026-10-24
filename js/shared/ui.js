@@ -40,7 +40,7 @@ export async function pending(button, container, action) {
   errorRegion(container).textContent = '';
   container.querySelectorAll('[aria-invalid]').forEach(input => { input.classList.remove('error'); input.removeAttribute('aria-invalid'); input.removeAttribute('title'); });
   try {
-    const invalid = isAuthPage() && validateAuthForm(container);
+    const invalid = isAuthPage() && (button?.type === 'submit' || button?.id === 'save-profile') && validateAuthForm(container);
     if (invalid) throw invalid;
     await action(); return true;
   }

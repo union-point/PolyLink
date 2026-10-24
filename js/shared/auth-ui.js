@@ -3,7 +3,7 @@ import { DataError } from '../data/errors.js';
 import { rememberChallenge } from '../services/workflow.js';
 
 export function initializePasswordControls(passwordId = 'password') {
-  window.addEventListener('pagehide',()=>document.querySelectorAll('input[type=password]').forEach(input=>{input.value='';}));
+  window.addEventListener('pagehide',()=>document.querySelectorAll('input[type=password],input[autocomplete=current-password],input[autocomplete=new-password]').forEach(input=>{input.value='';}));
   document.querySelectorAll('.toggle-password').forEach(button => {
     button.setAttribute('aria-label', 'Ցույց տալ գաղտնաբառը');
     button.setAttribute('aria-pressed', 'false');

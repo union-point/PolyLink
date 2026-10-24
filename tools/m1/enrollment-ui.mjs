@@ -18,18 +18,18 @@ try{
     await context.route('**/axios@*/dist/axios.min.js',route=>route.fulfill({path:new URL('./node_modules/axios/dist/axios.min.js',import.meta.url).pathname,contentType:'application/javascript'}));
     context.on('page',page=>page.on('pageerror',error=>errors.push(error.message)));
     const page=await context.newPage(),email=process.env.M1_BROWSER_EMAIL.replace('browser-',`enrollment-ui-${index}-`);
-    await page.goto(origin+'/register.html');await page.locator('select[name=role]').waitFor();
+    await page.goto(origin+'/register.html');await page.waitForFunction(()=>typeof document.querySelector('form').onsubmit==='function');
     for(const [id,value]of Object.entries({firstname:'Enrollment',lastname:role,email,password,confirm:password}))await page.locator('#'+id).fill(value);
-    await page.locator('[name=role]').selectOption(role);await page.locator('#register-form [type=submit]').click();await page.waitForURL('**/profile_info.html');await page.locator('#profile-fields:not([disabled])').waitFor();
+    await page.locator('#register-form [type=submit]').click();await page.waitForURL('**/profile_info.html');await page.locator('#profile-fields:not([disabled])').waitFor();
     assert.equal(await page.evaluate(async()=>{const {auth}=await import('/js/services/index.js');return auth.me();}),null);
-    await page.locator('#firstName').fill('Wrong');
+    await page.locator(`[name=role][value=${role}]`).check();await page.locator('#firstName').fill('Wrong');
     if(role==='graduate') {await page.locator('#diplomaNumber').fill(email);await page.locator('#specializationId').selectOption({index:1});await page.locator('#startYear').fill('2021');await page.locator('#endYear').fill('2025');}
     else {await page.locator('#departmentId').selectOption({index:1});await page.locator('#professionId').selectOption({index:1});}
-    await page.locator('#submit-profile').click();await page.getByText('The selected registry could not verify these details. Review your profile or contact the university.',{exact:true}).waitFor();assert.equal(await page.locator('#firstName').inputValue(),'Wrong');
+    await page.locator('#submit-profile').click();await page.getByText('Գրանցամատյանում համապատասխան տվյալներ չեն գտնվել։ Ստուգեք տվյալները կամ դիմեք համալսարանին։',{exact:true}).waitFor();assert.equal(await page.locator('#firstName').inputValue(),'Wrong');
     await page.locator('#firstName').fill('Enrollment');await Promise.all([page.waitForResponse(response=>response.url()===api+'/auth/enrollment/profile'&&response.status()===200),page.locator('#save-profile').click()]);await page.getByText('Տվյալները պահպանված են։',{exact:true}).waitFor();
     // A second tab saves a newer revision. The first tab must retain fields and show a conflict.
     const stale=await context.newPage();await stale.goto(origin+'/profile_info.html');await stale.locator('#profile-fields:not([disabled])').waitFor();await stale.locator('#biography').fill('Saved in another tab');await Promise.all([stale.waitForResponse(response=>response.url()===api+'/auth/enrollment/profile'&&response.status()===200),stale.locator('#save-profile').click()]);await stale.getByText('Տվյալները պահպանված են։',{exact:true}).waitFor();
-    await page.locator('#submit-profile').click();await page.getByText('Account state changed. Please sign in again.',{exact:true}).waitFor();assert.equal(await page.locator('#firstName').inputValue(),'Enrollment');
+    await page.locator('#submit-profile').click();await page.getByText('Տվյալները փոխվել են մեկ այլ ներդիրում։ Թարմացրեք էջը և կրկին փորձեք։',{exact:true}).waitFor();assert.equal(await page.locator('#firstName').inputValue(),'Enrollment');
     await stale.close();await page.reload();await page.locator('#profile-fields:not([disabled])').waitFor();assert.equal(await page.locator('#biography').inputValue(),'Saved in another tab');
     if(process.env.M1_ENROLLMENT_SCREENSHOT)await page.screenshot({path:`${process.env.M1_ENROLLMENT_SCREENSHOT}-${role}.png`,fullPage:true});
     assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),'Enrollment form fits a mobile viewport');

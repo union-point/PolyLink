@@ -10,6 +10,7 @@ export function initializeCodeInputs(purpose, onVerified) {
   catch (error) { showError(form, error); form.querySelector('[type="submit"]').disabled = true; return; }
   const inputs = [...form.querySelectorAll('.code-input')];
   inputs.forEach((input, index) => {
+    input.autocomplete = index === 0 ? 'one-time-code' : 'off';
     input.setAttribute('aria-label', `Կոդի նիշ ${index + 1}`);
     input.oninput = () => { input.value = input.value.replace(/\D/g, '').slice(0, 1); if (input.value) inputs[index + 1]?.focus(); };
     input.onkeydown = event => { if (event.key === 'Backspace' && !input.value) inputs[index - 1]?.focus(); };
@@ -27,6 +28,7 @@ export function initializeCodeInputs(purpose, onVerified) {
   function updateTimer() {
     const left = Math.max(0, Math.ceil(((context.resendAt || 0) - Date.now()) / 1000));
     timer.textContent = left ? `(${left}վ)` : '';
+    resend.disabled = Boolean(left || resending);
     resend.style.opacity = left || resending ? '0.5' : '1';
     resend.setAttribute('aria-disabled', String(Boolean(left || resending)));
   }
@@ -39,6 +41,8 @@ export function initializeCodeInputs(purpose, onVerified) {
     await pending(null, form, async () => {
       const result = await auth.resendChallenge(context.challengeId);
       context = rememberChallenge(purpose, result, context.email);
+      inputs.forEach(input => { input.value = ''; }); inputs[0].focus();
+      const notice = form.querySelector('[data-status]'); notice.setAttribute('role','status'); notice.textContent = 'Նոր կոդն ուղարկված է Ձեր էլ․ փոստին։';
     });
     resending = false; updateTimer();
   };
