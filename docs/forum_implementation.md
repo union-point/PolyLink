@@ -1,6 +1,6 @@
 # Forum contract and operations
 
-The career forum follows `forum_decisions.md`. Temporary access exception approved on 24 October 2026: admitted, email-verified graduates and lecturers may use it before the separately planned verified onboarding flow ships. Replace the centralized forum access gate when that flow is implemented; the current identity `onboardingComplete` constant is not evidence of profile verification.
+The career forum follows `forum_decisions.md`. Access requires authoritative admission and verified email for either member role. V14 admits new accounts only after completed registry enrollment; existing admitted accounts are grandfathered. See [registry enrollment](registry_enrollment.md).
 
 ## API
 

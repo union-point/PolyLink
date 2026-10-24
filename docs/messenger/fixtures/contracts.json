@@ -209,5 +209,65 @@
       "password": "raw secret"
     },
     "valid": false
+  },
+  {
+    "name": "graduate-enrollment-profile",
+    "schema": "EnrollmentProfileRequest",
+    "valid": true,
+    "value": {
+      "revision": 1,
+      "role": "graduate",
+      "firstName": "Demo",
+      "lastName": "Graduate",
+      "diplomaNumber": "DEMO-2025",
+      "specializationId": 1,
+      "startYear": 2021,
+      "endYear": 2025
+    }
+  },
+  {
+    "name": "graduate-without-diploma",
+    "schema": "EnrollmentProfileRequest",
+    "valid": false,
+    "value": {
+      "revision": 1,
+      "role": "graduate",
+      "firstName": "Demo",
+      "lastName": "Graduate",
+      "specializationId": 1,
+      "startYear": 2021,
+      "endYear": 2025
+    }
+  },
+  {
+    "name": "lecturer-without-profession",
+    "schema": "EnrollmentProfileRequest",
+    "valid": false,
+    "value": {
+      "revision": 1,
+      "role": "lecturer",
+      "firstName": "Demo",
+      "lastName": "Lecturer",
+      "departmentId": 1
+    }
+  },
+  {
+    "name": "pending-login-never-has-access-token",
+    "schema": "EnrollmentStarted",
+    "valid": false,
+    "value": {
+      "status": "enrollment",
+      "next": "profile_info.html",
+      "accessToken": "unexpected"
+    }
+  },
+  {
+    "name": "pending-login-result",
+    "schema": "LoginResult",
+    "valid": true,
+    "value": {
+      "status": "enrollment",
+      "next": "profile_info.html"
+    }
   }
 ]

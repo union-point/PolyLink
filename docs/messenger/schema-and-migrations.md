@@ -1,3 +1,5 @@
+Current schema: **V14** adds restricted registry enrollment, verified claims and explicit grandfathering. Apply migrations explicitly with a backup and matching application version. See [registry enrollment deployment](../registry_enrollment.md). Historical V1–V13 workflows below remain relevant to upgrades; invitations no longer admit new accounts.
+
 # Schema inventory and migration workflow
 
 M0 baseline, 18 October 2026. Source: read-only SQL catalog inspection of the restored `polylink` database, SQL Server 17.0.5015.4, compatibility 160, collation `SQL_Latin1_General_CP1_CI_AS`. The [catalog query](../../backend/src/main/resources/db/inventory/legacy-schema.sql) and [metadata snapshot](../../backend/src/main/resources/db/inventory/legacy-schema.json) contain no row values, users' email addresses, password hashes or message bodies.

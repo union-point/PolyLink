@@ -26,9 +26,9 @@ HTML → page controller → js/services/index.js → js/data/client.js
 
 | Page / modules | Current behavior |
 | --- | --- |
-| `login.html`, `register.html`, `2fa-verify.html`; `login.js`, `register.js`, `2fa-verify.js` | HTTP invitation registration, verified email, optional email login factor and automatic backed-up key setup. Browser password derivation precedes HTTP authentication. Mock accounts and fixed codes are separate. |
+| `login.html`, `register.html`, `2fa-verify.html`; `login.js`, `register.js`, `2fa-verify.js` | HTTP registry registration, verified email, optional email login factor and automatic backed-up key setup. Browser password derivation precedes HTTP authentication. Mock accounts and fixed codes are separate. |
 | `forgot.html`, `verify-code.html`, `reset-password.html`; `auth/recovery-client.js` | HTTP account/history recovery with local or platform-assisted vault unlock, resumable recovery authorization, atomic commit and identity rotation. No recovery key is shown to the user. |
-| `profile_info.html`; `profile-info.js` | Graduate/lecturer onboarding form; UI teacher maps to lecturer. The profile-write routes remain adapter expectations without implemented server controllers. |
+| `profile_info.html`; `profile-info.js` | Restricted graduate/lecturer enrollment form, saved revisions, database reference selections, email verification and password re-entry after admission. Uses explicit `/auth/enrollment` operations without application bootstrap or vault access. See [enrollment contract](registry_enrollment.md). |
 | `profile.html`; `profile/profile-main.js`, editor/sections/modal/render modules | Owner profile, education/certificate/publication editing and media work in mock mode. Full initialization can fail in HTTP mode when it requests unimplemented publication/child-resource APIs. |
 | `user.html?id=...`; `user/user-main.js` | Profile projection and direct contact. HTTP public-profile read exists, but child publication reads remain unavailable. Closed profiles cannot be opened by another member. |
 | `search.html`; `search.js`, `chat/direct-contact.js` | Real member search and Search → Connect → encrypted direct room. Closed profiles remain discoverable with `canOpenProfile=false`; search does not expose email. |
@@ -61,7 +61,7 @@ The source of truth is the implemented controllers plus the identity/encrypted c
 | Settings | `GET/PATCH /settings`; email-change start/verify/resend and email-factor under `/account`; `/notifications` cursor polling. |
 | Export/lifecycle | `/account/export/authorize`, `/data`, `/messages`, `/files/{id}`; `/account/deactivate`, `/account/delete`. |
 | Forum | `/forum/categories`, paginated `/forum/topics`, topic/reply CRUD and desired-state likes; content versions and 24-hour create deduplication. |
-| Adapter-only expectations | Profile update/onboarding/media, education/certificate CRUD and post/comment CRUD require future server implementation. |
+| Adapter-only expectations | Profile update/media, education/certificate CRUD and post/comment CRUD require future server implementation. |
 
 Ordinary DTO normalization accepts bare/data envelopes, requires list arrays and stable string identities, and validates role/onboarding fields. Legacy SQL display projections need explicit mappings. Posts use `job/internship/training`; spheres use `programming/engineering/data-science/marketing`; forum categories use database-backed stable codes. Rich body fields are sanitized; comments/messages are plain text. Profile month dates use `YYYY-MM`, nullable end dates mean ongoing. Auth and encrypted chat have separate versioned contracts: do not force their pages into the legacy full-array normalizer.
 

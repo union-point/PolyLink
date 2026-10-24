@@ -1,8 +1,8 @@
 openapi: 3.1.1
 info:
   title: PolyLink messenger
-  version: 0.5.0
-  description: M0 wire formats with M1 invitation enrollment, real sessions and backed-up
+  version: 0.6.0
+  description: M0 wire formats with V14 registry enrollment, real sessions and backed-up
     key setup. M1–M6 identity, recovery, encrypted messaging/images, personal state, groups and lifecycle are implemented; release checks retain
     their milestone scope. Original passwords never enter HTTP DTOs.
 servers:
@@ -478,9 +478,8 @@ paths:
   /auth/register:
     post:
       operationId: register
-      description: M1 requires an operator-approved, unexpired, single-use email/role
-        invitation for enrollment. Verification/resend is browser-bound and credential-version-bound;
-        revoked/replaced enrollment cannot reuse an old proof.
+      description: V14 restricted enrollment; see registry_enrollment.md. Profile completion, registry matching,
+        browser-bound email verification and a unique claim are required before admission.
       security: []
       responses:
         '200':
@@ -488,7 +487,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Challenge'
+                $ref: '#/components/schemas/EnrollmentStarted'
           headers:
             Cache-Control:
               schema:
@@ -517,17 +516,17 @@ paths:
   /auth/email/verify:
     post:
       operationId: verifyEmail
-      description: M1 requires an operator-approved, unexpired, single-use email/role
-        invitation for enrollment. Verification/resend is browser-bound and credential-version-bound;
-        revoked/replaced enrollment cannot reuse an old proof.
-      security: []
+      description: V14 restricted enrollment; see registry_enrollment.md. Profile completion, registry matching,
+        browser-bound email verification and a unique claim are required before admission.
+      security:
+      - enrollmentCookie: []
       responses:
         '200':
           description: Success
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Empty'
+                $ref: '#/components/schemas/AdmissionResult'
           headers:
             Cache-Control:
               schema:
@@ -593,9 +592,8 @@ paths:
   /auth/login/verify:
     post:
       operationId: verifyLogin
-      description: M1 requires an operator-approved, unexpired, single-use email/role
-        invitation for enrollment. Verification/resend is browser-bound and credential-version-bound;
-        revoked/replaced enrollment cannot reuse an old proof.
+      description: V14 restricted enrollment; see registry_enrollment.md. Profile completion, registry matching,
+        browser-bound email verification and a unique claim are required before admission.
       security: []
       responses:
         '200':
@@ -632,9 +630,8 @@ paths:
   /auth/challenges/resend:
     post:
       operationId: resendChallenge
-      description: M1 requires an operator-approved, unexpired, single-use email/role
-        invitation for enrollment. Verification/resend is browser-bound and credential-version-bound;
-        revoked/replaced enrollment cannot reuse an old proof.
+      description: V14 restricted enrollment; see registry_enrollment.md. Profile completion, registry matching,
+        browser-bound email verification and a unique claim are required before admission.
       security: []
       responses:
         '200':
@@ -716,7 +713,9 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/RecoveryVerified'
+                oneOf:
+                - $ref: '#/components/schemas/RecoveryVerified'
+                - $ref: '#/components/schemas/EnrollmentPending'
           headers:
             Cache-Control:
               schema:
@@ -1174,7 +1173,9 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/OperationStatus'
+                oneOf:
+                - $ref: '#/components/schemas/OperationStatus'
+                - $ref: '#/components/schemas/EnrollmentRecoveryState'
           headers:
             Cache-Control:
               schema:
@@ -1837,8 +1838,220 @@ paths:
           $ref: '#/components/responses/Error'
         '404':
           $ref: '#/components/responses/Error'
+  /auth/enrollment:
+    get:
+      operationId: getEnrollment
+      description: V14 restricted enrollment; see registry_enrollment.md. Requires an
+        unexpired enrollment cookie. Mutations require the enrollment CSRF cookie/header
+        and configured origin.
+      security:
+      - enrollmentCookie: []
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                oneOf:
+                - $ref: '#/components/schemas/EnrollmentState'
+                - $ref: '#/components/schemas/AdmissionResult'
+        '400':
+          $ref: '#/components/responses/Error'
+        '401':
+          $ref: '#/components/responses/Error'
+        '403':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+        '429':
+          $ref: '#/components/responses/Error'
+        '503':
+          $ref: '#/components/responses/Error'
+  /auth/enrollment/options:
+    get:
+      operationId: getEnrollmentOptions
+      description: V14 restricted enrollment; see registry_enrollment.md. Requires an
+        unexpired enrollment cookie. Mutations require the enrollment CSRF cookie/header
+        and configured origin.
+      security:
+      - enrollmentCookie: []
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EnrollmentOptions'
+        '400':
+          $ref: '#/components/responses/Error'
+        '401':
+          $ref: '#/components/responses/Error'
+        '403':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+        '429':
+          $ref: '#/components/responses/Error'
+        '503':
+          $ref: '#/components/responses/Error'
+  /auth/enrollment/profile:
+    put:
+      operationId: saveEnrollmentProfile
+      description: V14 restricted enrollment; see registry_enrollment.md. Requires an
+        unexpired enrollment cookie. Mutations require the enrollment CSRF cookie/header
+        and configured origin.
+      security:
+      - enrollmentCookie: []
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EnrollmentState'
+        '400':
+          $ref: '#/components/responses/Error'
+        '401':
+          $ref: '#/components/responses/Error'
+        '403':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+        '429':
+          $ref: '#/components/responses/Error'
+        '503':
+          $ref: '#/components/responses/Error'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EnrollmentProfileRequest'
+      parameters:
+      - name: X-CSRF-Token
+        in: header
+        required: true
+        schema:
+          type: string
+  /auth/enrollment/submit:
+    post:
+      operationId: submitEnrollment
+      description: V14 restricted enrollment; see registry_enrollment.md. Requires an
+        unexpired enrollment cookie. Mutations require the enrollment CSRF cookie/header
+        and configured origin.
+      security:
+      - enrollmentCookie: []
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Challenge'
+        '400':
+          $ref: '#/components/responses/Error'
+        '401':
+          $ref: '#/components/responses/Error'
+        '403':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+        '429':
+          $ref: '#/components/responses/Error'
+        '503':
+          $ref: '#/components/responses/Error'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EnrollmentRevision'
+      parameters:
+      - name: X-CSRF-Token
+        in: header
+        required: true
+        schema:
+          type: string
+  /auth/enrollment/password:
+    put:
+      operationId: resetEnrollmentPassword
+      description: V14 restricted enrollment; see registry_enrollment.md. Requires an
+        unexpired enrollment cookie. Mutations require the enrollment CSRF cookie/header
+        and configured origin.
+      security:
+      - enrollmentCookie: []
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EnrollmentPending'
+        '400':
+          $ref: '#/components/responses/Error'
+        '401':
+          $ref: '#/components/responses/Error'
+        '403':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+        '429':
+          $ref: '#/components/responses/Error'
+        '503':
+          $ref: '#/components/responses/Error'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EnrollmentPassword'
+      parameters:
+      - name: X-CSRF-Token
+        in: header
+        required: true
+        schema:
+          type: string
+  /auth/enrollment/logout:
+    post:
+      operationId: logoutEnrollment
+      description: V14 restricted enrollment; see registry_enrollment.md. Requires an
+        unexpired enrollment cookie. Mutations require the enrollment CSRF cookie/header
+        and configured origin.
+      security:
+      - enrollmentCookie: []
+      responses:
+        '204':
+          description: Success
+        '400':
+          $ref: '#/components/responses/Error'
+        '401':
+          $ref: '#/components/responses/Error'
+        '403':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+        '429':
+          $ref: '#/components/responses/Error'
+        '503':
+          $ref: '#/components/responses/Error'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Empty'
+      parameters:
+      - name: X-CSRF-Token
+        in: header
+        required: true
+        schema:
+          type: string
 components:
   securitySchemes:
+    enrollmentCookie:
+      type: apiKey
+      in: cookie
+      name: __Host-plk-enrollment
     bearer:
       type: http
       scheme: bearer
@@ -2152,6 +2365,7 @@ components:
       - challenge
     LoginResult:
       oneOf:
+      - $ref: '#/components/schemas/EnrollmentStarted'
       - $ref: '#/components/schemas/Authenticated'
       - $ref: '#/components/schemas/LoginChallenge'
     Error:
@@ -2168,6 +2382,7 @@ components:
           - DIRECT_UNAVAILABLE
           - NOT_FOUND
           - RATE_LIMITED
+          - REGISTRY_MISMATCH
           - REVISION_CONFLICT
           - KEY_STALE_NOT_SAVED
           - ATTACHMENT_UNAVAILABLE_NOT_SAVED
@@ -2949,3 +3164,277 @@ components:
       required:
       - items
       - nextCursor
+
+    EnrollmentStarted:
+      type: object
+      additionalProperties: false
+      properties:
+        status:
+          const: enrollment
+        next:
+          const: profile_info.html
+      required:
+      - status
+      - next
+    EnrollmentPending:
+      type: object
+      additionalProperties: false
+      properties:
+        status:
+          const: enrollment
+      required:
+      - status
+    AdmissionResult:
+      type: object
+      additionalProperties: false
+      properties:
+        status:
+          const: admitted
+        email:
+          $ref: '#/components/schemas/Email'
+      required:
+      - status
+      - email
+    EnrollmentProfile:
+      type: object
+      additionalProperties: false
+      properties:
+        firstName:
+          type: string
+          minLength: 1
+          maxLength: 100
+        lastName:
+          type: string
+          minLength: 1
+          maxLength: 100
+        role:
+          type: string
+          enum:
+          - graduate
+          - lecturer
+        diplomaNumber:
+          type:
+          - string
+          - 'null'
+          maxLength: 100
+        specializationId:
+          type:
+          - integer
+          - 'null'
+          minimum: 1
+        startYear:
+          type:
+          - integer
+          - 'null'
+          minimum: 1900
+          maximum: 2200
+        endYear:
+          type:
+          - integer
+          - 'null'
+          minimum: 1900
+          maximum: 2200
+        departmentId:
+          type:
+          - integer
+          - 'null'
+          minimum: 1
+        professionId:
+          type:
+          - integer
+          - 'null'
+          minimum: 1
+        biography:
+          type:
+          - string
+          - 'null'
+          maxLength: 2000
+      required:
+      - firstName
+      - lastName
+      - role
+    EnrollmentProfileRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        revision:
+          type: integer
+          minimum: 1
+        firstName:
+          type: string
+          minLength: 1
+          maxLength: 100
+        lastName:
+          type: string
+          minLength: 1
+          maxLength: 100
+        role:
+          type: string
+          enum:
+          - graduate
+          - lecturer
+        diplomaNumber:
+          type:
+          - string
+          - 'null'
+          maxLength: 100
+        specializationId:
+          type:
+          - integer
+          - 'null'
+          minimum: 1
+        startYear:
+          type:
+          - integer
+          - 'null'
+          minimum: 1900
+          maximum: 2200
+        endYear:
+          type:
+          - integer
+          - 'null'
+          minimum: 1900
+          maximum: 2200
+        departmentId:
+          type:
+          - integer
+          - 'null'
+          minimum: 1
+        professionId:
+          type:
+          - integer
+          - 'null'
+          minimum: 1
+        biography:
+          type:
+          - string
+          - 'null'
+          maxLength: 2000
+      required:
+      - revision
+      - firstName
+      - lastName
+      - role
+      allOf:
+      - if:
+          properties:
+            role:
+              const: graduate
+        then:
+          required:
+          - diplomaNumber
+          - specializationId
+          - startYear
+          - endYear
+          properties:
+            diplomaNumber:
+              type: string
+              minLength: 1
+            specializationId:
+              type: integer
+              minimum: 1
+            startYear:
+              type: integer
+            endYear:
+              type: integer
+        else:
+          required:
+          - departmentId
+          - professionId
+          properties:
+            departmentId:
+              type: integer
+              minimum: 1
+            professionId:
+              type: integer
+              minimum: 1
+    EnrollmentState:
+      type: object
+      additionalProperties: false
+      properties:
+        status:
+          const: enrollment
+        email:
+          $ref: '#/components/schemas/Email'
+        revision:
+          type: integer
+          minimum: 1
+        profile:
+          $ref: '#/components/schemas/EnrollmentProfile'
+        expiresAt:
+          $ref: '#/components/schemas/Time'
+        challenge:
+          $ref: '#/components/schemas/Challenge'
+      required:
+      - status
+      - email
+      - revision
+      - profile
+      - expiresAt
+    EnrollmentRevision:
+      type: object
+      additionalProperties: false
+      properties:
+        revision:
+          type: integer
+          minimum: 1
+      required:
+      - revision
+    EnrollmentPassword:
+      type: object
+      additionalProperties: false
+      properties:
+        derivation:
+          $ref: '#/components/schemas/Derivation'
+        loginSecret:
+          $ref: '#/components/schemas/Secret'
+      required:
+      - derivation
+      - loginSecret
+    EnrollmentReference:
+      type: object
+      additionalProperties: false
+      properties:
+        id:
+          type: integer
+          minimum: 1
+        name:
+          type: string
+          maxLength: 255
+      required:
+      - id
+      - name
+    EnrollmentOptions:
+      type: object
+      additionalProperties: false
+      properties:
+        specializations:
+          type: array
+          maxItems: 1000
+          items:
+            $ref: '#/components/schemas/EnrollmentReference'
+        departments:
+          type: array
+          maxItems: 1000
+          items:
+            $ref: '#/components/schemas/EnrollmentReference'
+        professions:
+          type: array
+          maxItems: 1000
+          items:
+            $ref: '#/components/schemas/EnrollmentReference'
+      required:
+      - specializations
+      - departments
+      - professions
+    EnrollmentRecoveryState:
+      type: object
+      additionalProperties: false
+      properties:
+        state:
+          const: ENROLLMENT
+        email:
+          $ref: '#/components/schemas/Email'
+      required:
+      - state
+      - email

@@ -1,6 +1,6 @@
 # PolyLink
 
-A university alumni/lecturer networking project with a Java 25/Spring Boot backend and a vanilla JavaScript frontend. The real application currently supports invitation registration, email verification, encrypted direct/group text and image messaging, group membership management, persistent sessions, password changes, email-based account/history recovery, own-message export and account lifecycle actions. Encryption-key setup is automatic; users never save or enter a recovery key.
+A university alumni/lecturer networking project with a Java 25/Spring Boot backend and a vanilla JavaScript frontend. The real application currently supports registry-based registration, email verification, encrypted direct/group text and image messaging, group membership management, persistent sessions, password changes, email-based account/history recovery, own-message export and account lifecycle actions. Encryption-key setup is automatic; users never save or enter a recovery key.
 
 ## Requirements — Linux and macOS
 
@@ -48,16 +48,13 @@ export MIGRATION_DB_PASSWORD="$DB_PASSWORD"
 ./backend/mvnw -f backend/pom.xml compile exec:java -Dexec.mainClass=am.polylink.database.SchemaCommand -Dexec.args=upgrade
 ```
 
-Use separate migration credentials if your runtime SQL user lacks permission. For an already-created **empty** database, use `-Dexec.args=fresh` instead. An existing database must pass the baseline guard; do not force it or delete tables. This applies/validates migrations through V13. If historical forum topics/replies exist, first stop at V12 and complete the [reviewed category/timezone backfill](docs/forum_implementation.md#existing-database-upgrade); V13 refuses unreviewed data. Application startup never migrates a database. See [schema details](docs/messenger/schema-and-migrations.md).
+Use separate migration credentials if your runtime SQL user lacks permission. For an already-created **empty** database, use `-Dexec.args=fresh` instead. An existing database must pass the baseline guard; do not force it or delete tables. This applies/validates migrations through V14. If historical forum topics/replies exist, first stop at V12 and complete the [reviewed category/timezone backfill](docs/forum_implementation.md#existing-database-upgrade); V13 refuses unreviewed data. Application startup never migrates a database. See [schema details](docs/messenger/schema-and-migrations.md).
 
-### 4. Invite two test users
+### 4. Check registry eligibility
 
-```sh
-./backend/mvnw -f backend/pom.xml compile exec:java -Dexec.mainClass=am.polylink.auth.AdmissionCommand -Dexec.args='invite alice@example.invalid graduate'
-./backend/mvnw -f backend/pom.xml compile exec:java -Dexec.mainClass=am.polylink.auth.AdmissionCommand -Dexec.args='invite bob@example.invalid graduate'
-```
+New accounts require a **`polytechnic.am`** address and matching university registry details. Graduates need their diploma number, first/last names, specialization and study years; lecturers need official names, registration email and department, plus a selected profession. Reference choices load from the database. Import verified lecturer names before enabling real lecturer enrollment; V14 does not invent names or seed identities. Invitations are retired. Existing admitted accounts keep access.
 
-Invitations authorize matching email/role registration for seven days. They do not bypass email verification or reset existing accounts. If these users already exist, log in or use new test addresses.
+For synthetic users, use the disposable acceptance suite below; it seeds its own registry data. See [enrollment and operator guidance](docs/registry_enrollment.md) for the API, expiry, recovery and rollout rules.
 
 ### 5. Start the app in two terminals
 
@@ -83,9 +80,9 @@ Use **`localhost` consistently**, rather than mixing it with `127.0.0.1`. Keep t
 
 ### 6. Try it
 
-1. Register Alice as **graduate** with a password containing 8–128 characters, an uppercase letter, a number and a symbol.
-2. Read Alice's verification code in [Mailpit](http://localhost:8025) and finish registration/login. Key setup completes automatically.
-3. In a **different browser profile or browser**, register and verify Bob. Two ordinary tabs share one login and cannot represent different users.
+1. Register an eligible university address as **graduate** with a password containing 8–128 characters, an uppercase letter, a number and a symbol.
+2. Complete the mandatory academic profile, request a code, then read the verification code in [Mailpit](http://localhost:8025) and verify the account. Enter the password again to log in; key setup completes automatically.
+3. In a **different browser profile or browser**, register and verify a second eligible account. Two ordinary tabs share one login and cannot represent different users.
 4. In Alice's [Search page](http://localhost:8001/search.html), find Bob and click **Connect**. Exchange text through [Messages](http://localhost:8001/message.html).
 5. Reload or restart the browser: a valid session and working secure browser storage restore access without another password. Bob can also close his browser and read Alice's later message when he returns.
 6. Try **Settings → Password**. The new password should preserve history and revoke other device sessions. A clean browser profile can open the same history with that password.
@@ -126,7 +123,9 @@ Stop app servers with Ctrl+C; retain the database, OpenBao volumes and private l
 
 To explore the independent mock UI without a backend, set `dataMode: 'mock'` in `js/config.js`, then run `python3 server.py --port 8001` and open [Profile](http://localhost:8001/profile.html). After demo logout, use `demo.alumni@polytechnic.am` or `demo.lecturer@polytechnic.am` with `DemoPass123!`; the fictional verification code is `123456`.
 
-[Developer controls](http://localhost:8001/dev-tools.html) reset the mock dataset and inject demo events. Mock accounts/codes do not authenticate against the real backend. Restore `dataMode: 'http'` before following the real-app instructions.
+[Developer controls](http://localhost:8001/dev-tools.html) reset the mock dataset and inject demo events. For a new demo enrollment, use `new.graduate@polytechnic.am`, names `Demo` / `Graduate`, diploma `DEMO-2025`, the first specialization and years 2021–2025. A lecturer demo uses `new.lecturer@polytechnic.am`, names `Demo` / `Lecturer`, and the first department/profession. Both use code `123456`.
+
+Mock accounts/codes do not authenticate against the real backend. Restore `dataMode: 'http'` before following the real-app instructions.
 
 To check the messenger UI with the static server running, use:
 

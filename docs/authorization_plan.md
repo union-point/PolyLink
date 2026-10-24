@@ -1,10 +1,10 @@
 # Authorization implementation plan
 
-Reviewed 24 October 2026 against the current implementation and migrations V1–V13. This document plans registry-based admission; the target flow below is **not implemented yet**. It does not authorize changing the working database during documentation maintenance.
+Reviewed 24 October 2026 against the current implementation and migrations V1–V13. The implementation is tracked in [registry enrollment](registry_enrollment.md); this file preserves the approved policy and original implementation sequence. V14 and the enrollment API replace the invitation flow described in the historical inventory below. Applying V14 to the working database remains an explicit deployment operation.
 
 Target registration flow: **Register → profile_info → registry match → email code → admission → login/key setup**.
 
-## Current implementation and dependencies
+## Pre-V14 implementation inventory (historical)
 
 - `EnrollmentService` currently requires an unexpired, unconsumed email/role invitation. Registration stores a pending enrollment and returns an email challenge; successful email verification admits the account and consumes an invitation. Missing admission produces a non-admitting challenge response rather than granting access.
 - `AdmissionCommand invite` supplies seven-day operator approvals. The current backend does not require the exact `polytechnic.am` domain or match official registries. This plan changes admission policy rather than documenting existing checks.
@@ -83,4 +83,4 @@ The chosen alumni check confirms knowledge of registry details and control of an
 
 Run `./mvnw verify` from `backend/`, relevant isolated SQL migration/admission concurrency tests, and the complete identity/recovery/settings/messenger browser regression before calling this plan implemented. Extend `tools/m1/verify.py` and contract fixtures as needed; existing M1–M6/settings acceptance does not test the proposed registry flow.
 
-Update [frontend context](frontend_context.md), [backend context](backend_design_context.md), root/backend setup, admission CLI guidance and authentication test instructions with the final deployed flow and migration number. Keep existing invitation behavior documented until it is actually retired. No registry-enrollment endpoints, migration or acceptance results are claimed by this planning update.
+Update [frontend context](frontend_context.md), [backend context](backend_design_context.md), root/backend setup, admission CLI guidance and authentication test instructions with the final deployed flow and migration number. Keep existing invitation behavior documented until it is actually retired. See the implementation contract and current test results for the V14 handoff; the original planning update did not claim implementation.

@@ -1,6 +1,8 @@
+Current authentication flow: [V14 registry enrollment](docs/registry_enrollment.md). Registration opens the mandatory academic form before any email is sent. After verification, enter the password again to finish key setup. Use two eligible university addresses for manual multi-account checks.
+
 # Live verification of M1–M6
 
-First complete the [Linux/macOS quickstart in README.md](README.md#run-the-real-application): local setup, OpenBao/mail, explicit migrations, invitations and app startup. The helper scripts replace the old manual environment/key/truststore routine and retain private local state across worktrees. See [tools/local/README.md](tools/local/README.md) for their behavior.
+First complete the [Linux/macOS quickstart in README.md](README.md#run-the-real-application): local setup, OpenBao/mail, explicit migrations, registry eligibility and app startup. The helper scripts replace the old manual environment/key/truststore routine and retain private local state across worktrees. See [tools/local/README.md](tools/local/README.md) for their behavior.
 
 **Users do not save, download or type a recovery key.** Password login and email verification trigger automatic encryption-key setup. Local OpenBao operator credentials are separate from user login. Email-based account/history recovery is available; see [M4 recovery checks](docs/messenger/m4.md).
 
@@ -17,10 +19,10 @@ Use `http://localhost:8001` consistently. If ports 3004/8001 are already occupie
 ## 1. Register and test encrypted text messaging
 
 1. Open a normal browser profile at [the registration page](http://localhost:8001/register.html).
-2. Register `alice@example.invalid` with role **graduate** and a password you choose. The password must contain 8–128 characters, an uppercase letter, a number and a symbol.
-3. Open [Mailpit](http://localhost:8025), find the message addressed to Alice and enter its six-digit code in the registration page. Codes expire after ten minutes; use the latest email.
-4. Wait for login and automatic encryption-key setup to finish and for the profile page to open. There is no recovery-key task for Alice.
-5. Open a **separate browser profile or a different browser** for Bob. Register and verify `bob@example.invalid` in the same way. Two ordinary tabs share cookies and do not represent two independent users.
+2. Register an eligible `polytechnic.am` address with role **graduate** and a password you choose. The password must contain 8–128 characters, an uppercase letter, a number and a symbol.
+3. Complete the mandatory academic profile using registry details and request a code. Open [Mailpit](http://localhost:8025), find the message addressed to Alice and enter its six-digit code in the profile verification form. Codes expire after ten minutes; use the latest email.
+4. Enter the password again, then wait for login and automatic encryption-key setup to finish and for the profile page to open. There is no recovery-key task for Alice.
+5. Open a **separate browser profile or a different browser** for Bob. Register and verify a second eligible university address in the same way. Two ordinary tabs share cookies and do not represent two independent users.
 6. In Alice's browser, open [Search](http://localhost:8001/search.html), find Bob and click **Connect**. The direct conversation opens.
 7. Send a text message. In Bob's browser, open [Messages](http://localhost:8001/message.html). The text should appear within a few seconds while the page is visible. Reply from Bob and confirm Alice receives it.
 8. For the offline-recipient check, close Bob's browser after his setup has completed. Send another message from Alice, then reopen Bob's browser. Bob should be able to read it without any key exchange or action by Alice.
@@ -59,13 +61,13 @@ Unrelated settings toggles are currently disabled in HTTP mode. You do not need 
 | Port 3004/8001 already in use, or old behavior still appears | Stop the old app processes and start both servers from this checkout. Reload the browser afterward. |
 | `release version 25 not supported`, missing `javac`, or wrong Maven JVM | Select the full JDK 25, export its `JAVA_HOME`/`PATH`, then check `./mvnw --version`. |
 | Backend does not start or reports missing auth tables | Check the SQL credentials and run the explicit upgrade through V4. Starting the backend never applies migrations. |
-| Registration produces no verification email | Check the invitation's exact email/role, Mailpit and SMTP port 1025. Uninvited registration is deliberately neutral. |
+| Registration produces no verification email | Complete and save the academic profile, then submit for registry matching. Mail is sent only after a successful match. Check Mailpit and SMTP port 1025. Occupied-address registration is deliberately neutral; use login or recovery. |
 | Verification succeeds but key setup cannot finish | Check OpenBao is unsealed, the JVM trusts its certificate, and `OPENBAO_TOKEN_FILE` points to a valid narrow service token. Retry login after fixing the prerequisite. |
 | Token stopped working after a long shutdown | The backend token is periodic and needs renewal. If it expired while the backend was stopped, an operator must issue/install a replacement using the [runbook](infra/openbao/README.md). Keep the existing Transit key and volume. |
 | Origin/cookie/refresh failures | Use `localhost` consistently, port 8001 for the frontend, and the matching allowed origin. Do not open HTML via `file://`. |
 | Sending says a participant is unconfigured | Both users must finish a verified password login and automatic setup at least once. |
 | Browser asks for a password after navigation | Check secure browser storage permissions and whether the session expired/was revoked. A signed-out profile must perform normal login. |
-| Old demo chats/users are absent | The HTTP messenger does not seed mock accounts or silently import legacy plaintext messages. Register the invited test users. |
+| Old demo chats/users are absent | The HTTP messenger does not seed mock accounts or silently import legacy plaintext messages. Register eligible users or run the isolated synthetic-fixture acceptance suite. |
 | Too many email attempts | Respect resend/aggregate limits. Do not repeatedly register the same address or restart verification to bypass a limit. |
 
 ## 4. Optional: run the complete automated checks
@@ -99,7 +101,7 @@ Run `python3 tools/m1/verify.py --groups` for the full disposable M1–M6 accept
 
 ## Career forum
 
-After explicit V13 migration, start the backend with `FORUM_ENABLED=true`; no messenger flag is required. For historical discussions, complete the [V12 category/timezone review](docs/forum_implementation.md#existing-database-upgrade) first. Current admission is the documented temporary exception until verified onboarding ships.
+After explicit V13 migration, start the backend with `FORUM_ENABLED=true`; no messenger flag is required. For historical discussions, complete the [V12 category/timezone review](docs/forum_implementation.md#existing-database-upgrade) first. New users require V14 registry enrollment; existing admitted accounts retain their access.
 
 1. With two admitted users in separate browser profiles, open Forum. Confirm six backend-loaded categories and server-side filtering. Create a formatted topic, then open its returned URL.
 2. Reply as the second user, like/unlike the reply (including your own), and manually refresh the first user's topic. Sort newest/oldest/popular and load additional pages; the displayed total counts all replies.

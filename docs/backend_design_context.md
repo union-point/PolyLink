@@ -1,6 +1,6 @@
 # PolyLink backend design context
 
-Reviewed 24 October 2026 against current Java controllers/services, migrations V1–V13, frontend provider clients and the settings/messenger handoffs. PolyLink now has an implemented Java 25 / Spring Boot 4.1.1 backend using Microsoft SQL Server, JDBC transactions, SMTP and OpenBao Transit. It is no longer only a design or scaffold.
+Reviewed 24 October 2026 against current Java controllers/services, migrations V1–V14, frontend provider clients and the settings/messenger handoffs. PolyLink now has an implemented Java 25 / Spring Boot 4.1.1 backend using Microsoft SQL Server, JDBC transactions, SMTP and OpenBao Transit. It is no longer only a design or scaffold.
 
 ## Evidence and authority
 
@@ -19,7 +19,7 @@ The platform connects graduates and lecturers through discovery, profiles and di
 
 | Area | Current server implementation |
 | --- | --- |
-| Identity | Invitation admission, email verification, password-derived login proof, optional email login factor, sessions/refresh, logout and versioned key setup. |
+| Identity | Registry enrollment, email verification, password-derived login proof, optional email login factor, sessions/refresh, logout and versioned key setup. |
 | Security continuity | Atomic password changes, other-device session revocation, protected browser restoration, email-based account/history recovery and identity rotation. |
 | Profiles/discovery | Owner identity, public member-profile projection and search; visibility/disclosure checks. General profile/education/certificate/media mutations remain absent. |
 | Messenger | Encrypted direct/group text and images, key epochs/envelopes, idempotent sends, cursor history, read/mute/hide/block state and protected attachment access. |
@@ -48,6 +48,7 @@ The code uses explicit JDBC/SQL service boundaries; domain JPA entity mappings a
 | V11 | Armenian language availability and session-bound account-export grants. |
 | V12 | Forum categories, versions/UTC projections, review/takedown audits, create deduplication and notification references. |
 | V13 | Required topic categories and UTC timestamps after reviewed legacy backfill. |
+| V14 | Restricted enrollment sessions, persisted academic profiles, verified registry claims and grandfathered admission. |
 
 Use `SchemaCommand inventory`, guarded `upgrade` for restored/existing databases, and `fresh` only for empty databases. Migrations use separate migration credentials and run explicitly. Startup disables Flyway and SQL initialization; Hibernate is configured for validation. Never edit applied migration checksums or bypass baseline drift checks. V8/V9 removal requires a verified backup and stopped application access with matching backend deployment. See [schema workflow](messenger/schema-and-migrations.md).
 
@@ -63,7 +64,7 @@ The browser derives PLK1 login/wrapping material using local libsodium/Argon2id 
 
 Recovery is explicitly platform-trusted: OpenBao Transit protects the service recovery copy, enabling the approved email-based recovery process. This is not a claim that the platform cannot recover vault keys. Users do not manage manual recovery keys. Recovery supports protected device and service unlock, resumable authorization, bounded prepare/commit and key rotation; stale versions and lost responses require the protocol's replay/conflict handling.
 
-Registration uses operator-issued email/role invitations and email ownership verification. General alumni/lecturer registry claims, exceptions and university-wide admission policy remain separate decisions. Never grant admission from mock IDs, seeded hashes, arbitrary role flags or matching display names.
+Registration requires an exact university-domain address, a saved profile, unique selected-role registry matching and email verification. See [registry enrollment](registry_enrollment.md) for restricted credentials, API variants, retention and audited maintenance. Existing admitted accounts are grandfathered and invitations are retired. Never grant admission from mock IDs, seeded hashes, arbitrary role flags or matching display names.
 
 Current `application.properties` defaults identity to enabled and messenger to disabled; environment configuration can override both. Identity needs configured HMAC/replay secrets, mail and working Transit prerequisites. Messenger requires explicit enablement and the matching schema. Do not infer operational availability from source flags alone.
 
@@ -82,7 +83,7 @@ The backend listens on loopback port 3004 by default; the default allowed fronte
 | Settings | GET/PATCH `/settings`; POST `/account/email-change/start`, `/verify`, `/resend`; PUT `/account/email-factor`; GET `/notifications`. |
 | Export/lifecycle | POST `/account/export/authorize`; GET `/account/export/data`, `/messages`, `/files/{id}`; POST `/account/deactivate`, `/account/delete`. |
 
-Frontend adapter mappings for profile update/onboarding/media, education/certificates and posts/comments remain expectations rather than implemented controllers. Forum topics/replies/likes have implemented HTTP contracts and separate page-aware normalizers. HTTP failures remain visible; there is no fallback to fixtures. The historical forgot/verify/reset routes and plain `{email,password}` login contract are obsolete for real identity.
+Frontend adapter mappings for profile update/media, education/certificates and posts/comments remain expectations rather than implemented controllers. Forum topics/replies/likes have implemented HTTP contracts and separate page-aware normalizers. HTTP failures remain visible; there is no fallback to fixtures. The historical forgot/verify/reset routes and plain `{email,password}` login contract are obsolete for real identity.
 
 Server ownership comes from the authenticated principal, never body `userId`/author/timestamps. Public projections exclude authentication metadata and undisclosed email; search never exposes email. Closed profiles remain discoverable with `canOpenProfile=false`, while another member's profile read returns 404. Legacy public media URLs cannot become private retroactively; future upload/storage APIs must enforce visibility.
 
