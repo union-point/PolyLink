@@ -37,7 +37,7 @@ Stop application access and verify a backup. Use the existing explicit migration
 2. `ForumMaintenanceCommand inspect` prints the topics and reply dates requiring human review. Review output privately; it contains user content.
 3. Prepare a JSON file outside the checkout: `{"operator":"responsible operator","timezone":"Asia/Yerevan","topics":{"123":"informatics"}}`. The timezone is an example, not an inferred historical timezone. Supply exactly the topic IDs requiring review. Confirm every category and the actual source timezone. Ambiguous/nonexistent DST timestamps are rejected and require explicit data correction/review.
 4. `ForumMaintenanceCommand dry-run /absolute/review.json` validates the complete input transactionally and rolls it back.
-5. `ForumMaintenanceCommand apply /absolute/review.json` fills category and UTC projections atomically and records original timestamps, source zone and operator in `forum.LegacyReview`.
+5. `ForumMaintenanceCommand apply /absolute/review.json` fills category and UTC projections atomically while preserving original `CreatedAt` values. Keep the reviewed JSON and command output externally if an operational record is required; V16 removes the historical review log.
 6. `SchemaCommand upgrade` applies V13 enforcement. A missing review blocks migration. Fresh empty databases can apply all migrations without review.
 
 Invoke commands through the existing Maven exec entry point, e.g. `./backend/mvnw -f backend/pom.xml compile exec:java -Dexec.mainClass=am.polylink.database.SchemaCommand -Dexec.args='upgrade --target=12'`; use `am.polylink.forum.ForumMaintenanceCommand` for maintenance. Schema inventories validate the V12 and V13 dbo shapes without modifying earlier baselines.

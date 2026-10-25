@@ -1,6 +1,6 @@
 # Schema inventory and migration workflow
 
-Current schema: **V15**, including V14 restricted registry enrollment/claims and V15 enrollment avatars. Apply migrations explicitly with a backup and matching application version. See [registry enrollment deployment](../registry_enrollment.md). Historical V1–V13 workflows below remain relevant to upgrades; invitations no longer admit new accounts.
+Current schema: **V16**, including V14 restricted registry enrollment/claims and V15 enrollment avatars. Apply migrations explicitly with a backup and matching application version. See [registry enrollment deployment](../registry_enrollment.md). V16 removes `dbo.AlumniRegistry_Import`, `auth.Invitations`, `forum.LegacyReview` and `auth.PendingEnrollments.InvitationId`, leaving 58 application tables plus Flyway history. Historical V1–V13 workflows below remain relevant to upgrades; invitations no longer admit new accounts.
 
 The legacy inventory, V2 mapping and dated acceptance below describe their original migration stages. Use the [backend migration commands](../../backend/README.md#migrations) for the current full upgrade and the [forum backfill procedure](../forum_implementation.md#existing-database-upgrade) before V13 when historical rows exist.
 
@@ -62,7 +62,7 @@ From `backend/`, set `DB_HOST`, `DB_PORT`, `DB_NAME`, `MIGRATION_DB_USERNAME`, `
 ./mvnw compile exec:java -Dexec.mainClass=am.polylink.database.SchemaCommand -Dexec.args=fresh
 ```
 
-`inventory` is read-only and prints metadata. `fresh` requires an empty database, executes all numbered migrations through V15 and validates checksums. Reference data may be seeded, but eligible identities and usable credentials are not. The DBA creates the empty database first. Use the inspected collation for consistency; V1 explicitly declares legacy string collations.
+`inventory` is read-only and prints metadata. `fresh` requires an empty database, executes all numbered migrations through V16 and validates checksums. Reference data may be seeded, but eligible identities and usable credentials are not. The DBA creates the empty database first. Use the inspected collation for consistency; V1 explicitly declares legacy string collations.
 
 For an existing restored database, first compare the inventory against the snapshot and take an independent safety backup. Then use:
 

@@ -129,6 +129,12 @@ public final class SchemaCommand {
                                                     + "\",\"type\":\"nvarchar\",\"maxLength\":200,\"precision\":0,\"scale\":0,\"nullable\":true,\"collation\":\"SQL_Latin1_General_CP1_CI_AS\"}"));
                     }
             }
+            if (version >= 16) {
+                var tables = (tools.jackson.databind.node.ArrayNode) expectedForum.path("tables");
+                for (int i = tables.size() - 1; i >= 0; i--)
+                    if (tables.get(i).path("name").asText().equals("AlumniRegistry_Import"))
+                        tables.remove(i);
+            }
             if (!expectedForum.equals(mapper.readTree(inventory(connection))))
                 throw new IllegalStateException(
                         "Schema differs from the inspected baseline; reviewed forum inventory required");

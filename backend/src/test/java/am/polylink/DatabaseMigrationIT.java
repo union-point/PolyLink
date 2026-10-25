@@ -14,6 +14,55 @@ import org.springframework.jdbc.datasource.SingleConnectionDataSource;
 
 class DatabaseMigrationIT {
     @Test
+    void v16RemovesRetiredTablesAndPreservesPendingEnrollments() throws Exception {
+        inIsolatedDatabase(
+                connection -> {
+                    var source = new SingleConnectionDataSource(connection, true);
+                    SchemaCommand.migrations(source, "15").migrate();
+                    var db = new org.springframework.jdbc.core.JdbcTemplate(source);
+                    db.update("INSERT dbo.AlumniRegistry_Import(FullName) VALUES (N'Old import')");
+                    db.execute(
+                            """
+                        INSERT dbo.Users(FirstName,LastName,Email,RoleId,LanguageId)
+                        SELECT N'Pending',N'Fixture',N'pending-v16@example.invalid',
+                            (SELECT RoleId FROM dbo.Roles WHERE Name=N'graduate'),
+                            (SELECT Id FROM dbo.Languages WHERE Code=N'en');
+                        INSERT auth.AccountSecurity(UserId,AdmissionStatus,CredentialVersion,SchemeVersion,ClientSalt,ClientOpsLimit,ClientMemoryBytes,LoginVerifier,EmailFactorEnabled)
+                        SELECT UserId,'PENDING',1,1,0x112233,2,67108864,'VERIFIER',0 FROM dbo.Users;
+                        INSERT auth.Invitations(InvitationId,Email,RoleCode,ExpiresAt)
+                        VALUES ('11111111-1111-1111-1111-111111111111',N'pending-v16@example.invalid','graduate',SYSDATETIMEOFFSET());
+                        INSERT auth.PendingEnrollments(UserId,InvitationId,CredentialVersion,FirstName,LastName,RoleCode)
+                        SELECT UserId,'11111111-1111-1111-1111-111111111111',1,N'Pending',N'Fixture','graduate' FROM dbo.Users;
+                        INSERT forum.LegacyReview VALUES ('topic',1,'2020-01-01','UTC','test',SYSDATETIMEOFFSET());
+                        """);
+                    SchemaCommand.migrate(connection, "upgrade");
+                    for (String table :
+                            java.util.List.of(
+                                    "dbo.AlumniRegistry_Import",
+                                    "auth.Invitations",
+                                    "forum.LegacyReview"))
+                        assertThat(db.queryForObject("SELECT OBJECT_ID(?)", Integer.class, table))
+                                .isNull();
+                    assertThat(
+                                    db.queryForObject(
+                                            "SELECT COL_LENGTH(N'auth.PendingEnrollments',N'InvitationId')",
+                                            Integer.class))
+                            .isNull();
+                    assertThat(
+                                    db.queryForObject(
+                                            "SELECT COUNT(*) FROM sys.tables WHERE is_ms_shipped=0 AND name<>'flyway_schema_history'",
+                                            Integer.class))
+                            .isEqualTo(58);
+                    assertThat(
+                                    db.queryForObject(
+                                            "SELECT FirstName FROM auth.PendingEnrollments",
+                                            String.class))
+                            .isEqualTo("Pending");
+                    SchemaCommand.migrate(connection, "upgrade");
+                });
+    }
+
+    @Test
     void v14GrandfathersOnlyExistingAdmissionAndRetiresPendingInvitations() throws Exception {
         inIsolatedDatabase(
                 connection -> {
@@ -45,7 +94,7 @@ class DatabaseMigrationIT {
                                     invite);
                         }
                     }
-                    SchemaCommand.migrate(connection, "upgrade");
+                    SchemaCommand.migrations(source, "14").migrate();
                     assertThat(
                                     db.queryForList(
                                             "SELECT AdmissionStatus FROM auth.AccountSecurity WHERE GrandfatheredAdmission=1 ORDER BY AdmissionStatus",
@@ -124,18 +173,18 @@ class DatabaseMigrationIT {
                     am.polylink.forum.ForumMaintenanceCommand.review(connection, review, false);
                     assertThat(
                                     db.queryForObject(
-                                            "SELECT COUNT(*) FROM forum.LegacyReview",
+                                            "SELECT COUNT(*) FROM dbo.ForumTopics WHERE CreatedAtUtc IS NULL",
                                             Integer.class))
-                            .isZero();
+                            .isEqualTo(1);
                     assertThatThrownBy(() -> SchemaCommand.migrations(source).migrate())
                             .hasMessageContaining("Forum legacy review required");
                     am.polylink.forum.ForumMaintenanceCommand.review(connection, review, true);
                     SchemaCommand.migrate(connection, "upgrade");
                     assertThat(
                                     db.queryForObject(
-                                            "SELECT COUNT(*) FROM forum.LegacyReview",
+                                            "SELECT COUNT(*) FROM dbo.ForumReplies WHERE CreatedAtUtc IS NULL",
                                             Integer.class))
-                            .isEqualTo(2);
+                            .isZero();
                     assertThat(
                                     db.queryForObject(
                                             "SELECT CONVERT(varchar(30),CreatedAt,126) FROM dbo.ForumTopics",

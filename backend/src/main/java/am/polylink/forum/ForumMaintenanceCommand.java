@@ -74,7 +74,7 @@ public final class ForumMaintenanceCommand {
             throws Exception {
         if (!input.keySet().equals(Set.of("operator", "timezone", "topics")))
             throw new IllegalArgumentException("Require operator, timezone and topics");
-        String operator = text(input.get("operator"), 100);
+        text(input.get("operator"), 100);
         ZoneId zone = ZoneId.of(text(input.get("timezone"), 100));
         if (!(input.get("topics") instanceof Map<?, ?> mapping))
             throw new IllegalArgumentException("topics must map topic IDs to category codes");
@@ -110,7 +110,6 @@ public final class ForumMaintenanceCommand {
                         codes.getFirst(),
                         utc,
                         id);
-                audit(db, "topic", id, row.get("CreatedAt"), zone, operator);
             }
             for (var row : replies) {
                 int id = ((Number) row.get("ReplyId")).intValue();
@@ -118,7 +117,6 @@ public final class ForumMaintenanceCommand {
                         "UPDATE dbo.ForumReplies SET CreatedAtUtc=? WHERE ReplyId=?",
                         utc(row.get("CreatedAt"), zone),
                         id);
-                audit(db, "reply", id, row.get("CreatedAt"), zone, operator);
             }
             if (apply) connection.commit();
             else connection.rollback();
@@ -143,18 +141,6 @@ public final class ForumMaintenanceCommand {
         if (offsets.size() != 1)
             throw new IllegalArgumentException("Ambiguous/nonexistent historical time: " + local);
         return local.atOffset(offsets.getFirst()).withOffsetSameInstant(ZoneOffset.UTC);
-    }
-
-    private static void audit(
-            JdbcTemplate db, String kind, int id, Object original, ZoneId zone, String operator) {
-        db.update(
-                "INSERT forum.LegacyReview(Kind,RecordId,OriginalCreatedAt,SourceTimezone,Operator,ReviewedAt) VALUES (?,?,?,?,?,?)",
-                kind,
-                id,
-                original,
-                zone.getId(),
-                operator,
-                OffsetDateTime.now(ZoneOffset.UTC));
     }
 
     private static String text(Object value, int max) {

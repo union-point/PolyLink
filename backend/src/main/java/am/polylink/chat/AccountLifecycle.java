@@ -186,12 +186,6 @@ public class AccountLifecycle {
                         chat.db.update(
                                 "UPDATE auth.AccountSecurity SET LoginVerifier='DELETED',EmailVerifiedAt=NULL,EmailFactorEnabled=0 WHERE UserId=?",
                                 caller);
-                        chat.db.update(
-                                "UPDATE auth.Invitations SET Email=?,RevokedAt=? WHERE ConsumedUserId=? OR Email=?",
-                                "deleted-" + caller + "@deleted.invalid",
-                                chat.now(),
-                                caller,
-                                account.email());
                         chat.db.update("DELETE auth.EmailChallenges WHERE UserId=?", caller);
                         chat.db.update("DELETE keyvault.Vaults WHERE UserId=?", caller);
                         chat.db.update(
