@@ -103,7 +103,6 @@ public class SecurityConfiguration {
                         authorize
                                 .requestMatchers(
                                         HttpMethod.GET,
-                                        "/search",
                                         "/chat/rooms",
                                         "/chat/export",
                                         "/chat/rooms/*/messages",
@@ -134,6 +133,14 @@ public class SecurityConfiguration {
                                         "/chat/rooms/*/owner",
                                         "/chat/rooms/*/mute",
                                         "/chat/blocks/*")
+                                .permitAll();
+                    if (enabled)
+                        authorize
+                                .requestMatchers(
+                                        HttpMethod.GET,
+                                        "/search",
+                                        "/search/people",
+                                        "/search/filters")
                                 .permitAll();
                     if (enabled && messenger) {
                         authorize.requestMatchers(HttpMethod.PATCH, "/chat/rooms/*").permitAll();
