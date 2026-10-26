@@ -62,6 +62,8 @@ export const routes = {
   'forum.replies.update': (id,data) => ({method:'patch',url:`/forum/replies/${encodeURIComponent(id)}`,data}),
   'forum.replies.delete': (id,expectedVersion) => ({method:'delete',url:`/forum/replies/${encodeURIComponent(id)}`,params:{expectedVersion}}),
   'forum.replies.like': (id,liked) => ({method:'put',url:`/forum/replies/${encodeURIComponent(id)}/like`,data:{liked}}),
+  'search.page': (filters = {}) => ({ method: 'get', url: '/search/people', params: pick(filters, ['q', 'specializationId', 'instituteId', 'year', 'limit', 'cursor']) }),
+  'search.filters': () => ({ method: 'get', url: '/search/filters' }),
   'search.people': (filters = {}) => ({ method: 'get', url: '/search', params: { q: filters.q || '' } }),
 };
 function form(data) { const value = new FormData(); for (const [key, item] of Object.entries(data)) if (item != null) value.append(key, item); return value; }

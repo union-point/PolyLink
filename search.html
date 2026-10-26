@@ -7,7 +7,8 @@
 <title>Պոլիտեխնիկի շրջանավարտների հարթակ</title>
 <link href="./css/search.css" rel="stylesheet"/>
 <link href="./css/style.css" rel="stylesheet"/>
-<body>
+</head>
+<body class="search-page">
 <header class="header">
 <div class="header-container">
 <div class="logo-container">
@@ -16,7 +17,7 @@
 </div>
 <nav>
 <ul class="menu">
-<li><a .="" href="profile.html">Անձնական էջ</a></li>
+<li><a href="profile.html">Անձնական էջ</a></li>
 <li><a href="events.html">Իրադարձություններ</a></li>
 <li><a href="forum.html">Ֆոռում</a></li>
 <li><a href="message.html">Նամակագրություն</a></li>
@@ -44,44 +45,31 @@
 <div class="filter-option">
 <label for="faculty">Մասնագիտություն՝</label>
 <select id="faculty">
-<option>Բոլորը</option>
-<option>Ծրագրայի ճարտարագիտություն</option>
-<option>Համակարգչային ճարտարագիտություն </option>
-<option>Տեղեկատվական տեխնոլոգիաներ </option>
-<option>Արհեստական բանականություն </option>
+<option value="">Բոլորը</option>
 </select>
 </div>
 <div class="filter-option">
 <label for="year">Ավարտելու տարեթիվ՝</label>
 <select id="year">
-<option>Բոլորը</option>
-<option>2018</option>
-<option>2019</option>
-<option>2020</option>
-<option>2021</option>
-<option>2022</option>
-<option>2023</option>
-<option>2024</option>
-<option>2025</option>
+<option value="">Բոլորը</option>
 </select>
 </div>
 <div class="filter-option">
 <label for="institute">Ինստիտուտ՝</label>
 <select id="institute">
-<option>Բոլորը</option>
-<option>ՏՀՏԷ</option>
-<option>ՄՄՏՀԴ</option>
-<option>ԷԷ</option>
-<option>ԼՔՏ</option>
+<option value="">Բոլորը</option>
 </select>
 </div>
 </div>
 </div>
 <main>
-<h2>Շրջանավարտներ</h2>
-<div class="graduates"></div>
+<h2>Շրջանավարտներ և դասախոսներ</h2>
+<div id="filter-status" aria-live="polite"></div>
+<div class="graduates" aria-busy="false"></div>
+<div id="search-status" aria-live="polite"></div>
+<button id="search-more" type="button" hidden>Ցույց տալ ավելին</button>
 </main>
 </div>
 <script src="./js/search.js" type="module"></script>
 </body>
-</head></html>
+</html>

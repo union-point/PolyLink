@@ -28,7 +28,7 @@ export const forum = {
   list: operation('forum.list'), get: operation('forum.get'), create: operation('forum.create'), update: operation('forum.update'), delete: operation('forum.delete'),
   replies: { get: operation('forum.replies.get'), update: operation('forum.replies.update'), delete: operation('forum.replies.delete'), list: operation('forum.replies.list'), create: operation('forum.replies.create'), like: operation('forum.replies.like') },
 };
-export const search = { people: operation('search.people') };
+export const search = { people: operation('search.people'), page: operation('search.page'), filters: operation('search.filters') };
 export const chat = {
   saveDraft:operation('chat.saveDraft'),loadDraft:operation('chat.loadDraft'),
   createGroup:operation('chat.createGroup'), participants:operation('chat.participants'), addParticipant:operation('chat.addParticipant'), removeParticipant:operation('chat.removeParticipant'), leaveGroup:operation('chat.leaveGroup'), renameGroup:operation('chat.renameGroup'), transferOwner:operation('chat.transferOwner'),

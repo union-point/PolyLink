@@ -1,3 +1,4 @@
+import { normalizeSearchPerson, normalizeSearchPage, normalizeSearchFilters } from '../../search/contracts.js';
 import { normalizeCategory, normalizeForumTopic, normalizeReply, normalizeForumPage } from '../../forum/contracts.js';
 import { createEncryptedChat } from '../../chat/encrypted-client.js';
 import { createIdentityClient } from '../../auth/identity-client.js';
@@ -57,7 +58,9 @@ export function createHttpProvider(transportPromise = loadTransport()) {
       if (operation === 'forum.replies.list') return normalizeForumPage(body, normalizeReply);
       if (operation.startsWith('forum.replies.')) return normalizeReply(body);
       if (operation.startsWith('forum.')) return normalizeForumTopic(body);
-      if (operation === 'search.people') return list(body, normalizeUser).filter(user => (!args[0]?.institute || user.institute === args[0].institute) && (!args[0]?.specialization || user.specialization === args[0].specialization) && (!args[0]?.year || user.graduationYear === String(args[0].year)));
+      if (operation === 'search.people') return list(body, normalizeSearchPerson);
+      if (operation === 'search.page') return normalizeSearchPage(body);
+      if (operation === 'search.filters') return normalizeSearchFilters(body);
       return body;
     },
     async subscribe(listener) { const a=(await identityClient()).subscribe(listener),b=(await chatClient()).subscribe(listener);return()=>{a();b();}; },

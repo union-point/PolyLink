@@ -1,3 +1,4 @@
+import { searchOperations } from './search-state.js';
 import { forumOperations, upgradeForumState } from './forum-state.js';
 import { upgradeChatState, preference, blocked as isBlocked, canSend, visibleMessages, markRead, hideRoom, appendMessage, messagePage } from './chat-state.js';
 import { validateImageBytes } from '../../crypto/images.js';
@@ -7,7 +8,7 @@ import { universityEmail, email, password, required, validateEducation, validate
 
 const now = () => new Date().toISOString();
 const defaults = () => ({ isProfilePublic: true, showEmail: false, twoFactorEnabled: false, language: 'hy', emailEnabled: true, newListingNotifications: true, forumReplyNotifications: true, directMessageNotifications: true });
-const readOperations = new Set(['auth.me', 'profiles.get', 'profiles.education.list', 'profiles.certificates.list', 'posts.list', 'posts.comments.list', 'forum.categories', 'forum.list', 'forum.get', 'forum.replies.list', 'forum.replies.get', 'search.people', 'chat.list', 'chat.messages', 'chat.page', 'chat.participants', 'chat.loadDraft', 'settings.get', 'settings.export']);
+const readOperations = new Set(['auth.me', 'profiles.get', 'profiles.education.list', 'profiles.certificates.list', 'posts.list', 'posts.comments.list', 'forum.categories', 'forum.list', 'forum.get', 'forum.replies.list', 'forum.replies.get', 'search.people', 'search.page', 'search.filters', 'chat.list', 'chat.messages', 'chat.page', 'chat.participants', 'chat.loadDraft', 'settings.get', 'settings.export']);
 const publicOperations = new Set(['auth.uploadEnrollmentAvatar','auth.removeEnrollmentAvatar','auth.enrollment','auth.enrollmentOptions','auth.saveEnrollment','auth.submitEnrollment','auth.logoutEnrollment','auth.verifyEmail','auth.me', 'auth.login', 'auth.register', 'auth.verifySecondFactor', 'auth.resendChallenge', 'auth.forgotPassword', 'auth.verifyRecovery', 'auth.resetPassword', 'auth.logout']);
 
 function find(records, id) {
@@ -266,10 +267,7 @@ const operations = {
   },
   'posts.comments.delete': (state, postId, id) => { const comment = owner(state, find(state.comments, id)); if (comment.postId !== String(postId)) throw new DataError('NOT_FOUND', 'Մեկնաբանությունը չի գտնվել։'); state.comments = state.comments.filter(record => record.id !== String(id)); return null; },
   ...forumOperations,
-  'search.people': (state, filters = {}) => state.users.filter(user => user.status === 'active' &&
-    (!filters.q || `${user.name} ${user.jobTitle} ${user.specialization}`.toLowerCase().includes(filters.q.trim().toLowerCase())) &&
-    (!filters.specialization || user.specialization === filters.specialization) && (!filters.institute || user.institute === filters.institute) &&
-    (!filters.year || user.graduationYear === String(filters.year))).map(user => ({id:user.id,name:user.name,firstName:user.firstName,lastName:user.lastName,role:user.role,onboardingComplete:user.onboardingComplete,canOpenProfile:(state.settings[user.id]||defaults()).isProfilePublic})),
+  ...searchOperations,
   'chat.list': state => state.rooms.filter(room => room.participants.includes(me(state).id) && !preference(room, me(state).id).hidden).map(room => roomView(state, room)),
   'chat.openDirect': (state, userId) => {
     const own = me(state).id; find(state.users, userId);

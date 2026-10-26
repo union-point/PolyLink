@@ -200,3 +200,26 @@ h2 {
 .btn-connect:hover {
   background-color: var(--secoundary-blue);
 }
+/* Search status and education disclosures share the card's available width. */
+.search-education { overflow-wrap: anywhere; }
+.card details { margin-bottom: 12px; }
+.card summary { cursor: pointer; }
+#search-status, #filter-status { text-align: center; }
+#search-more { display: block; margin: 24px auto; padding: 10px 24px; }
+#search-more[hidden] { display: none; }
+.card button:disabled { opacity: .55; cursor: not-allowed; }
+.card button:focus-visible, .card summary:focus-visible, #search-more:focus-visible { outline: 3px solid var(--primary-blue); outline-offset: 3px; }
+
+.search-page .header { position: sticky; }
+.search-page .container { margin-top: 20px; padding: 0 16px 24px; }
+.search-page .filter-option { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.search-page .filters select { max-width: min(300px, 55vw); }
+@media (max-width: 700px) {
+  .search-page .header .header-container { padding: 0 12px; }
+  .search-page nav { width: 100%; align-items: flex-start; }
+  .search-page .menu { flex-wrap: wrap; flex: 1; min-width: 0; }
+  .search-page .menu li a { padding: 6px; font-size: 14px; }
+  .search-page .filters { gap: 16px; align-items: stretch; flex-direction: column; }
+  .search-page .filter-option { justify-content: space-between; }
+  .search-page .search-bar input { flex: 1; min-width: 0; }
+}

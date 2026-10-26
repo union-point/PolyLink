@@ -2,7 +2,7 @@
   "name": "polylink-contract-checks",
   "private": true,
   "type": "module",
-  "scripts": { "test": "node --test enrollment.test.mjs forum.test.mjs direct-contact.test.mjs crypto.test.mjs chat.test.mjs session.test.mjs recovery.test.mjs messenger.test.mjs groups.test.mjs settings.test.mjs browser-wait.test.mjs" },
+  "scripts": { "test": "node --test search.test.mjs enrollment.test.mjs forum.test.mjs direct-contact.test.mjs crypto.test.mjs chat.test.mjs session.test.mjs recovery.test.mjs messenger.test.mjs groups.test.mjs settings.test.mjs browser-wait.test.mjs" },
   "dependencies": { "libsodium-wrappers-sumo": "0.8.4" },
   "engines": { "node": ">=22" }
 }
