@@ -14,7 +14,7 @@ General profile editing, education/certificate CRUD, profile cover uploads and p
 - Profile edits: define editable fields, limits, patch/replacement semantics, optimistic conflicts and role-change restrictions. Enrollment biography is already optional; do not impose the old proposed mandatory-biography rule.
 - Media: specify authenticated storage, visibility, replacement/deletion and export behavior for future profile media. V15 enrollment avatars are implemented separately and use publicly retrievable randomized URLs; legacy public URLs also remain public.
 - Publications: define required category/sphere/title/content fields, sanitization, bounded feed/comment pagination, ordering and edit/delete conflicts. `events.html` represents job/internship/training announcements.
-- Discovery: agree pagination, matching and filter semantics as the directory grows. Decide whether direct-message blocking should affect search/profile access; do not infer broader restrictions from chat blocks.
+- Discovery pagination, education matching and filter semantics are implemented in [people search](search_implementation.md). Education population after enrollment and production-scale index evaluation remain separate work; direct-message blocks retain their existing scope.
 - Work experience has stored legacy data but no connected editor/API; confirm future collection scope and preserve lifecycle/export handling of existing data.
 
 ## Delivery, recovery and release

@@ -79,7 +79,7 @@ The backend listens on loopback port 3004 by default; the default allowed fronte
 | Identity | POST `/auth/parameters`, `/auth/register`, `/auth/email/verify`, `/auth/login`, `/auth/login/verify`, `/auth/challenges/resend`, `/auth/refresh`, `/auth/logout`; GET `/auth/me`. |
 | Keys/password | GET `/keys/me`; POST `/keys/setup/prepare`, `/keys/setup/commit`, `/auth/password-change/prepare`, `/auth/password-change/commit`. |
 | Recovery | `/auth/recovery/request`, `/verify`, `/status`, `/unlock`, `/prepare`, `/commit`, `/login` (status is GET; others POST). |
-| Discovery | GET `/users/{userId}`, `/search`. |
+| Discovery | GET `/users/{userId}`, `/search` (legacy array), `/search/people` (keyset page), `/search/filters` (DB options). See [search implementation](search_implementation.md). |
 | Chat | POST `/chat/direct`; GET `/chat/rooms`, `/chat/export`; room message GET/POST, key read/activate, read/mute PUT, hide POST, block PUT and binary attachment upload/download. |
 | Groups | POST `/chat/groups/prepare`, `/chat/groups`; participant read/prepare/add/remove, leave POST, room rename PATCH and owner PUT. |
 | Settings | GET/PATCH `/settings`; POST `/account/email-change/start`, `/verify`, `/resend`; PUT `/account/email-factor`; GET `/notifications`. |

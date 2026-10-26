@@ -15,6 +15,7 @@ Start with the [project quickstart](../README.md). This index separates current 
 | [Profile modules](../js/profile/README.md) | Profile controller responsibilities. |
 | [Registry enrollment](registry_enrollment.md) | Admission, academic verification, avatars and maintenance. |
 | [Settings API](settings_backend.md) | Preferences, notification delivery and full export. |
+| [People search](search_implementation.md) | Search API, education matching, privacy, pagination and verification. |
 | [Forum API and operations](forum_implementation.md) | Discussion contracts, historical backfill and takedowns. |
 | [Schema workflow](messenger/schema-and-migrations.md) | Guarded explicit migrations and transaction rules. |
 | [Remaining decisions](specification_gaps.md) | Unimplemented feature contracts and release gates. |
