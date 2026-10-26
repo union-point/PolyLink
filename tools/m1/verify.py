@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Real SQL/OpenBao TLS/SMTP acceptance in uniquely named disposable resources."""
-import argparse, base64, json, os, pathlib, secrets, socket, ssl, subprocess, tempfile, time, urllib.error, urllib.request, uuid, shutil
+import argparse, base64, json, os, pathlib, secrets, socket, ssl, subprocess, tempfile, time, urllib.error, urllib.request, uuid, shutil, smtplib
 
 ROOT=pathlib.Path(__file__).resolve().parents[2]
 def run(args,**kw): return subprocess.run(args,check=True,**kw)
@@ -23,6 +23,38 @@ def wait_for_active(request):
             time.sleep(.1)
     raise TimeoutError('OpenBao did not become active after unsealing')
 
+def start_mailpit(name, smtp_port, api_port):
+    # Reverse DNS on Docker bridge addresses can exceed the application's 5s
+    # SMTP timeout before the server even sends its greeting.
+    run(['docker','run','-d','--name',name,
+         '-e','MP_SMTP_DISABLE_RDNS=true',
+         '-p',f'127.0.0.1:{smtp_port}:1025',
+         '-p',f'127.0.0.1:{api_port}:8025',
+         'axllent/mailpit:v1.31.6'], stdout=subprocess.DEVNULL)
+    wait_for_mailpit(f'http://127.0.0.1:{api_port}', smtp_port)
+
+def wait_for_mailpit(base, smtp_port, timeout=10):
+    """Require both storage/API readiness and a complete SMTP greeting/NOOP."""
+    deadline = time.monotonic() + timeout
+    last = None
+    while time.monotonic() < deadline:
+        try:
+            with urllib.request.urlopen(base + '/readyz', timeout=1) as response:
+                if response.status != 200:
+                    raise OSError('Mailpit storage is not ready')
+            with smtplib.SMTP('127.0.0.1', smtp_port, timeout=1) as smtp:
+                if smtp.noop()[0] != 250:
+                    raise OSError('Mailpit SMTP is not ready')
+            return
+        except urllib.error.HTTPError as error:
+            if error.code != 503:
+                raise
+            last = error
+        except (OSError, smtplib.SMTPException) as error:
+            last = error
+        time.sleep(.1)
+    raise TimeoutError('Mailpit API/SMTP did not become ready') from last
+
 def main():
     parser=argparse.ArgumentParser(description=__doc__);parser.add_argument('--search',action='store_true');parser.add_argument('--enrollment',action='store_true');parser.add_argument('--forum',action='store_true');parser.add_argument('--browser',action='store_true');parser.add_argument('--messenger',action='store_true');parser.add_argument('--continuity',action='store_true');parser.add_argument('--recovery',action='store_true');parser.add_argument('--messenger-ui',action='store_true');parser.add_argument('--messenger-ui-only',action='store_true');parser.add_argument('--groups',action='store_true');parser.add_argument('--groups-only',action='store_true');args=parser.parse_args();args.groups=args.groups or args.groups_only;args.messenger_ui=args.messenger_ui or (args.groups and not args.groups_only);args.messenger_ui=args.messenger_ui or args.messenger_ui_only;args.recovery=args.recovery or (args.messenger_ui and not args.messenger_ui_only);args.continuity=args.continuity or args.recovery;args.messenger=args.messenger or args.continuity or args.messenger_ui or args.groups
     password=os.environ.get('DB_TEST_ADMIN_PASSWORD')
@@ -40,7 +72,7 @@ def main():
             req=urllib.request.Request(base+'/v1/'+path,data=None if body is None else json.dumps(body).encode(),headers=headers,method=method)
             with urllib.request.urlopen(req,context=ctx,timeout=10) as response:
                 raw=response.read();return json.loads(raw) if raw else None
-        env=os.environ.copy();env.update(FORUM_ENABLED='true',DB_NAME=name,M1_DB_NAME=name,DB_PASSWORD=password,MIGRATION_DB_PASSWORD=password,MIGRATION_DB_USERNAME=env.get('DB_TEST_ADMIN_USERNAME','sa'),DB_TRUST_SERVER_CERTIFICATE='true',AUTH_HMAC_KEY=secrets.token_urlsafe(32),AUTH_REPLAY_KEY=secrets.token_urlsafe(32),OPENBAO_URL=base,OPENBAO_TOKEN_FILE=str(temp/'backend.token'),SMTP_HOST='localhost',SMTP_PORT=str(smtp),M1_MAILPIT_URL=f'http://localhost:{mailapi}')
+        env=os.environ.copy();env.update(FORUM_ENABLED='true',DB_NAME=name,M1_DB_NAME=name,DB_PASSWORD=password,MIGRATION_DB_PASSWORD=password,MIGRATION_DB_USERNAME=env.get('DB_TEST_ADMIN_USERNAME','sa'),DB_TRUST_SERVER_CERTIFICATE='true',AUTH_HMAC_KEY=secrets.token_urlsafe(32),AUTH_REPLAY_KEY=secrets.token_urlsafe(32),OPENBAO_URL=base,OPENBAO_TOKEN_FILE=str(temp/'backend.token'),SMTP_HOST='127.0.0.1',SMTP_PORT=str(smtp),SMTP_AUTH='false',SMTP_STARTTLS='false',SMTP_USERNAME='',SMTP_PASSWORD='',M1_MAILPIT_URL=f'http://localhost:{mailapi}')
         java_home=pathlib.Path(env['JAVA_HOME']) if env.get('JAVA_HOME') else pathlib.Path(shutil.which('java')).resolve().parent.parent
         trust=temp/'trust.jks';shutil.copyfile(java_home/'lib/security/cacerts',trust);keytool=java_home/'bin/keytool'
         run([str(keytool),'-importcert','-noprompt','-alias','openbao-test','-file',str(cert),'-keystore',str(trust),'-storepass','changeit'],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
@@ -61,7 +93,7 @@ def main():
             credential=request('auth/token/create',{'policies':['polylink-backend'],'no_default_policy':True,'ttl':'1h','renewable':True},root)['auth']['client_token']
             token=temp/'backend.token';token.write_text(credential);token.chmod(0o600)
             adminfile=temp/'operator-test-only.json';adminfile.write_text(json.dumps(admin));adminfile.chmod(0o600);env['M1_BAO_ADMIN_FILE']=str(adminfile)
-            run(['docker','run','-d','--name',mail,'-p',f'127.0.0.1:{smtp}:1025','-p',f'127.0.0.1:{mailapi}:8025','axllent/mailpit:v1.31.6'],stdout=subprocess.DEVNULL)
+            start_mailpit(mail, smtp, mailapi)
             # Use the project's JDBC dependencies to create only the uniquely named target.
             helper=ROOT/'backend/target/M1Admin.java';helper.parent.mkdir(parents=True,exist_ok=True)
             helper.write_text('import java.sql.*; public class M1Admin { public static void main(String[] args)throws Exception { var p=new java.util.Properties();p.setProperty("user",System.getenv("MIGRATION_DB_USERNAME"));p.setProperty("password",System.getenv("MIGRATION_DB_PASSWORD"));p.setProperty("databaseName","master");p.setProperty("encrypt","true");p.setProperty("trustServerCertificate","true");p.setProperty("loginTimeout","10");try(var c=DriverManager.getConnection("jdbc:sqlserver://"+System.getenv().getOrDefault("DB_HOST","localhost")+":"+System.getenv().getOrDefault("DB_PORT","1433"),p)){c.createStatement().execute(System.getenv("M1_ADMIN_SQL"));}}}')
