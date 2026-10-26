@@ -69,3 +69,29 @@ Its cleanup removes only that uniquely named disposable project. It does not pro
 `POST /auth/recovery/unlock` needs the real OpenBao Transit service. SQL migrations alone do not configure Java TLS. If OpenBao is unsealed and its narrow token is valid but recovery still fails, inspect the backend terminal for TLS/truststore failures. Stop the backend, run `bash tools/local/setup.sh`, then `source tools/local/env.sh` and restart from that same terminal. An environment loaded before local setup, or one loaded directly from `local.env`, can lack `JAVA_TOOL_OPTIONS` and leave Java unable to trust the local certificate. Environment changes do not update an already-running Java process.
 
 Setup reuses the existing certificate/key and copies the narrow token into the stable private state directory. It does not reinitialize OpenBao, replace Transit keys or modify account data. If the token has expired, use the existing provisioning command and operator state as described above.
+
+## SMTP timeouts in disposable acceptance tests
+
+A `503 SERVICE_UNAVAILABLE` while requesting a registration/recovery code, followed by “Verification email was not delivered”, can originate before any message is sent. Mailpit normally performs a reverse DNS lookup before its SMTP greeting. An unavailable Docker DNS resolver can delay that greeting beyond the backend's five-second read timeout. The [Mailpit runtime options](https://mailpit.axllent.org/docs/configuration/runtime-options/) document `MP_SMTP_DISABLE_RDNS` for this case.
+
+The tracked local Compose template and disposable acceptance fixture disable SMTP reverse DNS. The fixture waits for `/readyz` and an SMTP greeting/NOOP before tests, and explicitly overrides inherited SMTP credentials/auth/STARTTLS settings for its isolated, unauthenticated loopback Mailpit. Application SMTP timeouts remain five seconds, and genuine delivery failures still fail tests. Recovery test fixtures assert the request's HTTP status before trying to read an email, so a send failure is reported directly.
+
+For an existing local Mailpit, run `bash tools/local/setup.sh`, reload `source tools/local/env.sh`, then run `docker compose -f "$POLYLINK_SECURITY_COMPOSE" up -d mailpit` to apply the updated template. The acceptance runner creates its own temporary Mailpit and needs no change to running local services.
+
+For focused SQL/SMTP registration, identity and recovery checks, load the environment, set `DB_TEST_ADMIN_USERNAME`/`DB_TEST_ADMIN_PASSWORD` to the disposable-database administrator, then run:
+
+```sh
+python3 tools/m1/verify.py --mail
+```
+
+A database-free Docker regression deliberately gives the isolated Mailpit an unreachable TEST-NET DNS resolver and verifies 80 SMTP messages with the unchanged five-second client timeout:
+
+```sh
+python3 tools/m1/mailpit_smoke.py
+```
+
+It creates/removes only a uniquely named temporary container. Fixture unit tests (`python3 -m unittest discover -s tools/m1 -p 'test_*.py'`) exercise bounded readiness, delayed greetings and unexpected HTTP errors; the standard `tools/local/test.sh` runs them too.
+
+On 27 October 2026 the controlled comparison produced 8/8 SMTP greeting timeouts with reverse DNS enabled and 0/8 failures with it disabled (maximum 39 ms). The fixed 80-message regression completed in 1.3 seconds. This isolates the dependency on Docker DNS rather than compensating with longer application timeouts or retrying failed API requests.
+
+After the fix, the full disposable suite passed all 58 integration tests and 16 backend unit tests. Two further `--mail` runs each passed all 21 enrollment/identity/recovery integration tests on fresh temporary databases. All seven fixture unit tests and twelve local-tooling tests passed as well; temporary containers/databases were removed after every run.

@@ -88,7 +88,7 @@ The test script handles dependency installation, a private Python virtual enviro
 bash tools/local/test.sh
 ```
 
-For focused forum SQL/mail/browser acceptance, run `bash tools/local/test.sh --forum`.
+For focused forum SQL/mail/browser acceptance, run `bash tools/local/test.sh --forum`. For registration/recovery mail diagnostics and the Docker DNS regression, see [SMTP troubleshooting](tools/local/README.md#smtp-timeouts-in-disposable-acceptance-tests).
 
 For the complete disposable SQL/OpenBao/mail/browser acceptance suite:
 
