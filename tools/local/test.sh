@@ -16,6 +16,7 @@ command -v node >/dev/null && command -v npm >/dev/null || { echo 'Install Node.
 node -e 'if (Number(process.versions.node.split(".")[0]) < 22) { console.error("Node.js 22+ is required"); process.exit(1); }'
 cd "$repo_dir"
 python3 -m unittest discover -s tools/local -p 'test_*.py'
+python3 -m unittest discover -s tools/m1 -p 'test_*.py'
 npm ci --prefix tools/contracts --ignore-scripts
 npm test --prefix tools/contracts
 state="${POLYLINK_LOCAL_DIR:-$HOME/.config/polylink}"

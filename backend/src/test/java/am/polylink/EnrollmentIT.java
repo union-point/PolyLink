@@ -332,8 +332,9 @@ class EnrollmentIT {
             throws Exception {
         var a = applicant("graduate");
         var recovery = f.new Browser();
-        var challenge =
-                recovery.json(recovery.post("/auth/recovery/request", Map.of("email", a.email)));
+        var requested = recovery.post("/auth/recovery/request", Map.of("email", a.email));
+        assertThat(requested.statusCode()).as(requested.body()).isEqualTo(200);
+        var challenge = recovery.json(requested);
         var response =
                 recovery.post(
                         "/auth/recovery/verify",
