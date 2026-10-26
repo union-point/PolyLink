@@ -23,14 +23,16 @@ def wait_for_active(request):
             time.sleep(.1)
     raise TimeoutError('OpenBao did not become active after unsealing')
 
-def start_mailpit(name, smtp_port, api_port):
+def start_mailpit(name, smtp_port, api_port, *, dns=None):
     # Reverse DNS on Docker bridge addresses can exceed the application's 5s
     # SMTP timeout before the server even sends its greeting.
-    run(['docker','run','-d','--name',name,
-         '-e','MP_SMTP_DISABLE_RDNS=true',
-         '-p',f'127.0.0.1:{smtp_port}:1025',
-         '-p',f'127.0.0.1:{api_port}:8025',
-         'axllent/mailpit:v1.31.6'], stdout=subprocess.DEVNULL)
+    command = ['docker','run','-d','--name',name,
+               '-e','MP_SMTP_DISABLE_RDNS=true',
+               '-p',f'127.0.0.1:{smtp_port}:1025',
+               '-p',f'127.0.0.1:{api_port}:8025']
+    if dns is not None:
+        command += ['--dns', dns]
+    run(command + ['axllent/mailpit:v1.31.6'], stdout=subprocess.DEVNULL)
     wait_for_mailpit(f'http://127.0.0.1:{api_port}', smtp_port)
 
 def wait_for_mailpit(base, smtp_port, timeout=10):
