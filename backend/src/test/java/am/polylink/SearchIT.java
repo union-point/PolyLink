@@ -3,13 +3,17 @@ package am.polylink;
 import static org.assertj.core.api.Assertions.*;
 
 import am.polylink.auth.AuthFailure;
+import am.polylink.auth.Secrets;
 import am.polylink.search.SearchService;
+import java.nio.file.*;
 import java.util.*;
 import org.junit.jupiter.api.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
+import org.springframework.jdbc.core.ConnectionCallback;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.core.RowMapper;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import tools.jackson.databind.json.JsonMapper;
@@ -26,6 +30,7 @@ class SearchIT {
     @Autowired JdbcTemplate db;
     @Autowired JsonMapper mapper;
     @Autowired SearchService search;
+    @Autowired Secrets secrets;
 
     @DynamicPropertySource
     static void configuration(DynamicPropertyRegistry r) {
@@ -107,7 +112,59 @@ class SearchIT {
                     values[2]);
         assertThat(items(search.page(0, filters(name, s1, i2, null, 50), null))).isEmpty();
         assertThat(items(search.page(0, filters(name, s1, null, 2024, 50), null))).isEmpty();
-        var matches = items(search.page(0, filters(name, s1, i1, 2020, 50), null));
+        var sqls = new ArrayList<String>();
+        var bindings = new ArrayList<Object[]>();
+        var counted =
+                new JdbcTemplate(db.getDataSource()) {
+                    @Override
+                    public <T> List<T> query(String sql, RowMapper<T> mapper, Object... args) {
+                        sqls.add(sql);
+                        bindings.add(args);
+                        return super.query(sql, mapper, args);
+                    }
+                };
+        long started = System.nanoTime();
+        var matches =
+                items(
+                        new SearchService(counted, secrets)
+                                .page(0, filters(name, s1, i1, 2020, 50), null));
+        System.out.println(
+                "Search fixture: 211 users, matching page in "
+                        + (System.nanoTime() - started) / 1_000_000.0
+                        + " ms; SQL reads="
+                        + sqls.size());
+        assertThat(sqls).hasSize(2);
+        // SHOWPLAN is a separate SQL batch. Use escaped synthetic literals to avoid
+        // JDBC's prepared-statement RPC, whose own batch is not the SELECT plan.
+        String explain = sqls.getFirst();
+        for (Object arg : bindings.getFirst()) {
+            String literal =
+                    arg instanceof Number
+                            ? arg.toString()
+                            : "N'" + arg.toString().replace("'", "''") + "'";
+            int placeholder = explain.indexOf('?');
+            explain =
+                    explain.substring(0, placeholder)
+                            + literal
+                            + explain.substring(placeholder + 1);
+        }
+        String explainQuery = explain;
+        String plan =
+                db.execute(
+                        (ConnectionCallback<String>)
+                                connection -> {
+                                    try (var statement = connection.createStatement()) {
+                                        statement.execute("SET SHOWPLAN_XML ON");
+                                        try (var result = statement.executeQuery(explainQuery)) {
+                                            result.next();
+                                            return result.getString(1);
+                                        } finally {
+                                            statement.execute("SET SHOWPLAN_XML OFF");
+                                        }
+                                    }
+                                });
+        assertThat(plan).contains("ShowPlanXML");
+        Files.writeString(Path.of("target/search-query-plan.xml"), plan);
         assertThat(matches).hasSize(1);
         assertThat((List<?>) matches.getFirst().get("matchedEducation")).hasSize(2);
         assertThat(matches.getFirst().get("id")).isEqualTo("" + target);
@@ -133,11 +190,36 @@ class SearchIT {
         do {
             var page = search.page(0, filters(name, null, null, null, 100), cursor);
             assertThat(items(page).size()).isLessThanOrEqualTo(100);
-            for (var item : items(page)) found.add(item.get("id").toString());
+            for (var item : items(page)) {
+                found.add(item.get("id").toString());
+                if (item.get("id").equals("" + target))
+                    assertThat((List<?>) item.get("matchedEducation")).hasSize(4);
+            }
             cursor = (String) page.get("nextCursor");
             if (firstCursor == null) firstCursor = cursor;
         } while (cursor != null);
         assertThat(found).doesNotHaveDuplicates().hasSize(211);
+        db.update(
+                "INSERT dbo.Education(UserId,UniversityId,DegreeId,EndDate) VALUES (?,?,?,'9999-12-31')",
+                target,
+                university,
+                degree);
+        assertThat(items(search.page(0, filters(name, null, null, 9999, 50), null))).hasSize(1);
+        String literal = "Անի " + UUID.randomUUID() + " %_![";
+        int literalId = insert(literal, "lecturer");
+        var literalPage =
+                items(
+                        search.page(
+                                literalId,
+                                filters("  " + literal + "  ", null, null, null, 50),
+                                null));
+        assertThat(literalPage).hasSize(1);
+        assertThat(literalPage.getFirst().get("canOpenProfile")).isEqualTo(true);
+        assertThat(
+                        items(search.page(0, filters(name, null, null, null, 100), null))
+                                .getFirst()
+                                .get("matchedEducation"))
+                .isEqualTo(List.of());
         String token = firstCursor;
         assertThatThrownBy(() -> search.page(0, filters(name + "x", null, null, null, 100), token))
                 .isInstanceOf(AuthFailure.class);

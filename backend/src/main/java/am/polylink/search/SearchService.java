@@ -33,7 +33,7 @@ public class SearchService {
                     || limit > 100
                     || specializationId != null && specializationId < 1
                     || instituteId != null && instituteId < 1
-                    || year != null && (year < 1 || year > 9998)) throw AuthFailure.invalid();
+                    || year != null && (year < 1 || year > 9999)) throw AuthFailure.invalid();
             q = q.strip();
         }
 
@@ -63,9 +63,16 @@ public class SearchService {
                 args.add(instituteId);
             }
             if (year != null) {
-                sql += " AND e.EndDate>=? AND e.EndDate<?";
+                sql +=
+                        year == 9999
+                                ? " AND e.EndDate>=? AND e.EndDate<=?"
+                                : " AND e.EndDate>=? AND e.EndDate<?";
                 args.add(java.sql.Date.valueOf(LocalDate.of(year, 1, 1)));
-                args.add(java.sql.Date.valueOf(LocalDate.of(year + 1, 1, 1)));
+                args.add(
+                        java.sql.Date.valueOf(
+                                year == 9999
+                                        ? LocalDate.of(9999, 12, 31)
+                                        : LocalDate.of(year + 1, 1, 1)));
             }
             return sql;
         }

@@ -14,7 +14,7 @@ export function normalizeSearchPage(value) {
   return { items: value.items.map(normalizeSearchPerson), hasMore: value.hasMore, nextCursor: value.nextCursor };
 }
 export function normalizeSearchFilters(value) {
-  if (!value || !Array.isArray(value.specializations) || !Array.isArray(value.institutes) || !Array.isArray(value.years) || value.years.some(year => !Number.isInteger(year) || year < 1 || year > 9998)) invalid();
+  if (!value || !Array.isArray(value.specializations) || !Array.isArray(value.institutes) || !Array.isArray(value.years) || value.years.some(year => !Number.isInteger(year) || year < 1 || year > 9999)) invalid();
   const options = entries => entries.map(entry => ({ id: id(entry.id), label: text(entry.label) }));
   return { specializations: options(value.specializations), institutes: options(value.institutes), years: value.years };
 }

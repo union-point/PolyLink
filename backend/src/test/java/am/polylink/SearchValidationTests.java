@@ -13,7 +13,7 @@ class SearchValidationTests {
         for (int limit : new int[] {0, -1, 101, Integer.MAX_VALUE})
             assertThatThrownBy(() -> new Filters("", null, null, null, limit))
                     .isInstanceOf(AuthFailure.class);
-        for (int year : new int[] {0, -1, 9999})
+        for (int year : new int[] {0, -1, 10000})
             assertThatThrownBy(() -> new Filters("", null, null, year, 50))
                     .isInstanceOf(AuthFailure.class);
         assertThatThrownBy(() -> new Filters("x".repeat(101), null, null, null, 50))

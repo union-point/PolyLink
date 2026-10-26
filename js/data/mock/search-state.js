@@ -15,7 +15,7 @@ function parameters(input) {
     if (value === undefined) continue;
     if (!/^[1-9][0-9]*$/.test(String(value))) invalid();
     result[key] = Number(value);
-    if (!Number.isSafeInteger(result[key]) || result[key] > (key === 'limit' ? 100 : key === 'year' ? 9998 : 2147483647)) invalid();
+    if (!Number.isSafeInteger(result[key]) || result[key] > (key === 'limit' ? 100 : key === 'year' ? 9999 : 2147483647)) invalid();
   }
   return result;
 }
@@ -44,5 +44,5 @@ function page(state, input = {}) {
 export const searchOperations = {
   'search.page': page,
   'search.people': (state, { q = '' } = {}) => page(state, { q, limit: 100 }).items,
-  'search.filters': state => ({ specializations: catalog(state, 'specialization'), institutes: catalog(state, 'institute'), years: [...new Set(state.education.filter(entry => state.users.some(user => user.id === entry.userId && eligible(user))).map(entry => Number(entry.endDate?.slice(0, 4))).filter(year => year >= 1 && year <= 9998))].sort((a, b) => b - a) }),
+  'search.filters': state => ({ specializations: catalog(state, 'specialization'), institutes: catalog(state, 'institute'), years: [...new Set(state.education.filter(entry => state.users.some(user => user.id === entry.userId && eligible(user))).map(entry => Number(entry.endDate?.slice(0, 4))).filter(year => year >= 1 && year <= 9999))].sort((a, b) => b - a) }),
 };

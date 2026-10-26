@@ -34,6 +34,9 @@ test('mock validates params and binds cursors to normalized filters', () => {
   const state = fixture(), cursor = operations['search.page'](state).nextCursor;
   for (const input of [{ limit: 101 }, { year: 'bad' }, { instituteId: 0 }, { q: 'x'.repeat(101) }, { cursor, q: 'changed' }, { cursor: 'bad' }]) assert.throws(() => operations['search.page'](state, input), error => error.code === 'VALIDATION');
   assert.equal(operations['search.people'](state, { q: 'Position' }).length, 0);
+  state.education[0].endDate = '9999-12-31';
+  assert.equal(normalizeSearchPage(operations['search.page'](state, { year: 9999 })).items.length, 1);
+  assert.throws(() => operations['search.page'](state, { year: 10000 }));
 });
 test('HTTP forwards filters and cursor, returns page DTO and preserves legacy array', async () => {
   const state = fixture(), requests = [];
