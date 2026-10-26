@@ -145,7 +145,7 @@ input.error, textarea.error, select.error { border-color: var(--danger); }
 .verification-symbol { margin: 0 auto 16px; display: grid; place-items: center; width: 60px; height: 60px; border-radius: 18px; background: var(--surface); font-size: 28px; color: var(--primary-blue); }
 .single-code { font-size: 28px; letter-spacing: .35em; text-align: center; font-variant-numeric: tabular-nums; }
 .verification-actions { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 8px; margin-top: 10px; }
-.success-notice { color: #16734b; background: #edf8f2; padding: 16px; border-radius: 12px; }
+.success-notice { color: #616161; background: #f3f4f6; padding: 16px; border-radius: 12px; }
 #enrollment-status { margin: 18px 0 0; color: var(--muted); font-size: 13px; }
 .enrollment-footer { margin-top: 24px; padding-top: 18px; border-top: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; gap: 12px; font-size: 12px; }
 .enrollment-footer a { text-decoration: none; }
@@ -156,7 +156,7 @@ input.error, textarea.error, select.error { border-color: var(--danger); }
 .theme-dark .signin-btn, .theme-dark .enrollment-steps [aria-current] .step-number { color: #10253d; }
 .theme-dark [data-status][role=alert] { background: #422632; border-color: #744451; }
 .theme-dark .avatar-dropzone:hover, .theme-dark .avatar-dropzone.drag-over, .theme-dark .avatar-dropzone:focus-within { background: #243c57; }
-.theme-dark .success-notice { background: #183b30; color: #8dddb6; }
+.theme-dark .success-notice { background: #30343b; color: #c4c4c4; }
 .theme-dark .requirement.met, .theme-dark .strength-text.strong { color: #8dddb6; }
 @media (max-width: 540px) {
   body { padding: 16px 12px; align-items: flex-start; }

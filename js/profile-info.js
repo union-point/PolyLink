@@ -30,7 +30,7 @@ start(async () => {
     const text = {
       profile: ['Լրացրեք Ձեր պրոֆիլը', ''],
       code: ['Հաստատեք Ձեր էլ․ փոստը', 'Մնացել է մեկ քայլ՝ հաշիվը հաստատելու համար։'],
-      login: ['Ձեր պրոֆիլը պատրաստ է', 'Բարի գալուստ PolyLink համայնք։'],
+      login: ['Ձեր պրոֆիլը պատրաստ է', ''],
     }[name];
     element('step-title').textContent = text[0];
     element('step-description').textContent = text[1];
