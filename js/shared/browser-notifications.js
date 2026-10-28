@@ -36,7 +36,7 @@ export function createBrowserPresentation(user){
           notification.onclick=()=>{window.focus();location.href=target;notification.close();};
         }
         // Never regress the cross-tab watermark when an older tab finishes later.
-        const latest=localStorage.getItem(storageKey)||'0';if(/^\d+$/.test(through)&&(!/^\d+$/.test(latest)||BigInt(through)>BigInt(latest)))localStorage.setItem(storageKey,through);
+        const latest=localStorage.getItem(storageKey);if(/^\d+$/.test(through)&&(latest===null||!/^\d+$/.test(latest)||BigInt(through)>BigInt(latest)))localStorage.setItem(storageKey,through);
       });
     },
     stop(){stopped=true;for(const item of shown.values())item.close();shown.clear();channel?.close();window.removeEventListener('polylink-chat-read',onRead);},

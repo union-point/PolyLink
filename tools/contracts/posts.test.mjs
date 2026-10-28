@@ -39,3 +39,17 @@ test('browser notification targets dispatch explicit kinds and ignore unknown ev
  assert.equal(notificationTarget({kind:'ANNOUNCEMENT',roomId:'room'}),null);
  assert.equal(notificationTarget({kind:'POST_COMMENT'}),null);
 });
+
+test('shared browser presentation persists a zero baseline and never treats unknown activity as chat',async()=>{
+ const {createBrowserPresentation}=await import('../../js/shared/browser-notifications.js');
+ const records=new Map([['polylink.notifications.viewer','true']]),shown=[];
+ globalThis.localStorage={getItem:key=>records.get(key)??null,setItem:(key,value)=>records.set(key,value)};
+ globalThis.window={addEventListener(){},removeEventListener(){},focus(){}};
+ Object.defineProperty(globalThis,'navigator',{value:{locks:{request:async(key,options,action)=>action({})}},configurable:true});
+ globalThis.BroadcastChannel=undefined;
+ globalThis.Notification=class{static permission='granted';constructor(title,options){Object.assign(this,{title,...options});shown.push(this);}close(){}};
+ const presenter=createBrowserPresentation('viewer');await presenter.present([],'0');assert.equal(records.get('polylink.notifications.viewer.cursor'),'0');
+ await presenter.present([{id:'1',kind:'ANNOUNCEMENT',title:'Ignored',roomId:'room'}],'1');assert.equal(shown.length,0);
+ await presenter.present([{id:'2',kind:'POST_COMMENT',postId:'7',title:'Member',body:'Comment'}],'2');assert.equal(shown[0].tag,'polylink-post-7');
+ await presenter.present([{id:'2',kind:'POST_COMMENT',postId:'7',title:'Member'}],'2');assert.equal(shown.length,1);presenter.stop();
+});
