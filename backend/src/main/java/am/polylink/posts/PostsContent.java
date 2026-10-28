@@ -1,6 +1,6 @@
 package am.polylink.posts;
 
-import am.polylink.forum.ForumContent;
+import java.util.List;
 import org.owasp.html.*;
 
 /**
@@ -13,6 +13,9 @@ public final class PostsContent {
                     .allowWithoutAttributes("a")
                     .allowUrlProtocols("http", "https", "mailto")
                     .allowAttributes("href")
+                    .matching(
+                            (element, attribute, value) ->
+                                    value.matches("(?is)^(https?://|mailto:).+") ? value : null)
                     .onElements("a")
                     .requireRelsOnLinks("noopener", "noreferrer")
                     .toFactory();
@@ -28,7 +31,28 @@ public final class PostsContent {
     }
 
     public static String plain(String html) {
-        return ForumContent.plain(html).replace('\u00a0', ' ').strip();
+        var text = new StringBuilder();
+        HtmlSanitizer.sanitize(
+                html,
+                POLICY.apply(
+                        new HtmlStreamEventReceiver() {
+                            public void openDocument() {}
+
+                            public void closeDocument() {}
+
+                            public void openTag(String name, List<String> attributes) {
+                                if (name.equals("br")) text.append('\n');
+                            }
+
+                            public void closeTag(String name) {
+                                if (name.equals("p")) text.append('\n');
+                            }
+
+                            public void text(String value) {
+                                text.append(value);
+                            }
+                        }));
+        return text.toString().replace('\u00a0', ' ').strip();
     }
 
     public static String title(Object value) {

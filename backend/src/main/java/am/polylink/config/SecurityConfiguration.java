@@ -23,6 +23,7 @@ public class SecurityConfiguration {
             @Value("${polylink.identity.enabled:false}") boolean enabled,
             @Value("${polylink.messenger.enabled:false}") boolean messenger,
             @Value("${polylink.forum.enabled:false}") boolean forum,
+            @Value("${polylink.posts.enabled:false}") boolean posts,
             @Value("${polylink.frontend-origins:http://localhost:8001}") String allowedOrigins)
             throws Exception {
         var origins = Set.copyOf(Arrays.asList(allowedOrigins.split(",")));
@@ -171,6 +172,8 @@ public class SecurityConfiguration {
                                 .requestMatchers(HttpMethod.PUT, "/account/email-factor")
                                 .permitAll();
                     }
+                    if (enabled && posts)
+                        authorize.requestMatchers("/posts", "/posts/**").permitAll();
                     if (enabled && forum) {
                         authorize
                                 .requestMatchers(
