@@ -2,7 +2,7 @@ import { DataError } from '../errors.js';
 import { nextId } from './store.js';
 import { sanitizePostHtml, validatePostInput, validateComment } from '../../posts/content.js';
 const types=[{code:'job',name:'Աշխատանք'},{code:'internship',name:'Պրակտիկա'},{code:'training',name:'Դասընթաց'}];
-const spheres=[{id:'1',name:'Ծրագրավորում',isOther:false},{id:'2',name:'Ինժեներություն',isOther:false},{id:'3',name:'Տվյալների գիտություն',isOther:false},{id:'4',name:'Այլ',isOther:true}];
+const spheres=[{id:'1',name:'Ծրագրավորում',isOther:false},{id:'2',name:'Ինժեներություն',isOther:false},{id:'3',name:'Տվյալների գիտություն',isOther:false},{id:'5',name:'Մարկետինգ',isOther:false},{id:'4',name:'Այլ',isOther:true}];
 const missing=()=>new DataError('NOT_FOUND','Հայտարարությունը կամ մեկնաբանությունը հասանելի չէ։');
 const invalid=field=>new DataError('VALIDATION','Անվավեր արժեք։',{[field]:'Ստուգեք դաշտը։'});
 const find=(items,id)=>{const item=items.find(item=>item.id===String(id));if(!item)throw missing();return item;};
@@ -10,7 +10,7 @@ const fields=(data,keys)=>{if(!data||typeof data!=='object'||Array.isArray(data)
 const time=()=>new Date().toISOString();
 export function upgradePostsState(state) {
   if(state.postsDataVersion===1)return;
-  const mapping={'programming':'1','engineering':'2','data-science':'3','other':'4'};
+  const mapping={'programming':'1','engineering':'2','data-science':'3','marketing':'5','other':'4'};
   for(const post of state.posts){post.sphereId??=mapping[post.sphere]||null;delete post.sphere;post.updatedAt??=null;}
   for(const comment of state.comments)comment.updatedAt??=null;
   for(const setting of Object.values(state.settings))setting.postCommentNotifications??=true;
