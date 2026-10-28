@@ -155,6 +155,7 @@ public class SecurityConfiguration {
                                         HttpMethod.GET,
                                         "/settings",
                                         "/notifications",
+                                        "/notifications/history",
                                         "/account/export/data",
                                         "/account/export/messages",
                                         "/account/export/files/*")

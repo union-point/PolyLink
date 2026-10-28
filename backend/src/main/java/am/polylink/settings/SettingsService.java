@@ -26,6 +26,8 @@ public class SettingsService {
                     "NewListingNotifications",
                     "forumReplyNotifications",
                     "ForumReplyNotifications",
+                    "postCommentNotifications",
+                    "PostCommentNotifications",
                     "directMessageNotifications",
                     "DirectMessageNotifications");
 

@@ -18,20 +18,122 @@ public class NotificationService {
     private final TransactionTemplate tx;
     private final boolean forumEnabled;
     private final String frontend;
+    private final boolean postsEnabled;
+    private final Secrets secrets;
 
+    @org.springframework.beans.factory.annotation.Autowired
     public NotificationService(
             JdbcTemplate db,
             Clock clock,
             MailDelivery mail,
             TransactionTemplate tx,
             @Value("${polylink.forum.enabled:false}") boolean forumEnabled,
-            @Value("${polylink.frontend-origins:http://localhost:8001}") String frontend) {
+            @Value("${polylink.frontend-origins:http://localhost:8001}") String frontend,
+            @Value("${polylink.posts.enabled:false}") boolean postsEnabled,
+            Secrets secrets) {
         this.db = db;
         this.clock = clock;
         this.mail = mail;
         this.tx = tx;
         this.forumEnabled = forumEnabled;
+        this.postsEnabled = postsEnabled;
+        this.secrets = secrets;
         this.frontend = frontend.split(",")[0].strip().replaceAll("/+$", "");
+    }
+
+    public NotificationService(
+            JdbcTemplate db,
+            Clock clock,
+            MailDelivery mail,
+            TransactionTemplate tx,
+            boolean forumEnabled,
+            String frontend) {
+        this(db, clock, mail, tx, forumEnabled, frontend, false, null);
+    }
+
+    private static final String POST_ELIGIBLE =
+            " FROM auth.ActivityNotifications n JOIN dbo.Users u ON u.UserId=n.UserId JOIN auth.AccountSecurity a ON a.UserId=n.UserId JOIN dbo.UserNotificationSettings s ON s.UserId=n.UserId JOIN dbo.Posts post ON post.PostId=n.PostId AND post.UserId=n.UserId JOIN dbo.PostComments comment ON comment.CommentId=n.CommentId AND comment.PostId=post.PostId AND comment.UserId=n.ActorId JOIN dbo.Users actor ON actor.UserId=n.ActorId JOIN auth.AccountSecurity actorSecurity ON actorSecurity.UserId=n.ActorId WHERE n.Kind='POST_COMMENT' AND n.UserId<>n.ActorId AND a.AdmissionStatus='ADMITTED' AND a.EmailVerifiedAt IS NOT NULL AND actorSecurity.AdmissionStatus='ADMITTED' AND actorSecurity.EmailVerifiedAt IS NOT NULL AND s.PostCommentNotifications=1";
+    private static final String POST_FIELDS =
+            "n.Id,n.PostId,n.CommentId,n.CreatedAt,actor.FirstName,actor.LastName";
+
+    private Map<String, Object> postItem(Map<String, Object> row) {
+        return Map.of(
+                "id",
+                row.get("Id").toString(),
+                "kind",
+                "POST_COMMENT",
+                "postId",
+                row.get("PostId").toString(),
+                "commentId",
+                row.get("CommentId").toString(),
+                "createdAt",
+                row.get("CreatedAt").toString(),
+                "title",
+                row.get("FirstName") + " " + row.get("LastName"),
+                "body",
+                "Նոր մեկնաբանություն ձեր հայտարարության տակ");
+    }
+
+    /** Retained history is separate from the browser/live initial-cursor baseline. */
+    public Map<String, Object> history(int user, String cursor) {
+        var result = new LinkedHashMap<String, Object>();
+        if (!postsEnabled) {
+            result.put("items", List.of());
+            result.put("nextCursor", null);
+            return result;
+        }
+        var args = new ArrayList<Object>();
+        args.add(user);
+        String where = " AND n.UserId=?";
+        if (!cursor.isEmpty()) {
+            try {
+                if (cursor.length() > 1000) throw new IllegalArgumentException();
+                String[] parts = cursor.split("\\.", -1);
+                if (parts.length != 2) throw new IllegalArgumentException();
+                String payload =
+                        new String(
+                                Base64.getUrlDecoder().decode(parts[0]),
+                                java.nio.charset.StandardCharsets.UTF_8);
+                if (!Secrets.equal(
+                        secrets.mac("posts-activity-history", payload),
+                        Secrets.decode(parts[1], 32))) throw new IllegalArgumentException();
+                String[] fields = payload.split("\n", -1);
+                if (fields.length != 3 || !fields[0].equals("" + user))
+                    throw new IllegalArgumentException();
+                var time = OffsetDateTime.parse(fields[1]);
+                long id = Long.parseLong(fields[2]);
+                if (id < 1) throw new IllegalArgumentException();
+                where += " AND (n.CreatedAt<? OR (n.CreatedAt=? AND n.Id<?))";
+                args.add(time);
+                args.add(time);
+                args.add(id);
+            } catch (RuntimeException e) {
+                throw AuthFailure.invalid();
+            }
+        }
+        var rows =
+                Rows.query(
+                        db,
+                        "SELECT TOP (21) "
+                                + POST_FIELDS
+                                + POST_ELIGIBLE
+                                + where
+                                + " ORDER BY n.CreatedAt DESC,n.Id DESC",
+                        args.toArray());
+        boolean more = rows.size() > 20;
+        var visible = more ? rows.subList(0, 20) : rows;
+        result.put("items", visible.stream().map(this::postItem).toList());
+        String next = null;
+        if (more) {
+            var row = visible.getLast();
+            String payload = user + "\n" + row.get("CreatedAt") + "\n" + row.get("Id");
+            next =
+                    Secrets.encode(payload.getBytes(java.nio.charset.StandardCharsets.UTF_8))
+                            + "."
+                            + Secrets.encode(secrets.mac("posts-activity-history", payload));
+        }
+        result.put("nextCursor", next);
+        return result;
     }
 
     // All eligibility checks run again at delivery, including membership's sequence boundary.
@@ -121,6 +223,17 @@ public class NotificationService {
                                 "Նոր պատասխան ձեր թեմայում"));
             }
         }
+        if (postsEnabled)
+            for (var row :
+                    Rows.query(
+                            db,
+                            "SELECT "
+                                    + POST_FIELDS
+                                    + POST_ELIGIBLE
+                                    + " AND n.UserId=? AND n.Id>? AND n.Id<=? ORDER BY n.Id",
+                            user,
+                            after,
+                            through)) items.add(postItem(row));
         items.sort(Comparator.comparingLong(item -> Long.parseLong(item.get("id").toString())));
         return Map.of("items", items, "nextCursor", Long.toString(through));
     }
@@ -199,6 +312,46 @@ public class NotificationService {
             }
         }
         if (forumEnabled) deliverForum(now);
+        if (postsEnabled) deliverPosts(now);
+    }
+
+    private void deliverPosts(OffsetDateTime now) {
+        for (var event :
+                Rows.query(
+                        db,
+                        "SELECT TOP (20) Id FROM auth.ActivityNotifications WHERE Kind='POST_COMMENT' AND EmailDone=0 AND RetryAt<=? ORDER BY Id",
+                        now)) {
+            if (db.update(
+                            "UPDATE auth.ActivityNotifications SET RetryAt=? WHERE Id=? AND Kind='POST_COMMENT' AND EmailDone=0 AND RetryAt<=?",
+                            now.plusMinutes(2),
+                            event.get("Id"),
+                            now)
+                    != 1) continue;
+            try {
+                var eligible =
+                        Rows.query(
+                                db,
+                                "SELECT u.Email,n.PostId"
+                                        + POST_ELIGIBLE
+                                        + " AND n.Id=? AND s.EmailEnabled=1 AND n.EmailDone=0",
+                                event.get("Id"));
+                if (!eligible.isEmpty()) {
+                    var row = eligible.getFirst();
+                    mail.sendNotice(
+                            (String) row.get("Email"),
+                            "PolyLink: նոր մեկնաբանություն",
+                            "Ձեր հայտարարության տակ կա նոր մեկնաբանություն։ Բացեք՝ "
+                                    + frontend
+                                    + "/post.html?id="
+                                    + row.get("PostId"));
+                }
+                db.update(
+                        "UPDATE auth.ActivityNotifications SET EmailDone=1 WHERE Id=?",
+                        event.get("Id"));
+            } catch (RuntimeException ignored) {
+                /* At-least-once SMTP; retry after the lease expires. */
+            }
+        }
     }
 
     private void deliverForum(OffsetDateTime now) {

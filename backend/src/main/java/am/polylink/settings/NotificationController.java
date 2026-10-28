@@ -16,6 +16,12 @@ public class NotificationController {
         this.notifications = notifications;
     }
 
+    @GetMapping("/notifications/history")
+    public Map<String, Object> history(
+            @RequestParam(defaultValue = "") String cursor, HttpServletRequest request) {
+        return notifications.history(sessions.require(request).account().id(), cursor);
+    }
+
     @GetMapping("/notifications")
     public Map<String, Object> list(
             @RequestParam(defaultValue = "initial") String cursor,

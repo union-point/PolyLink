@@ -27,6 +27,15 @@ class SettingsValidationTests {
     }
 
     @Test
+    void postCommentPreferenceIsStrictBoolean() {
+        assertThatCode(() -> SettingsService.validate(Map.of("postCommentNotifications", false)))
+                .doesNotThrowAnyException();
+        assertThatThrownBy(
+                        () -> SettingsService.validate(Map.of("postCommentNotifications", "false")))
+                .isInstanceOf(AuthFailure.class);
+    }
+
+    @Test
     void onlySupportedLanguageCodesAreAccepted() {
         for (var code : List.of("hy", "en", "ru"))
             assertThatCode(() -> SettingsService.validate(Map.of("language", code)))

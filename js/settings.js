@@ -23,7 +23,7 @@ start(async () => {
       element.disabled = true;
       const saved = await pending(null, element.closest('.settings-item'), async () => { const updated = key==='twoFactorEnabled' ? await settings.setEmailFactor({enabled:value,password:await requestPassword(element.closest('.settings-item'))}) : await settings.update({ [key]: value }); preferences = { ...preferences, [key]: updated[key] }; });
       element.disabled = false; applyControl(element, saved ? preferences[key] : previous);
-      if (saved) notify('Կարգավորումը պահպանվել է');
+      if (saved) { notify('Կարգավորումը պահպանվել է');window.dispatchEvent(new Event('polylink-notifications-changed')); }
     };
   });
   const {browserNotificationsEnabled,enableBrowserNotifications}=await import('./shared/browser-notifications.js');
@@ -36,7 +36,7 @@ start(async () => {
   const browserToggle=document.createElement('input');browserToggle.type='checkbox';browserToggle.id='browser-notifications-toggle';browserToggle.setAttribute('aria-labelledby',browserTitle.id);browserToggle.setAttribute('aria-describedby',browserDescription.id);browserToggle.checked=browserNotificationsEnabled(user.id);
   const browserSlider=document.createElement('span');browserSlider.className='toggle-slider';browserSlider.setAttribute('aria-hidden','true');browserLabel.append(browserToggle,browserSlider);browserRow.append(browserInfo,browserLabel);
   document.querySelector('[data-setting="emailEnabled"]').closest('section').append(browserRow);
-  const deliveryNotice=document.createElement('p');deliveryNotice.className='settings-delivery-note';deliveryNotice.textContent='Հայտարարությունների և ֆորումի ծանուցումները հասանելի կլինեն այդ բաժինների սերվերային միացումից հետո։';browserRow.after(deliveryNotice);
+  const deliveryNotice=document.createElement('p');deliveryNotice.className='settings-delivery-note';deliveryNotice.textContent='Մեկնաբանությունների ծանուցումները հասանելի են հավելվածում։ Էլ․ փոստի առաքումը նաև պահանջում է միացված էլ․ փոստի կարգավորումը։ Նոր հայտարարությունների ծանուցումները հետաձգված են։';browserRow.after(deliveryNotice);
   browserToggle.onchange=async()=>{const wanted=browserToggle.checked;browserToggle.disabled=true;await pending(null,browserRow,()=>enableBrowserNotifications(user.id,wanted));browserToggle.checked=browserNotificationsEnabled(user.id);browserToggle.disabled=false;};
   const themeButtons = [...document.querySelectorAll('.theme-btn')];
   function updateThemes() {

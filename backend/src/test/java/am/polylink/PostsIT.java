@@ -29,6 +29,9 @@ class PostsIT {
     @Autowired JdbcTemplate db;
     @Autowired JsonMapper mapper;
     @Autowired PostsService posts;
+    @Autowired Accounts accounts;
+    @Autowired Secrets secrets;
+    @Autowired am.polylink.settings.NotificationService notifications;
     @Autowired am.polylink.chat.AccountLifecycle lifecycle;
     final IdentityIT fixture = new IdentityIT();
 
@@ -312,5 +315,172 @@ class PostsIT {
                                 Integer.class,
                                 id))
                 .isZero();
+    }
+
+    @Test
+    void retainedActivityHonorsCategoryEmailAndDeliveryRetry() throws Exception {
+        var a = fixture.enroll("graduate");
+        var b = fixture.enroll("lecturer");
+        int id = Integer.parseInt(posts.create(a.id(), input()).get("id").toString());
+        var baseline = notifications.list(a.id(), "initial", 100).get("nextCursor").toString();
+        for (int i = 0; i < 45; i++)
+            posts.createComment(b.id(), id, Map.of("text", "Private comment " + i));
+        assertThat((List<?>) notifications.list(a.id(), baseline, 100).get("items")).hasSize(45);
+        var history = notifications.history(a.id(), "");
+        assertThat((List<?>) history.get("items")).hasSize(20);
+        String next = history.get("nextCursor").toString();
+        call(b, "GET", "/notifications/history?cursor=" + next, null, 400);
+        call(a, "GET", "/notifications/history?cursor=" + next + "x", null, 400);
+        var second = notifications.history(a.id(), next);
+        assertThat((List<?>) second.get("items")).hasSize(20);
+        assertThat(
+                        (List<?>)
+                                notifications
+                                        .history(a.id(), second.get("nextCursor").toString())
+                                        .get("items"))
+                .hasSize(5);
+        assertThat((List<?>) notifications.history(b.id(), "").get("items")).isEmpty();
+        call(a, "PATCH", "/settings", Map.of("postCommentNotifications", false), 200);
+        assertThat((List<?>) notifications.history(a.id(), "").get("items")).isEmpty();
+        call(
+                a,
+                "PATCH",
+                "/settings",
+                Map.of("postCommentNotifications", true, "emailEnabled", false),
+                200);
+        assertThat((List<?>) notifications.history(a.id(), "").get("items")).hasSize(20);
+        var future =
+                java.time.OffsetDateTime.now(java.time.ZoneOffset.UTC)
+                        .plusDays(1)
+                        .truncatedTo(java.time.temporal.ChronoUnit.MILLIS);
+        db.update("UPDATE auth.ActivityNotifications SET RetryAt=? WHERE PostId=?", future, id);
+        var notices = new ArrayList<String>();
+        var fail = new java.util.concurrent.atomic.AtomicBoolean();
+        MailDelivery mail =
+                new MailDelivery() {
+                    public void sendCode(String email, String purpose, String code) {}
+
+                    public void sendNotice(String email, String subject, String body) {
+                        if (fail.getAndSet(false)) throw new RuntimeException("SMTP unavailable");
+                        notices.add(email + " " + body);
+                    }
+                };
+        var transaction =
+                new org.springframework.transaction.support.TransactionTemplate(
+                        new org.springframework.jdbc.datasource.DataSourceTransactionManager(
+                                db.getDataSource()));
+        var delivery =
+                new am.polylink.settings.NotificationService(
+                        db,
+                        java.time.Clock.fixed(future.toInstant(), java.time.ZoneOffset.UTC),
+                        mail,
+                        transaction,
+                        false,
+                        "http://localhost:8001",
+                        true,
+                        secrets);
+        delivery.deliver();
+        assertThat(notices).isEmpty();
+        call(a, "PATCH", "/settings", Map.of("emailEnabled", true), 200);
+        int event =
+                db.queryForObject(
+                        "SELECT MIN(Id) FROM auth.ActivityNotifications WHERE PostId=?",
+                        Integer.class,
+                        id);
+        db.update(
+                "UPDATE auth.ActivityNotifications SET EmailDone=CASE WHEN Id=? THEN 0 ELSE 1 END,RetryAt=? WHERE PostId=?",
+                event,
+                future,
+                id);
+        fail.set(true);
+        delivery.deliver();
+        assertThat(
+                        db.queryForObject(
+                                "SELECT EmailDone FROM auth.ActivityNotifications WHERE Id=?",
+                                Boolean.class,
+                                event))
+                .isFalse();
+        new am.polylink.settings.NotificationService(
+                        db,
+                        java.time.Clock.fixed(
+                                future.plusMinutes(3).toInstant(), java.time.ZoneOffset.UTC),
+                        mail,
+                        transaction,
+                        false,
+                        "http://localhost:8001",
+                        true,
+                        secrets)
+                .deliver();
+        assertThat(notices).hasSize(1);
+        assertThat(notices.getFirst())
+                .contains(a.email(), "post.html?id=" + id)
+                .doesNotContain("Private comment");
+        posts.delete(a.id(), id);
+        assertThat((List<?>) notifications.history(a.id(), "").get("items")).isEmpty();
+    }
+
+    @Test
+    void eventFailureRollsBackCommentAndAccountDeletionRetainsNeutralContent() throws Exception {
+        var a = fixture.enroll("graduate");
+        var b = fixture.enroll("lecturer");
+        int id = Integer.parseInt(posts.create(a.id(), input()).get("id").toString());
+        db.execute(
+                "CREATE TRIGGER auth.TestPostsRollback ON auth.ActivityNotifications AFTER INSERT AS BEGIN IF EXISTS(SELECT 1 FROM inserted WHERE PostId="
+                        + id
+                        + ") THROW 51000,'test rollback',1; END");
+        try {
+            assertThatThrownBy(() -> posts.createComment(b.id(), id, Map.of("text", "rollback")))
+                    .isInstanceOf(org.springframework.dao.DataAccessException.class);
+        } finally {
+            db.execute("DROP TRIGGER auth.TestPostsRollback");
+        }
+        assertThat(
+                        db.queryForObject(
+                                "SELECT COUNT(*) FROM dbo.PostComments WHERE PostId=?",
+                                Integer.class,
+                                id))
+                .isZero();
+        posts.createComment(a.id(), id, Map.of("text", "Retained self"));
+        posts.createComment(b.id(), id, Map.of("text", "Retained other"));
+        var grant =
+                call(
+                        a,
+                        "POST",
+                        "/account/export/authorize",
+                        Map.of("expectedCredential", "1", "loginSecret", a.secret()),
+                        200);
+        a.browser().exportGrant = grant.path("grant").asText();
+        var exported = call(a, "GET", "/account/export/data?category=posts", null, 200);
+        assertThat(exported.path("items").get(0).has("CreatedAtUtc")).isTrue();
+        assertThat(exported.path("items").get(0).has("UpdatedAtUtc")).isTrue();
+        assertThat(
+                        call(a, "GET", "/account/export/data?category=comments", null, 200)
+                                .path("items")
+                                .get(0)
+                                .has("CreatedAtUtc"))
+                .isTrue();
+        assertThat(
+                        call(a, "GET", "/account/export/data?category=settings", null, 200)
+                                .path("items")
+                                .get(0)
+                                .has("postCommentNotifications"))
+                .isTrue();
+        lifecycle.apply(
+                new Sessions.Principal(accounts.get(a.id()), UUID.randomUUID()),
+                new am.polylink.chat.AccountLifecycle.Request("1", a.secret()),
+                true);
+        var surviving = posts.get(b.id(), id);
+        assertThat(surviving.get("commentCount")).isEqualTo(2);
+        assertThat(((Map<?, ?>) surviving.get("author")).get("id")).isNull();
+        posts.createComment(b.id(), id, Map.of("text", "Still readable"));
+        assertThat(
+                        db.queryForObject(
+                                "SELECT COUNT(*) FROM auth.ActivityNotifications WHERE UserId=? OR ActorId=?",
+                                Integer.class,
+                                a.id(),
+                                a.id()))
+                .isZero();
+        lifecycle.replayDeletion(a.id());
+        assertThat(posts.get(b.id(), id).get("commentCount")).isEqualTo(3);
     }
 }
