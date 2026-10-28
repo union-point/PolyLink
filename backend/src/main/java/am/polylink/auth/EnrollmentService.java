@@ -171,6 +171,7 @@ public class EnrollmentService {
                         "FirstName",
                         "LastName",
                         "RoleCode",
+                        "InstituteId",
                         "DiplomaNumber",
                         "SpecializationId",
                         "StartYear",
@@ -233,6 +234,7 @@ public class EnrollmentService {
                     sessions.require(request, false);
                     return Map.of(
                             "specializations", options("Specializations", "SpecializationId"),
+                            "institutes", options("Institutes", "InstituteId"),
                             "departments", options("Departments", "DepartmentId"),
                             "professions", options("Professions", "ProfessionId"));
                 });
@@ -268,6 +270,7 @@ public class EnrollmentService {
                     int id = caller.account().id();
 
                     expect(pending(id), input.revision());
+                    reference("Institutes", "InstituteId", input.instituteId());
                     if (EnrollmentRules.text(input.firstName()).isEmpty()
                             || EnrollmentRules.text(input.lastName()).isEmpty())
                         throw AuthFailure.invalid();
@@ -283,10 +286,11 @@ public class EnrollmentService {
                         reference("Professions", "ProfessionId", input.professionId());
                     }
                     db.update(
-                            "UPDATE auth.PendingEnrollments SET FirstName=?,LastName=?,RoleCode=?,DiplomaNumber=?,SpecializationId=?,StartYear=?,EndYear=?,DepartmentId=?,ProfessionId=?,Biography=?,Revision=Revision+1,SavedAt=?,ProfileComplete=1 WHERE UserId=?",
+                            "UPDATE auth.PendingEnrollments SET FirstName=?,LastName=?,RoleCode=?,InstituteId=?,DiplomaNumber=?,SpecializationId=?,StartYear=?,EndYear=?,DepartmentId=?,ProfessionId=?,Biography=?,Revision=Revision+1,SavedAt=?,ProfileComplete=1 WHERE UserId=?",
                             input.firstName().strip(),
                             input.lastName().strip(),
                             input.role(),
+                            input.instituteId(),
                             graduate ? input.diplomaNumber().strip() : null,
                             graduate ? input.specializationId() : null,
                             graduate ? input.startYear() : null,
@@ -309,6 +313,7 @@ public class EnrollmentService {
      */
     private int match(Accounts.Account account, Map<String, Object> profile) {
         if (!Boolean.TRUE.equals(profile.get("ProfileComplete"))) throw mismatch();
+        reference("Institutes", "InstituteId", (Integer) profile.get("InstituteId"));
         EnrollmentRules.universityEmail(account.email());
         boolean graduate = "graduate".equals(profile.get("RoleCode"));
         List<Map<String, Object>> rows =
@@ -507,12 +512,29 @@ public class EnrollmentService {
                                     job.substring(0, Math.min(job.length(), 150)),
                                     profile.get("Biography"),
                                     account.id());
-                            if (!graduate)
+                            int university =
+                                    db.queryForObject(
+                                            "SELECT UniversityId FROM dbo.Universities WHERE Name=N'Հայաստանի ազգային պոլիտեխնիկական համալսարան'",
+                                            Integer.class);
+                            if (graduate)
+                                db.update(
+                                        "INSERT dbo.Education(UserId,UniversityId,InstituteId,StartDate,EndDate,SpecializationId) SELECT ?,?,?,StudyStartDate,StudyEndDate,SpecializationId FROM dbo.AlumniRegistry WHERE AlumniRegistryId=?",
+                                        account.id(),
+                                        university,
+                                        profile.get("InstituteId"),
+                                        registry);
+                            else {
+                                db.update(
+                                        "INSERT dbo.Education(UserId,UniversityId,InstituteId) VALUES (?,?,?)",
+                                        account.id(),
+                                        university,
+                                        profile.get("InstituteId"));
                                 db.update(
                                         "INSERT dbo.Lecturers(UserId,DepartmentId,ProfessionId) VALUES (?,?,?)",
                                         account.id(),
                                         profile.get("DepartmentId"),
                                         profile.get("ProfessionId"));
+                            }
                             db.update(
                                     "UPDATE auth.AccountSecurity SET AdmissionStatus='ADMITTED',EmailVerifiedAt=?,UpdatedAt=? WHERE UserId=?",
                                     now(),

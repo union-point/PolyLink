@@ -44,6 +44,7 @@ class EnrollmentIT {
         for (String sql :
                 List.of(
                         "IF NOT EXISTS(SELECT 1 FROM dbo.Specializations) INSERT dbo.Specializations(Name) VALUES (N'Enrollment fixture')",
+                        "IF NOT EXISTS(SELECT 1 FROM dbo.Institutes) INSERT dbo.Institutes(Name) VALUES (N'Enrollment fixture')",
                         "IF NOT EXISTS(SELECT 1 FROM dbo.Departments) INSERT dbo.Departments(Name) VALUES (N'Enrollment fixture')",
                         "IF NOT EXISTS(SELECT 1 FROM dbo.Professions) INSERT dbo.Professions(Name) VALUES (N'Enrollment fixture')"))
             db.execute(sql);
@@ -77,6 +78,7 @@ class EnrollmentIT {
         p.put("role", role);
         p.put("firstName", "Synthetic");
         p.put("lastName", "Fixture");
+        p.put("instituteId", ref("Institutes", "InstituteId"));
         if (role.equals("graduate")) {
             String diploma = UUID.randomUUID().toString();
             int spec = ref("Specializations", "SpecializationId");
@@ -161,7 +163,31 @@ class EnrollmentIT {
             assertThat(options.toString()).doesNotContain("DiplomaNumber", "FirstName", "Email");
             login(a);
             assertThat(b.json(b.last).path("status").asText()).isEqualTo("enrollment");
+            assertThat(
+                            db.queryForObject(
+                                    "SELECT COUNT(*) FROM dbo.Education WHERE UserId=?",
+                                    Integer.class,
+                                    a.id))
+                    .isZero();
             admit(a);
+            var education = db.queryForMap("SELECT * FROM dbo.Education WHERE UserId=?", a.id);
+            assertThat(education.get("InstituteId")).isEqualTo(a.profile.get("instituteId"));
+            assertThat(education.get("UniversityId"))
+                    .isEqualTo(
+                            db.queryForObject(
+                                    "SELECT UniversityId FROM dbo.Universities WHERE Name=N'Հայաստանի ազգային պոլիտեխնիկական համալսարան'",
+                                    Integer.class));
+            assertThat(education.get("DegreeId")).isNull();
+            if (role.equals("graduate")) {
+                assertThat(education.get("StartDate").toString()).isEqualTo("2020-09-01");
+                assertThat(education.get("EndDate").toString()).isEqualTo("2024-06-01");
+                assertThat(education.get("SpecializationId"))
+                        .isEqualTo(a.profile.get("specializationId"));
+            } else {
+                assertThat(education.get("StartDate")).isNull();
+                assertThat(education.get("EndDate")).isNull();
+                assertThat(education.get("SpecializationId")).isNull();
+            }
             assertThat(b.get("/auth/me").statusCode()).isEqualTo(401);
             login(a);
             assertThat(
@@ -178,6 +204,34 @@ class EnrollmentIT {
                                     Integer.class,
                                     a.id))
                     .isEqualTo(1);
+        }
+    }
+
+    @Test
+    void instituteIsRequiredForBothRolesAndSurvivesProfileReload() throws Exception {
+        for (String role : List.of("graduate", "lecturer")) {
+            var a = applicant(role);
+            var institute = a.profile.remove("instituteId");
+            assertThat(a.browser.call("PUT", "/auth/enrollment/profile", a.profile).statusCode())
+                    .isEqualTo(400);
+            a.profile.put("instituteId", 2147483647);
+            assertThat(a.browser.call("PUT", "/auth/enrollment/profile", a.profile).statusCode())
+                    .isEqualTo(400);
+            a.profile.put("instituteId", institute);
+            assertThat(save(a).path("profile").path("instituteId").asInt()).isEqualTo(institute);
+            assertThat(
+                            a.browser
+                                    .json(a.browser.get("/auth/enrollment"))
+                                    .path("profile")
+                                    .path("instituteId")
+                                    .asInt())
+                    .isEqualTo(institute);
+            assertThat(
+                            db.queryForObject(
+                                    "SELECT COUNT(*) FROM dbo.Education WHERE UserId=?",
+                                    Integer.class,
+                                    a.id))
+                    .isZero();
         }
     }
 
@@ -249,6 +303,12 @@ class EnrollmentIT {
         assertThat(a.browser.post("/auth/email/verify", proof).statusCode()).isEqualTo(200);
         assertThat(a.browser.post("/auth/email/verify", proof).statusCode()).isEqualTo(200);
         assertThat(
+                        db.queryForObject(
+                                "SELECT COUNT(*) FROM dbo.Education WHERE UserId=?",
+                                Integer.class,
+                                a.id))
+                .isEqualTo(1);
+        assertThat(
                         a.browser
                                 .post(
                                         "/auth/email/verify",
@@ -287,6 +347,12 @@ class EnrollmentIT {
                                 valid.get("challengeId")))
                 .isEqualTo(5);
         assertThat(limited.browser.post("/auth/email/verify", valid).statusCode()).isEqualTo(401);
+        assertThat(
+                        db.queryForObject(
+                                "SELECT COUNT(*) FROM dbo.Education WHERE UserId=?",
+                                Integer.class,
+                                limited.id))
+                .isZero();
     }
 
     @Test
@@ -321,6 +387,13 @@ class EnrollmentIT {
         assertThat(
                         db.queryForObject(
                                 "SELECT COUNT(*) FROM auth.RegistryClaims WHERE UserId IN (?,?)",
+                                Integer.class,
+                                a.id,
+                                b.id))
+                .isEqualTo(1);
+        assertThat(
+                        db.queryForObject(
+                                "SELECT COUNT(*) FROM dbo.Education WHERE UserId IN (?,?)",
                                 Integer.class,
                                 a.id,
                                 b.id))

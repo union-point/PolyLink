@@ -63,7 +63,7 @@ start(async () => {
     const next = await auth.enrollment();
     if (next.status === 'enrollment') {
       const options = await auth.enrollmentOptions();
-      for (const [field, list] of [['specializationId', options.specializations], ['departmentId', options.departments], ['professionId', options.professions]])
+      for (const [field, list] of [['instituteId', options.institutes], ['specializationId', options.specializations], ['departmentId', options.departments], ['professionId', options.professions]])
         element(field).replaceChildren(new Option('Ընտրեք…', ''), ...list.map(item => new Option(item.name, String(item.id))));
     }
     render(next);
@@ -80,7 +80,7 @@ start(async () => {
     if (graduate && numeric('endYear') < numeric('startYear'))
       throw new DataError('VALIDATION', 'Ուսման ավարտը չի կարող լինել սկզբից առաջ։', { endYear: 'Ստուգեք ուսման տարիները։' });
     return {
-      revision: state.revision, role: selectedRole(), firstName: state.profile.firstName, lastName: state.profile.lastName,
+      revision: state.revision, role: selectedRole(), firstName: state.profile.firstName, lastName: state.profile.lastName, instituteId: numeric('instituteId'),
       diplomaNumber: graduate ? element('diplomaNumber').value.trim() : null,
       specializationId: graduate ? numeric('specializationId') : null, startYear: graduate ? numeric('startYear') : null, endYear: graduate ? numeric('endYear') : null,
       departmentId: graduate ? null : numeric('departmentId'), professionId: graduate ? null : numeric('professionId'), biography: element('biography').value.trim(),

@@ -21,6 +21,7 @@ public final class EnrollmentDtos {
             @NotNull @Pattern(regexp = "graduate|lecturer") String role,
             @NotBlank @Size(max = 100) String firstName,
             @NotBlank @Size(max = 100) String lastName,
+            @NotNull @Positive Integer instituteId,
             @Size(max = 100) String diplomaNumber,
             @Positive Integer specializationId,
             @Min(1900) @Max(2200) Integer startYear,

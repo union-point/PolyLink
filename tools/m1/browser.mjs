@@ -64,6 +64,7 @@ try{
     await page.waitForURL('**/profile_info.html');await page.locator('#profile-fields:not([disabled])').waitFor();
     // Reload resumes the restricted enrollment without storing a password or a derived login proof.
     await page.reload();await page.locator('#profile-fields:not([disabled])').waitFor();
+    await page.locator('#instituteId').selectOption({index:1});
     await page.locator('#diplomaNumber').fill(email);await page.locator('#specializationId').selectOption({index:1});await page.locator('#startYear').fill('2021');await page.locator('#endYear').fill('2025');
     await page.locator('#submit-profile').click();await page.locator('#enrollment-code:not([hidden])').waitFor();
     await verifyCode();await page.locator('#enrollment-login:not([hidden])').waitFor();

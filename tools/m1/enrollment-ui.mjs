@@ -23,6 +23,9 @@ try{
     await page.locator('#register-form [type=submit]').click();await page.waitForURL('**/profile_info.html');await page.locator('#profile-fields:not([disabled])').waitFor();
     assert.equal(await page.evaluate(async()=>{const {auth}=await import('/js/services/index.js');return auth.me();}),null);
     await page.locator(`[name=role][value=${role}]`).check();assert.equal(await page.locator('#firstName,#lastName').count(),0);
+    assert.equal(await page.getByLabel('Ֆակուլտետ/ինստիտւտ', {exact:true}).getAttribute('required'), '');
+    await page.locator('#save-profile').click();await page.locator('#instituteId[aria-invalid=true]').waitFor();
+    await page.locator('#instituteId').selectOption({index:1});
     if(role==='graduate') {await page.locator('#diplomaNumber').fill(email+'-wrong');await page.locator('#specializationId').selectOption({index:1});await page.locator('#startYear').fill('2021');await page.locator('#endYear').fill('2025');}
     else {await page.locator('#departmentId').selectOption({index:1});await page.locator('#professionId').selectOption({index:1});}
     if(role==='graduate') {
@@ -33,7 +36,7 @@ try{
     // A second tab saves a newer revision. The first tab must retain fields and show a conflict.
     const stale=await context.newPage();await stale.goto(origin+'/profile_info.html');await stale.locator('#profile-fields:not([disabled])').waitFor();await stale.locator('#biography').fill('Saved in another tab');await Promise.all([stale.waitForResponse(response=>response.url()===api+'/auth/enrollment/profile'&&response.status()===200),stale.locator('#save-profile').click()]);await stale.getByText('Տվյալները պահպանված են։',{exact:true}).waitFor();
     await page.locator('#submit-profile').click();await page.getByText('Տվյալները փոխվել են մեկ այլ ներդիրում։ Թարմացրեք էջը և կրկին փորձեք։',{exact:true}).waitFor();assert.equal(await page.locator('#firstName,#lastName').count(),0);
-    await stale.close();await page.reload();await page.locator('#profile-fields:not([disabled])').waitFor();assert.equal(await page.locator('#biography').inputValue(),'Saved in another tab');
+    await stale.close();await page.reload();await page.locator('#profile-fields:not([disabled])').waitFor();assert.equal(await page.locator('#biography').inputValue(),'Saved in another tab');assert.notEqual(await page.locator('#instituteId').inputValue(),'');
     if(process.env.M1_ENROLLMENT_SCREENSHOT)await page.screenshot({path:`${process.env.M1_ENROLLMENT_SCREENSHOT}-${role}.png`,fullPage:true});
     assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),'Enrollment form fits a mobile viewport');
     await page.locator('#submit-profile').click();await page.locator('#enrollment-code:not([hidden])').waitFor();await page.reload();await page.locator('#enrollment-code:not([hidden])').waitFor();

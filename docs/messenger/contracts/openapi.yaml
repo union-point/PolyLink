@@ -3212,6 +3212,11 @@ components:
           enum:
           - graduate
           - lecturer
+        instituteId:
+          type:
+          - integer
+          - 'null'
+          minimum: 1
         diplomaNumber:
           type:
           - string
@@ -3273,6 +3278,9 @@ components:
           enum:
           - graduate
           - lecturer
+        instituteId:
+          type: integer
+          minimum: 1
         diplomaNumber:
           type:
           - string
@@ -3311,6 +3319,7 @@ components:
           - 'null'
           maxLength: 2000
       required:
+      - instituteId
       - revision
       - firstName
       - lastName
@@ -3408,6 +3417,11 @@ components:
       type: object
       additionalProperties: false
       properties:
+        institutes:
+          type: array
+          maxItems: 1000
+          items:
+            $ref: '#/components/schemas/EnrollmentReference'
         specializations:
           type: array
           maxItems: 1000
@@ -3424,6 +3438,7 @@ components:
           items:
             $ref: '#/components/schemas/EnrollmentReference'
       required:
+      - institutes
       - specializations
       - departments
       - professions

@@ -32,6 +32,7 @@ try {
     await page.locator('#avatar-file').setInputFiles({ name: 'portrait.png', mimeType: 'image/png', buffer: Buffer.from(picture, 'base64') });
     await page.getByText('Լուսանկարը պահպանված է։', { exact: true }).waitFor({timeout:10000}).catch(async error => { console.log(await page.locator('main').innerText()); console.log(errors); throw error; });
     assert((await page.locator('#avatar-preview').getAttribute('src')).startsWith('blob:'));
+    await page.locator('#instituteId').selectOption('1');
     if (role === 'graduate') {
       await page.locator('#diplomaNumber').fill('DEMO-2025'); await page.locator('#specializationId').selectOption('1');
       await page.locator('#startYear').fill('2021'); await page.locator('#endYear').fill('2020');

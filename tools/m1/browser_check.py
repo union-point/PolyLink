@@ -15,7 +15,7 @@ def run(root,env,admin_sql,bao_request,root_token,messenger=False,continuity=Fal
     records += [(email.replace('browser-',f'm6-{i}-'),'M6',f'User{i}','graduate') for i in range(1,5)]
     records += [(email.replace('browser-',f'forum-{i}-'),'Forum',role,role) for i,role in [(1,'graduate'),(2,'lecturer')]]
     sql=f"USE [{env['M1_DB_NAME']}]; "
-    sql+="IF NOT EXISTS(SELECT 1 FROM dbo.Specializations) INSERT dbo.Specializations(Name) VALUES (N'Browser fixture'); IF NOT EXISTS(SELECT 1 FROM dbo.Departments) INSERT dbo.Departments(Name) VALUES (N'Browser fixture'); IF NOT EXISTS(SELECT 1 FROM dbo.Professions) INSERT dbo.Professions(Name) VALUES (N'Browser fixture'); "
+    sql+="IF NOT EXISTS(SELECT 1 FROM dbo.Institutes) INSERT dbo.Institutes(Name) VALUES (N'Browser fixture'); IF NOT EXISTS(SELECT 1 FROM dbo.Specializations) INSERT dbo.Specializations(Name) VALUES (N'Browser fixture'); IF NOT EXISTS(SELECT 1 FROM dbo.Departments) INSERT dbo.Departments(Name) VALUES (N'Browser fixture'); IF NOT EXISTS(SELECT 1 FROM dbo.Professions) INSERT dbo.Professions(Name) VALUES (N'Browser fixture'); "
     for address,first,last,role in records:
         if role=='graduate':
             sql+=f"INSERT dbo.AlumniRegistry(FirstName,LastName,DiplomaNumber,StudyStartDate,StudyEndDate,SpecializationId) SELECT N'{first}',N'{last}',N'{address}','2021-09-01','2025-06-01',(SELECT TOP(1) SpecializationId FROM dbo.Specializations ORDER BY SpecializationId); "

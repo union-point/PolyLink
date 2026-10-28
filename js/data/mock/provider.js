@@ -30,9 +30,10 @@ function enrollmentState(state) {
   const user=enrollmentUser(state),entry=user.enrollment;
   return user.status==='active'?{status:'admitted',email:user.email}:{status:'enrollment',email:user.email,revision:entry.revision,profile:entry.profile,avatar:user.avatar,challenge:entry.challenge,expiresAt:new Date(entry.savedAt+7*86400000).toISOString()};
 }
-const enrollmentOptions={specializations:[{id:1,name:'Ծրագրային ճարտարագիտություն'}],departments:[{id:1,name:'Ծրագրային ապահովման ամբիոն'}],professions:[{id:1,name:'Դասախոս'}]};
+const enrollmentOptions={institutes:[{id:1,name:'ՏՀՏԷ'}],specializations:[{id:1,name:'Ծրագրային ճարտարագիտություն'}],departments:[{id:1,name:'Ծրագրային ապահովման ամբիոն'}],professions:[{id:1,name:'Դասախոս'}]};
 function checkRegistry(state,user) {
   const p=user.enrollment.profile;
+  if(!enrollmentOptions.institutes.some(item=>item.id===p.instituteId))throw new DataError('VALIDATION','Ընտրեք ֆակուլտետը/ինստիտուտը։');
   const normalize=value=>String(value??'').normalize('NFKC').replace(/[\s\p{Z}]+/gu,' ').trim().toLowerCase();
   const graduate=p.role==='graduate';
   const valid=graduate?normalize(p.firstName)==='demo'&&normalize(p.lastName)==='graduate'&&normalize(p.diplomaNumber)==='demo-2025'&&p.specializationId===1&&p.startYear===2021&&p.endYear===2025:normalize(p.firstName)==='demo'&&normalize(p.lastName)==='lecturer'&&user.email==='new.lecturer@polytechnic.am'&&p.departmentId===1&&p.professionId===1;
@@ -132,6 +133,7 @@ const operations = {
     if(user.status!=='pending'||data.revision!==entry.revision)throw new DataError('REVISION_CONFLICT','Թարմացրեք էջը։');
     if(!['graduate','lecturer'].includes(data.role))throw new DataError('VALIDATION','Ընտրեք դերը։');
     required(data.firstName,'firstName',100);required(data.lastName,'lastName',100);
+    if(!enrollmentOptions.institutes.some(item=>item.id===data.instituteId))throw new DataError('VALIDATION','Ընտրեք ֆակուլտետը/ինստիտուտը։',{instituteId:'Ընտրեք ֆակուլտետը/ինստիտուտը։'});
     if(data.role==='graduate') {required(data.diplomaNumber,'diplomaNumber',100);if(!data.specializationId||!data.startYear||data.endYear<data.startYear)throw new DataError('VALIDATION','Լրացրեք ուսման տվյալները։');}
     else if(!data.departmentId||!data.professionId)throw new DataError('VALIDATION','Ընտրեք ամբիոնը և մասնագիտությունը։');
     entry.profile={...data};delete entry.profile.revision;entry.revision++;entry.savedAt=Date.now();delete entry.challenge;
@@ -153,6 +155,8 @@ const operations = {
     if(item.userId!==user.id||item.revision!==entry.revision)throw new DataError('UNAUTHORIZED','Անվավեր կոդ։');
     const failure=checkCode(item,code);if(failure)return failure;
     const claim=checkRegistry(state,user);item.consumed=true;entry.completed=challengeId;user.registryClaim=claim;
+    const graduate=entry.profile.role==='graduate';
+    state.education.push({id:nextId(state,'education'),userId:user.id,institution:'Հայաստանի ազգային պոլիտեխնիկական համալսարան',degree:null,institute:enrollmentOptions.institutes.find(item=>item.id===entry.profile.instituteId).name,specialization:graduate?enrollmentOptions.specializations.find(item=>item.id===entry.profile.specializationId).name:null,startDate:graduate?'2021-09-01':null,endDate:graduate?'2025-06-01':null});
     Object.assign(user,{firstName:entry.profile.firstName,lastName:entry.profile.lastName,role:entry.profile.role,status:'active',onboardingComplete:true});user.name=`${user.firstName} ${user.lastName}`;
     return enrollmentState(state);
   },

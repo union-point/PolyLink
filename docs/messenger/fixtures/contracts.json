@@ -222,7 +222,8 @@
       "diplomaNumber": "DEMO-2025",
       "specializationId": 1,
       "startYear": 2021,
-      "endYear": 2025
+      "endYear": 2025,
+      "instituteId": 1
     }
   },
   {
@@ -236,7 +237,8 @@
       "lastName": "Graduate",
       "specializationId": 1,
       "startYear": 2021,
-      "endYear": 2025
+      "endYear": 2025,
+      "instituteId": 1
     }
   },
   {
@@ -248,7 +250,8 @@
       "role": "lecturer",
       "firstName": "Demo",
       "lastName": "Lecturer",
-      "departmentId": 1
+      "departmentId": 1,
+      "instituteId": 1
     }
   },
   {
@@ -268,6 +271,37 @@
     "value": {
       "status": "enrollment",
       "next": "profile_info.html"
+    }
+  },
+  {
+    "name": "enrollment-without-institute",
+    "schema": "EnrollmentProfileRequest",
+    "valid": false,
+    "value": {
+      "revision": 1,
+      "role": "graduate",
+      "firstName": "Demo",
+      "lastName": "Graduate",
+      "diplomaNumber": "DEMO-2025",
+      "specializationId": 1,
+      "startYear": 2021,
+      "endYear": 2025
+    }
+  },
+  {
+    "name": "enrollment-with-invalid-institute",
+    "schema": "EnrollmentProfileRequest",
+    "valid": false,
+    "value": {
+      "revision": 1,
+      "role": "graduate",
+      "firstName": "Demo",
+      "lastName": "Graduate",
+      "diplomaNumber": "DEMO-2025",
+      "specializationId": 1,
+      "startYear": 2021,
+      "endYear": 2025,
+      "instituteId": 0
     }
   }
 ]
