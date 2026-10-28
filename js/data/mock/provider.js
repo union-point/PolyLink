@@ -1,3 +1,4 @@
+import { postOperations, activityOperations, upgradePostsState } from './posts-state.js';
 import { searchOperations } from './search-state.js';
 import { forumOperations, upgradeForumState } from './forum-state.js';
 import { upgradeChatState, preference, blocked as isBlocked, canSend, visibleMessages, markRead, hideRoom, appendMessage, messagePage } from './chat-state.js';
@@ -7,8 +8,8 @@ import { DataError } from '../errors.js';
 import { universityEmail, email, password, required, validateEducation, validateCertificate, validatePost, validateImage, richContent } from '../validation.js';
 
 const now = () => new Date().toISOString();
-const defaults = () => ({ isProfilePublic: true, showEmail: false, twoFactorEnabled: false, language: 'hy', emailEnabled: true, newListingNotifications: true, forumReplyNotifications: true, directMessageNotifications: true });
-const readOperations = new Set(['auth.me', 'profiles.get', 'profiles.education.list', 'profiles.certificates.list', 'posts.list', 'posts.comments.list', 'forum.categories', 'forum.list', 'forum.get', 'forum.replies.list', 'forum.replies.get', 'search.people', 'search.page', 'search.filters', 'chat.list', 'chat.messages', 'chat.page', 'chat.participants', 'chat.loadDraft', 'settings.get', 'settings.export']);
+const defaults = () => ({ isProfilePublic: true, showEmail: false, twoFactorEnabled: false, language: 'hy', emailEnabled: true, newListingNotifications: true, forumReplyNotifications: true, directMessageNotifications: true, postCommentNotifications: true });
+const readOperations = new Set(['auth.me', 'profiles.get', 'profiles.education.list', 'profiles.certificates.list', 'posts.options', 'posts.get', 'posts.list', 'posts.comments.list', 'notifications.list', 'notifications.history', 'forum.categories', 'forum.list', 'forum.get', 'forum.replies.list', 'forum.replies.get', 'search.people', 'search.page', 'search.filters', 'chat.list', 'chat.messages', 'chat.page', 'chat.participants', 'chat.loadDraft', 'settings.get', 'settings.export']);
 const publicOperations = new Set(['auth.uploadEnrollmentAvatar','auth.removeEnrollmentAvatar','auth.enrollment','auth.enrollmentOptions','auth.saveEnrollment','auth.submitEnrollment','auth.logoutEnrollment','auth.verifyEmail','auth.me', 'auth.login', 'auth.register', 'auth.verifySecondFactor', 'auth.resendChallenge', 'auth.forgotPassword', 'auth.verifyRecovery', 'auth.resetPassword', 'auth.logout']);
 
 function find(records, id) {
@@ -56,10 +57,6 @@ function profile(state, user) {
   return { ...publicUser, ...(own || settings.showEmail ? { email: address } : {}),
     education: state.education.filter(record => record.userId === user.id),
     licenses: state.certificates.filter(record => record.userId === user.id) };
-}
-function commentView(state, record) { return { ...record, author: author(state, record.userId) }; }
-function postView(state, record) {
-  return { ...record, author: author(state, record.userId), comments: state.comments.filter(comment => comment.postId === record.id).map(comment => commentView(state, comment)) };
 }
 function roomForUser(state, id) {
   const room = find(state.rooms, id);
@@ -255,21 +252,8 @@ const operations = {
     me(state)[kind] = `media:${id}`;
     return profile(state, me(state));
   },
-  'posts.list': (state, filters = {}) => {
-    if (filters.userId) profile(state, find(state.users, filters.userId));
-    return state.posts.filter(post => (!filters.userId || post.userId === String(filters.userId)) && (!filters.category || post.category === filters.category) && (!filters.sphere || post.sphere === filters.sphere))
-      .sort((a, b) => b.createdAt.localeCompare(a.createdAt) || b.id.localeCompare(a.id)).map(post => postView(state, post));
-  },
-  'posts.create': (state, data) => { const post = { ...validatePost(data), id: nextId(state, 'post'), userId: me(state).id, createdAt: now() }; state.posts.push(post); return postView(state, post); },
-  'posts.update': (state, id, data) => { const post = owner(state, find(state.posts, id)); Object.assign(post, validatePost({ ...post, ...data })); return postView(state, post); },
-  'posts.delete': (state, id) => { owner(state, find(state.posts, id)); state.posts = state.posts.filter(post => post.id !== String(id)); state.comments = state.comments.filter(comment => comment.postId !== String(id)); return null; },
-  'posts.comments.list': (state, id) => { find(state.posts, id); return state.comments.filter(comment => comment.postId === String(id)).map(comment => commentView(state, comment)); },
-  'posts.comments.create': (state, postId, data) => { find(state.posts, postId); const comment = { id: nextId(state, 'comment'), postId: String(postId), userId: me(state).id, text: required(data.text, 'text', 2000), createdAt: now() }; state.comments.push(comment); return commentView(state, comment); },
-  'posts.comments.update': (state, postId, id, data) => {
-    const comment = owner(state, find(state.comments, id)); if (comment.postId !== String(postId)) throw new DataError('NOT_FOUND', 'Մեկնաբանությունը չի գտնվել։');
-    comment.text = required(data.text, 'text', 2000); return commentView(state, comment);
-  },
-  'posts.comments.delete': (state, postId, id) => { const comment = owner(state, find(state.comments, id)); if (comment.postId !== String(postId)) throw new DataError('NOT_FOUND', 'Մեկնաբանությունը չի գտնվել։'); state.comments = state.comments.filter(record => record.id !== String(id)); return null; },
+  ...postOperations,
+  ...activityOperations,
   ...forumOperations,
   ...searchOperations,
   'chat.list': state => state.rooms.filter(room => room.participants.includes(me(state).id) && !preference(room, me(state).id).hidden).map(room => roomView(state, room)),
@@ -286,7 +270,7 @@ const operations = {
   'chat.messages': (state,id)=>visibleMessages(state,roomForUser(state,id),me(state).id).map(message=>messageView(state,message)),
   'chat.page': (state,id,params)=>{const page=messagePage(visibleMessages(state,roomForUser(state,id),me(state).id),params);return {...page,items:page.items.map(message=>messageView(state,message))};},
   'chat.send': (state, roomId, data) => {
-    upgradeChatState(state); upgradeForumState(state);const room = roomForUser(state, roomId), own = me(state).id;
+    upgradeChatState(state); upgradeForumState(state); upgradePostsState(state);const room = roomForUser(state, roomId), own = me(state).id;
     if (!room.isGroup&&room.participants.length < 2) throw new DataError('FORBIDDEN', 'Նամակագրությունն ավարտված է։');
     if (!canSend(state,room)) throw new DataError('FORBIDDEN', 'Հաղորդագրությունը չի կարող ուղարկվել։ Օգտատերը արգելափակված է։');
     const text = String(data.text || '').trim();
@@ -340,11 +324,11 @@ const operations = {
     return {status:'challenge',requestId:item.id,stage:item.stage,...created};
   },
   'settings.changePassword': (state, data) => { const user = me(state); if (state.credentials[user.id] !== data.oldDigest) throw new DataError('UNAUTHORIZED', 'Սխալ գաղտնաբառ։'); state.credentials[user.id] = data.newDigest; user.passwordChangedAt = now(); state.challenges.filter(item => item.userId === user.id).forEach(item => { item.consumed = true; }); return null; },
-  'settings.deactivate': (state, data) => { const user = me(state); if (state.credentials[user.id] !== data.digest) throw new DataError('UNAUTHORIZED', 'Սխալ գաղտնաբառ։'); user.status = 'deactivated'; state.sessionUserId = null; return null; },
+  'settings.deactivate': (state, data) => { const user = me(state); if (state.credentials[user.id] !== data.digest) throw new DataError('UNAUTHORIZED', 'Սխալ գաղտնաբառ։'); user.status = 'deactivated'; state.activity=state.activity.filter(item=>item.userId!==user.id&&item.actorId!==user.id); state.sessionUserId = null; return null; },
   'settings.deleteAccount': (state, data) => {
     const user = me(state), id = user.id;
     if (state.credentials[id] !== data.digest) throw new DataError('UNAUTHORIZED', 'Սխալ գաղտնաբառ։');
-    const postIds = state.posts.filter(item => item.userId === id).map(item => item.id);
+    state.activity=state.activity.filter(item=>item.userId!==id&&item.actorId!==id);
     const topicIds = state.topics.filter(item => item.userId === id).map(item => item.id);
     for (const key of ['education', 'certificates', 'media']) state[key] = state[key].filter(item => item.userId !== id);
 
@@ -391,7 +375,7 @@ export function createMockProvider() {
     if(['auth.logout','chat.hide'].includes(operation)){for(const url of urls.values())URL.revokeObjectURL(url);urls.clear();}
     if (!operations[operation]) throw new DataError('UNSUPPORTED', 'Այս գործողությունը հասանելի չէ։');
     const scenario = await transaction(state => {
-      upgradeChatState(state); upgradeForumState(state);
+      upgradeChatState(state); upgradeForumState(state); upgradePostsState(state);
       const failure = state.scenario.failures[operation];
       delete state.scenario.failures[operation];
       return { latency: state.scenario.latency, failure };
@@ -418,7 +402,7 @@ export function createMockProvider() {
       else args = [{ ...data,digest: await digest(user.email, data.password) }];
     }
     if(operation==='chat.send'&&args[1]?.file){const file=validateImage(args[1].file);await validateImageBytes(new Uint8Array(await file.arrayBuffer()),file.type);}
-    const write = !readOperations.has(operation);
+    const write = !readOperations.has(operation) || ['posts.list','posts.comments.list','notifications.history'].includes(operation);
     const result = await transaction(state => {
       for(const room of state.rooms)if(room.isGroup&&!room.ownerId&&!room.closed){room.ownerId=[...room.participants].sort(compareUserIds)[0];room.membershipVersion||='1';room.metadataVersion||='1';}
       if (!publicOperations.has(operation)) me(state);
@@ -447,7 +431,7 @@ export function createMockProvider() {
       async clearScenarios() { await transaction(state => { state.scenario = { latency: 0, failures: {} }; }, { write: true }); },
       async incoming(roomId, text) {
         const result = await transaction(state => {
-          upgradeChatState(state); upgradeForumState(state);const room = roomForUser(state, roomId), own = me(state).id;
+          upgradeChatState(state); upgradeForumState(state); upgradePostsState(state);const room = roomForUser(state, roomId), own = me(state).id;
           const senderId = room.participants.find(id => id !== own);
           if (!senderId) throw new DataError('VALIDATION', 'No other participant');
           if (!room.isGroup&&(isBlocked(state, own, senderId) || isBlocked(state, senderId, own))) throw new DataError('FORBIDDEN', 'Օգտատերը արգելափակված է։');

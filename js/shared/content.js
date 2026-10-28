@@ -15,9 +15,9 @@ export function safeUrl(value, { image = false } = {}) {
 }
 
 // Preserve the existing editor's simple rich text, removing all scripts/handlers/styles.
-export function sanitizeHtml(value) {
+export function sanitizeHtml(value, { elements } = {}) {
   const source = new DOMParser().parseFromString(String(value ?? ''), 'text/html');
-  const allowed = new Set(['P', 'BR', 'B', 'STRONG', 'I', 'EM', 'U', 'UL', 'OL', 'LI', 'A', 'DIV', 'H2', 'H3', 'BLOCKQUOTE']);
+  const allowed = elements || new Set(['P', 'BR', 'B', 'STRONG', 'I', 'EM', 'U', 'UL', 'OL', 'LI', 'A', 'DIV', 'H2', 'H3', 'BLOCKQUOTE']);
   const dangerous = new Set(['SCRIPT', 'STYLE', 'IFRAME', 'OBJECT', 'EMBED', 'SVG', 'MATH', 'FORM', 'INPUT']);
   function clean(parent) {
     for (const node of [...parent.childNodes]) {

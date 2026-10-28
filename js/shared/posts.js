@@ -1,20 +1,13 @@
-import { escapeHtml as e, sanitizeHtml, safeUrl } from './content.js';
+import { escapeHtml as e, safeUrl } from './content.js';
+import { sanitizePostHtml } from '../posts/content.js';
 import { dateTime } from './ui.js';
-import { categories } from '../data/models.js';
-
+function attribution(author) {const name=e(author?.name);return author?.canOpenProfile&&author.id?`<a href="user.html?id=${encodeURIComponent(author.id)}">${name}</a>`:name;}
 export function renderComment(comment) {
-  return `<div class="comment" data-comment-id="${e(comment.id)}">
-    <img src="${e(safeUrl(comment.author?.avatar || 'image/logo.png', { image: true }))}" alt="Օգտատեր" class="comment-icon">
-    <div class="comment-content"><p class="comment-author">${e(comment.author?.name)}</p>
-    <p class="comment-text">${e(comment.text)}</p><p class="comment-time">${e(dateTime(comment.createdAt))}</p></div></div>`;
+  return `<div class="comment" data-comment-id="${e(comment.id)}"><img src="${e(safeUrl(comment.author.avatar||'image/logo.png',{image:true}))}" alt="" class="comment-icon"><div class="comment-content"><p class="comment-author">${attribution(comment.author)}</p><p class="comment-text">${e(comment.text)}</p><p class="comment-time">${e(dateTime(comment.createdAt))}${comment.updatedAt?' · փոփոխված':''}</p><div class="comment-actions">${comment.canEdit?'<button type="button" data-comment-edit>Փոփոխել</button>':''}${comment.canDelete?'<button type="button" data-comment-delete>Հեռացնել</button>':''}</div></div></div>`;
+}
+export function renderPostSummary(post) {
+  return `<div class="announcement-header"><img src="${e(safeUrl(post.author.avatar||'image/logo.png',{image:true}))}" alt="" class="user-icon"><div class="announcement-info"><h3 class="user-name">${attribution(post.author)}</h3><p class="announcement-date">${e(dateTime(post.createdAt))}${post.updatedAt?' · փոփոխված':''}</p></div><a class="post-permalink" href="post.html?id=${encodeURIComponent(post.id)}">Բացել հայտարարությունը</a></div><p class="post-meta">${e(post.categoryName||'Նշված չէ')} · ${e(post.sphereName||'Նշված չէ')}</p><div class="announcement-content">${post.title?`<h2>${e(post.title)}</h2>`:''}${sanitizePostHtml(post.content)}</div><div class="post-actions">${post.canEdit?'<button type="button" data-post-edit class="btn-edit">Փոփոխել</button>':''}${post.canDelete?'<button type="button" data-post-delete class="btn-delete">Հեռացնել</button>':''}</div>`;
 }
 export function renderPost(post) {
-  return `<div class="announcement-card" data-category="${e(post.category)}" data-post-id="${e(post.id)}">
-    <div class="announcement-header"><img src="${e(safeUrl(post.author?.avatar || 'image/logo.png', { image: true }))}" alt="Օգտատեր" class="user-icon">
-      <div class="announcement-info"><h3 class="user-name">${e(post.author?.name)}</h3><p class="announcement-date">${e(dateTime(post.createdAt))}</p></div>
-      <span class="category-badge ${e(post.category)}">${e(categories[post.category] || post.category)}</span></div>
-    <div class="announcement-content"><p><strong>${e(post.title)}</strong></p>${sanitizeHtml(post.content)}</div>
-    <div class="comments-section"><h4>Մեկնաբանություններ (${post.comments.length})</h4><div class="comments">${post.comments.map(renderComment).join('')}</div>
-      <div class="comment-field"><input class="comment-input" type="text" aria-label="Մեկնաբանություն" placeholder="Գրեք մեկնաբանություն..." maxlength="2000">
-      <button class="comment-btn">Ուղարկել</button></div></div></div>`;
+  return `<article class="announcement-card post-card" data-post-id="${e(post.id)}" data-category="${e(post.category||'')}"><div data-post-summary>${renderPostSummary(post)}</div><div class="comments-section"><button type="button" class="comments-toggle" aria-expanded="false">Մեկնաբանություններ (${post.commentCount})</button><section data-comments hidden><div class="comments"></div><div data-comment-status></div><button type="button" class="comments-more" hidden>Ցուցադրել ավելին</button><div class="comment-field"><textarea class="comment-input" aria-label="Մեկնաբանություն" placeholder="Գրեք մեկնաբանություն..." maxlength="2000"></textarea><button type="button" class="comment-btn">Ուղարկել</button></div></section></div></article>`;
 }

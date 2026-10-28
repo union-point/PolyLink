@@ -1,3 +1,4 @@
+import { normalizePost, normalizeComment, normalizePostOptions, normalizePostPage } from '../../posts/contracts.js';
 import { normalizeSearchPerson, normalizeSearchPage, normalizeSearchFilters } from '../../search/contracts.js';
 import { normalizeCategory, normalizeForumTopic, normalizeReply, normalizeForumPage } from '../../forum/contracts.js';
 import { createEncryptedChat } from '../../chat/encrypted-client.js';
@@ -5,7 +6,7 @@ import { createIdentityClient } from '../../auth/identity-client.js';
 import { loadTransport } from './transport.js';
 import { routes } from './routes.js';
 import { DataError } from '../errors.js';
-import { unwrap, list, normalizeUser, normalizePost, normalizeComment, normalizeEducation, normalizeCertificate } from './normalize.js';
+import { unwrap, list, normalizeUser, normalizeEducation, normalizeCertificate } from './normalize.js';
 
 export function createHttpProvider(transportPromise = loadTransport()) {
   // Prevent an unhandled rejection when a CDN fails before the first operation.
@@ -33,7 +34,7 @@ export function createHttpProvider(transportPromise = loadTransport()) {
       let body;
       try {
         const response = await api.request(routes[operation](...args));
-        body = operation.startsWith('forum.') ? response : unwrap(response);
+        body = (operation.startsWith('forum.') || operation.startsWith('posts.')) ? response : unwrap(response);
       }
       catch (error) { if (operation === 'auth.me' && error?.response?.status === 401) return null; throw error; }
       if (operation === 'profiles.upload' && !(body?.id ?? body?.UserId)) {
@@ -47,10 +48,11 @@ export function createHttpProvider(transportPromise = loadTransport()) {
         return normalizeUser(body);
       }
       if (operation.endsWith('.delete')) return null;
-      if (operation === 'posts.list') return list(body, normalizePost).filter(post => (!args[0]?.category || post.category === args[0].category) && (!args[0]?.sphere || post.sphere === args[0].sphere));
-      if (operation === 'posts.create' || operation === 'posts.update') return normalizePost(body);
-      if (operation === 'posts.comments.list') return list(body, normalizeComment);
+      if (operation === 'posts.options') return normalizePostOptions(body);
+      if (operation === 'posts.list') return normalizePostPage(body);
+      if (operation === 'posts.comments.list') return normalizePostPage(body, normalizeComment);
       if (operation.startsWith('posts.comments.')) return normalizeComment(body);
+      if (operation.startsWith('posts.')) return normalizePost(body);
       if (operation.startsWith('profiles.education.')) return operation.endsWith('.list') ? list(body, normalizeEducation) : normalizeEducation(body);
       if (operation.startsWith('profiles.certificates.')) return operation.endsWith('.list') ? list(body, normalizeCertificate) : normalizeCertificate(body);
       if (operation === 'forum.categories') return list(body, normalizeCategory);

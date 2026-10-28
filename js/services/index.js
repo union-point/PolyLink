@@ -20,6 +20,7 @@ export const profiles = {
   certificates: { list: operation('profiles.certificates.list'), create: operation('profiles.certificates.create'), update: operation('profiles.certificates.update'), delete: operation('profiles.certificates.delete') },
 };
 export const posts = {
+  options: operation('posts.options'), get: operation('posts.get'),
   list: operation('posts.list'), create: operation('posts.create'), update: operation('posts.update'), delete: operation('posts.delete'),
   comments: { list: operation('posts.comments.list'), create: operation('posts.comments.create'), update: operation('posts.comments.update'), delete: operation('posts.comments.delete') },
 };
@@ -41,4 +42,4 @@ export const settings = {
   deactivate: operation('settings.deactivate'), deleteAccount: operation('settings.deleteAccount'), export: operation('settings.export'),
 };
 
-export const notifications = { list:operation('notifications.list') };
+export const notifications = { list:operation('notifications.list'), history:operation('notifications.history') };

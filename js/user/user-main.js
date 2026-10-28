@@ -1,3 +1,4 @@
+import { createPostFeed } from '../posts/feed.js';
 import { openDirectWithUnblock } from '../chat/direct-contact.js';
 import { profiles, posts, chat } from '../services/index.js';
 import { selectedUserId } from '../services/navigation.js';
@@ -29,13 +30,9 @@ start(async () => {
   main.querySelector('.education-list').replaceChildren(...user.education.map(record => educationEntry(record)));
   main.querySelector('.licenses-list').replaceChildren(...user.licenses.map(record => certificateEntry(record)));
   const list = main.querySelector('.announcements-list');
-  async function load() {
-    stateMessage(list, 'Բեռնվում է...');
-    try { const records = await posts.list({ userId: id }); list.replaceChildren(...records.map(record => announcementEntry(record))); if (!records.length) stateMessage(list, 'Հայտարարություններ չկան'); }
-    catch (error) { stateMessage(list, error.message, { retry: load }); }
-  }
+  const postFeed=createPostFeed(list,{filters:()=>({userId:id})});
   const contact = main.querySelector('.primary-btn');
   contact.disabled = user.id === currentUser.id;
   contact.onclick = () => pending(contact, main.querySelector('.intro-card'), async () => { const room = await openDirectWithUnblock(chat, user.id, confirmAction); if (room) location.href = `message.html?room=${encodeURIComponent(room.id)}`; });
-  await load();
+  await postFeed.load();
 });

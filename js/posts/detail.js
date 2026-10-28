@@ -1,0 +1,4 @@
+import { posts } from '../services/index.js';
+import { bootstrap, start, stateMessage } from '../shared/ui.js';
+import { createPostCard } from './cards.js';
+start(async()=>{const user=await bootstrap();if(!user)return;const host=document.querySelector('[data-post-detail]'),id=new URLSearchParams(location.search).get('id');if(!id||!/^([1-9][0-9]{0,9}|post-[0-9]+)$/.test(id)){stateMessage(host,'Հայտարարությունը հասանելի չէ։');return;}async function load(){stateMessage(host,'Բեռնվում է...');try{const record=await posts.get(id);host.replaceChildren(createPostCard(record,{onDeleted:()=>stateMessage(host,'Հայտարարությունը հասանելի չէ։')}));document.title=`${record.title||'Հայտարարություն'} | PolyLink`;}catch(error){if(error.code==='NOT_FOUND')stateMessage(host,'Հայտարարությունը հասանելի չէ։');else stateMessage(host,error.message,{retry:load});}}await load();});

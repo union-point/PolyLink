@@ -1,3 +1,4 @@
+import { createPostFeed } from '../posts/feed.js';
 import { Modal } from './profile-modal.js';
 import { InlineEditor } from './profile-editor.js';
 import { showAddEducationModal, addEducationEntry, showAddLicenseModal, showAddAnnouncementModal, addLicenseEntry, addAnnouncementEntry, handleBannerUpload, handleProfilePhotoUpload } from './profile-sections.js';
@@ -31,18 +32,12 @@ start(async () => {
   licenses.querySelector('.fa-plus').onclick = showAddLicenseModal;
   const announcements = document.querySelector('.announcements-section');
   announcements.querySelector('.fa-plus').onclick = showAddAnnouncementModal;
-  async function loadAnnouncements() {
-    announcements.querySelectorAll('.item-entry,[data-announcement-state]').forEach(entry => entry.remove());
-    const status = document.createElement('div'); status.dataset.announcementState = ''; announcements.appendChild(status);
-    stateMessage(status, 'Բեռնվում է...');
-    try {
-      const personalPosts = await posts.list({ userId: user.id });
-      if (personalPosts.length) status.remove(); else stateMessage(status, 'Հայտարարություններ չկան');
-      personalPosts.forEach(addAnnouncementEntry);
-    } catch (error) { stateMessage(status, error.message, { retry: loadAnnouncements }); }
-  }
+  announcements.querySelectorAll('.item-entry,[data-announcement-state]').forEach(entry=>entry.remove());
+  const postHost=document.createElement('div');announcements.append(postHost);
+  const postFeed=createPostFeed(postHost,{filters:()=>({userId:user.id})});
+  document.addEventListener('polylink-post-created',event=>postFeed.add(event.detail));
   document.querySelector('.banner-edit-icon').onclick = handleBannerUpload;
   document.querySelector('.profile-photo-area > .profile-photo').onclick = handleProfilePhotoUpload;
   initializeKeyboardNavigation(editor);
-  await loadAnnouncements();
+  await postFeed.load();
 });

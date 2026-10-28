@@ -8,10 +8,11 @@
   <title>Պոլիտեխնիկ - Աշխատանքային Հայտարարություններ</title>
   <link rel="stylesheet" href="./css/events.css">
   <link rel="stylesheet" href="./css/style.css">
+  <link rel="stylesheet" href="./css/posts.css">
 
 </head>
 
-<body>
+<body class="posts-page">
   <header class="header">
     <div class="header-container">
       <div class="logo-container">
@@ -51,22 +52,10 @@
 
         </div>
         <div class="filters">
-          <select class="tag-selector">
-            <option value="">Բոլորը</option>
-            <option value="programming">Ծրագրավորում</option>
-            <option value="engineering">Ինժեներություն</option>
-            <option value="data-science">Տվյալների գիտություն</option>
-            <option value="marketing">Մարկետինգ</option>
-          </select>
-
-          <select class="tag-selector category-selector">
-            <option value="">Բոլոր կատեգորիաները</option>
-            <option value="job">Աշխատանք</option>
-            <option value="internship">Պրակտիկա</option>
-            <option value="training">Դասընթաց</option>
-          </select>
-
+          <label>Ուղղություն <select class="tag-selector" aria-label="Ուղղության զտիչ"><option value="">Բոլոր ուղղությունները</option></select></label>
+          <label>Տեսակ <select class="tag-selector category-selector" aria-label="Տեսակի զտիչ"><option value="">Բոլոր տեսակները</option></select></label>
         </div>
+        <div data-options-status></div>
       </div>
       <div class="announcements-list">
 
@@ -76,66 +65,6 @@
       </div>
     </main>
   </div>
-  <!-- Post Modal -->
-  <div id="postModal" class="modal">
-    <div class="modal-overlay">
-      <div class="modal-container">
-        <div class="modal-header">
-          <div class="user-profile-header">
-            <div class="avatar-wrapper">
-              <img src="https://images.pexels.com/photos/733872/pexels-photo-733872.jpeg" alt="User"
-                class="modal-user-img">
-            </div>
-            <div class="user-meta">
-              <span class="modal-user-name">Գայանե Սարգսյան</span>
-              <select class="visibility-selector" id="category-selector">
-
-                <option value="job">Աշխատանք</option>
-                <option value="internship">Պրակտիկա</option>
-                <option value="training">Դասընթաց</option>
-              </select>
-            </div>
-          </div>
-          <span class="close-btn">&times;</span>
-        </div>
-        <div class="modal-content">
-          <div>
-            <div class="form-group">
-              <label class="form-label">Վերնագիր</label>
-              <input type="text" id="announcement-title" name="title" class="form-input"
-                placeholder="Օրինակ՝ Աշխատանքային հնարավորություն">
-            </div>
-            <div class="form-group">
-              <label class="form-label">Բովանդակություն</label>
-              <div id="announcement-content" class="form-input editor" contenteditable="true"
-                placeholder="Մուտքագրեք հայտարարության բովանդակությունը..."></div>
-            </div>
-
-          </div>
-        </div>
-        <div class="modal-footer">
-
-          <div class="post-formatting-toolbar">
-            <button type="button" class="format-btn bold-btn" title="Թավ" data-command="bold">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-                <path
-                  d="M15.6 10.79c.97-.67 1.65-1.77 1.65-2.79 0-2.26-1.75-4-4-4H7v14h7.04c2.09 0 3.71-1.7 3.71-3.79 0-1.52-.86-2.82-2.15-3.42zM10 6.5h3c.83 0 1.5.67 1.5 1.5s-.67 1.5-1.5 1.5h-3v-3zm3.5 9H10v-3h3.5c.83 0 1.5.67 1.5 1.5s-.67 1.5-1.5 1.5z" />
-              </svg>
-            </button>
-            <button type="button" class="format-btn italic-btn" title="Շեղ" data-command="italic">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M10 4v3h2.21l-3.42 8H6v3h8v-3h-2.21l3.42-8H18V4z" />
-              </svg>
-            </button>
-
-          </div>
-          <button class="btn btn-cancel">Չեղարկել</button>
-          <button class="btn publish-btn">Պահպանել</button>
-        </div>
-      </div>
-    </div>
-  </div>
-
   <script type="module" src="./js/posts.js"></script>
 </body>
 

@@ -1,7 +1,8 @@
+import { openPostForm } from '../posts/form.js';
 // ============================================
 // PROFILE SECTIONS MANAGEMENT
 // ============================================
-import { Modal, createFormattingToolbar, setupFormattingHandlers } from './profile-modal.js';
+import { Modal } from './profile-modal.js';
 import { monthLabel as formatDate, dateRange as formatDateRange, relativeTime as formatTimeAgo,
   notify as showNotification, confirmAction as customConfirm, pending, showError } from '../shared/ui.js';
 import { validateForm, initializeValidation } from './profile-validation.js';
@@ -510,108 +511,12 @@ function attachLicenseHandlers(entry, data) {
  * Show modal to add announcement
  */
 function showAddAnnouncementModal() {
-  const form = document.createElement('div');
-  form.innerHTML = `
-    <div style=" margin-bottom: 16px;">
-      <label style="display: block; margin-bottom: 8px; font-weight: 600; color: var(--font-color-primary);">Կատեգորիա</label>
-      <select class="visibility-selector" id="category-selector" name="category">
-        <option value="job">Աշխատանք</option>
-        <option value="internship">Պրակտիկա</option>
-        <option value="training">Դասընթաց</option>
-      </select>
-    </div>
-    <div style="margin-bottom: 16px;">
-      <label style="display: block; margin-bottom: 8px; font-weight: 600; color: var(--font-color-primary);">Վերնագիր</label>
-      <input type="text" id="announcement-title" name="title" 
-        style="box-sizing:border-box; width: 100%; padding: 10px; border-radius: 8px; font-size: 14px; background: var(--card-background); color: var(--font-color-primary); border: 1px solid var(--border-color);"
-        placeholder="Օրինակ՝ Աշխատանքային հնարավորություն">
-    </div>
-    <div style="margin-bottom: 16px;">
-      <label style="display: block; margin-bottom: 8px; font-weight: 600; color: var(--font-color-primary);">Բովանդակություն</label>
-      <div id="announcement-content" data-name="content" contenteditable="true"
-        style="box-sizing:border-box; width: 100%; min-height: 150px; padding: 10px; border: 1px solid var(--border-color); border-radius: 8px; font-size: 14px; background: var(--card-background); color: var(--font-color-primary);"
-        data-placeholder="Մուտքագրեք հայտարարության բովանդակությունը..."></div>
-    </div>
-  `;
-
-  const toolbar = createFormattingToolbar();
-
-  modal.create('Ավելացնել հայտարարություն', form, async data => {
-    addAnnouncementEntry(await posts.create(data));
-    showNotification('Հայտարարությունը ավելացվել է');
-  }, {
-    customFooterLeft: toolbar,
-    setupFormatting: (modalElement) => setupFormattingHandlers(modalElement)
-  });
+  openPostForm({onSaved:saved=>document.dispatchEvent(new CustomEvent('polylink-post-created',{detail:saved}))});
 }
-
-/**
- * Add announcement entry to the DOM
- * @param {Object} data - Announcement data
- */
 function addAnnouncementEntry(data) {
-  const section = document.querySelector('.announcements-section');
-  if ([...section.querySelectorAll('.announcement-card')].some(card => card.dataset.postId === data.id)) return;
-  const entry = announcementEntry(data, true);
-  document.querySelector('.announcements-section [data-announcement-state]')?.remove();
-  document.querySelector('.announcements-section').appendChild(entry);
-  attachAnnouncementHandlers(entry);
-}
-
-/**
- * Edit an announcement
- * @param {HTMLElement} announcementCard - Announcement card element
- */
-function editAnnouncement(announcementCard) {
-  const contentEl = announcementCard.querySelector('.announcement-content p');
-  const record = announcementCard.record;
-  const currentTitle = record.title;
-  const currentContent = record.content;
-
-  const form = document.createElement('div');
-  form.innerHTML = `
-    <div style="margin-bottom: 16px;">
-      <label style="display: block; margin-bottom: 8px; font-weight: 600; color: var(--font-color-primary);">Վերնագիր</label>
-      <input type="text" id="announcement-title" name="title" value="${e(currentTitle)}"
-        style="width: 100%; padding: 10px; border-radius: 8px; font-size: 14px; background: var(--card-background); color: var(--font-color-primary); border: 1px solid var(--border-color);">
-    </div>
-    <div style="margin-bottom: 16px;">
-      <label style="display: block; margin-bottom: 8px; font-weight: 600; color: var(--font-color-primary);">Բովանդակություն</label>
-      <div id="announcement-content" data-name="content" contenteditable="true"
-        style="box-sizing:border-box; width: 100%; min-height: 150px; padding: 10px; border: 1px solid var(--border-color); border-radius: 8px; font-size: 14px; background: var(--card-background); color: var(--font-color-primary);">${sanitizeHtml(currentContent)}</div>
-    </div>
-  `;
-
-  const toolbar = createFormattingToolbar();
-
-  modal.create('Փոփոխել հայտարարությունը', form, async data => {
-    const saved = await posts.update(record.id, { ...record, ...data });
-    const entry = announcementEntry(saved, true); announcementCard.closest('.item-entry').replaceWith(entry);
-    attachAnnouncementHandlers(entry);
-  }, {
-    customFooterLeft: toolbar,
-    setupFormatting: (modalElement) => setupFormattingHandlers(modalElement)
-  });
-}
-
-/**
- * Delete an announcement
- * @param {HTMLElement} announcementEntry - Announcement entry element
- */
-async function deleteAnnouncement(entry) {
-  const button = entry.querySelector('.btn-delete');
-  if (button.disabled) return;
-  button.disabled = true;
-  const confirmed = await customConfirm('Վստա՞հ եք, որ ցանկանում եք հեռացնել այս հայտարարությունը։');
-  button.disabled = false;
-  if (!confirmed) return;
-  await pending(button, entry, async () => { await posts.delete(entry.querySelector('.announcement-card').dataset.postId); entry.remove(); });
-}
-
-function attachAnnouncementHandlers(entry) {
-  const card = entry.querySelector('.announcement-card');
-  entry.querySelector('.btn-edit').onclick = () => editAnnouncement(card);
-  entry.querySelector('.btn-delete').onclick = () => deleteAnnouncement(entry);
+  const section=document.querySelector('.announcements-section');
+  if ([...section.querySelectorAll('[data-post-id]')].some(card=>card.dataset.postId===data.id)) return;
+  section.prepend(announcementEntry(data));
 }
 
 // ============================================
@@ -640,5 +545,5 @@ function uploadPhoto(kind) {
 
 export { showAddEducationModal, addEducationEntry, attachEducationHandlers,
  showAddLicenseModal, addLicenseEntry, attachLicenseHandlers,
- showAddAnnouncementModal, addAnnouncementEntry, attachAnnouncementHandlers,
+ showAddAnnouncementModal, addAnnouncementEntry,
  handleBannerUpload, handleProfilePhotoUpload };
