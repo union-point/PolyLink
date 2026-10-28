@@ -1,6 +1,6 @@
 # PolyLink backend design context
 
-Reviewed 28 October 2026 against current Java controllers/services, migrations V1–V17, frontend provider clients and the settings/messenger handoffs. PolyLink now has an implemented Java 25 / Spring Boot 4.1.1 backend using Microsoft SQL Server, JDBC transactions, SMTP and OpenBao Transit. It is no longer only a design or scaffold.
+Reviewed 29 October 2026 against current Java controllers/services, migrations V1–V19, frontend provider clients and the settings/messenger handoffs. PolyLink now has an implemented Java 25 / Spring Boot 4.1.1 backend using Microsoft SQL Server, JDBC transactions, SMTP and OpenBao Transit. It is no longer only a design or scaffold.
 
 ## Evidence and authority
 
@@ -26,7 +26,7 @@ The platform connects graduates and lecturers through discovery, profiles and di
 | Groups | User-created rooms, owner transfer/rename, add/remove/leave and sequence-bounded membership intervals. |
 | Settings | Privacy, language, notification preferences, staged email changes and password-authorized email factor. |
 | Forum | Database categories, cursor topics/replies, owner edits/deletion, desired-state likes, optimistic versions and create deduplication; independently enabled after V13. |
-| Notifications | Transactional messenger/forum events, cursor browser feed, batched message email and individual forum notices; announcement producers remain deferred. |
+| Notifications | Transactional chat/forum/post-comment events, shared live polling, retained in-app post-comment history and settings-aware email; new-announcement delivery remains deferred. |
 | Export/lifecycle | Password-authorized full export, own encrypted messages/files, deactivation, account deletion and deletion ledger. |
 
 The code uses explicit JDBC/SQL service boundaries; domain JPA entity mappings are not implemented. SQL FKs alone do not enforce principal ownership, room membership, role consistency or visibility. Services must maintain these invariants transactionally.
@@ -52,6 +52,8 @@ The code uses explicit JDBC/SQL service boundaries; domain JPA entity mappings a
 | V15 | Bounded normalized enrollment avatars, retained on admission. |
 | V16 | Remove retired import staging, invitations and enrollment invitation reference, and historical forum review log; retain 58 application tables. |
 | V17 | Add the enrollment institute reference, allow unknown education degrees and backfill study dates/specialization from verified alumni claims. |
+| V18 | Stage posts codes/UTC timestamps, comment notifications, preference and permanent review audit. |
+| V19 | Gate historical UTC review, enforce canonical dates and add feed/comment paging indexes. |
 
 Use `SchemaCommand inventory`, guarded `upgrade` for restored/existing databases, and `fresh` only for empty databases. Migrations use separate migration credentials and run explicitly. Startup disables Flyway and SQL initialization; Hibernate is configured for validation. Never edit applied migration checksums or bypass baseline drift checks. V8/V9 removal requires a verified backup and stopped application access with matching backend deployment. See [schema workflow](messenger/schema-and-migrations.md).
 
@@ -86,7 +88,7 @@ The backend listens on loopback port 3004 by default; the default allowed fronte
 | Settings | GET/PATCH `/settings`; POST `/account/email-change/start`, `/verify`, `/resend`; PUT `/account/email-factor`; GET `/notifications`. |
 | Export/lifecycle | POST `/account/export/authorize`; GET `/account/export/data`, `/messages`, `/files/{id}`; POST `/account/deactivate`, `/account/delete`. |
 
-Frontend adapter mappings for profile update/media, education/certificates and posts/comments remain expectations rather than implemented controllers. Forum topics/replies/likes have implemented HTTP contracts and separate page-aware normalizers. HTTP failures remain visible; there is no fallback to fixtures. The historical forgot/verify/reset routes and plain `{email,password}` login contract are obsolete for real identity.
+Frontend adapter mappings for profile update/media and education/certificates remain expectations rather than implemented controllers. Posts/comments have admitted HTTP controllers, strict page-aware DTOs and an independent rollout flag. Forum topics/replies/likes have implemented HTTP contracts and separate page-aware normalizers. HTTP failures remain visible; there is no fallback to fixtures. The historical forgot/verify/reset routes and plain `{email,password}` login contract are obsolete for real identity.
 
 Server ownership comes from the authenticated principal, never body `userId`/author/timestamps. Public projections exclude authentication metadata and undisclosed email; search never exposes email. Closed profiles remain discoverable with `canOpenProfile=false`, while another member's profile read returns 404. Legacy public media URLs cannot become private retroactively; future upload/storage APIs must enforce visibility.
 
@@ -115,3 +117,10 @@ The [24 October settings acceptance](settings_backend.md) records nine database-
 Run backend `./mvnw verify` for formatting/build/database-free tests. Use `bash tools/local/test.sh --full` or the milestone runner options in `tools/m1/verify.py` for isolated SQL/Transit/mail/browser acceptance. Keep schema/config prerequisites and platform limitations visible; [backend setup](../backend/README.md) and [local runbook](../tools/local/README.md) describe configuration.
 
 Remaining gates: M7 production backup retention/restore/deletion-ledger rehearsal; unavailable-old-mailbox recovery; legacy external-file migration/private media storage; production TLS/origins/secret custody; general registry admission policy; full profile/publication/forum APIs and notification producers; reference-data authority/date precision; translation catalogs. Future domain writes need explicit validation, rich-content sanitization, pagination, concurrency and retention contracts rather than copying mock behavior.
+
+
+## Posts and comment activity (29 October 2026)
+
+The focused `am.polylink.posts` package implements admitted options, filtered cursor feed, detail and owner-only post/comment CRUD with a posts-specific sanitizer. V18 preserves nullable legacy metadata and original timestamps, adds staged canonical dates/reference codes, post-comment preference/activity targets and a permanent review audit; V19 requires reviewed canonical dates and adds feed/comment indexes. `POSTS_ENABLED` defaults off and is independent of forum/messenger flags.
+
+Feed, detail and profile callers share strict DTOs, database directions, forms and lazy comment cards. Comment creation and its non-self author event are atomic; deletes explicitly clear activity and children. Retained activity uses a separate signed history cursor and a shared live poller independent of browser permission. Email eligibility rechecks category, email master switch, admission and target existence. New-announcement notifications remain deferred under [posts decisions](posts_decisions.md). See [posts implementation](posts_implementation.md) for contracts, migration review, lifecycle/export and validation evidence.

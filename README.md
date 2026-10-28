@@ -1,8 +1,8 @@
 # PolyLink
 
-A university networking application for graduates and lecturers, built with Java 25, Spring Boot and vanilla JavaScript. It supports registry-based enrollment, encrypted direct/group messaging, a career forum, account settings and email-based recovery. Encryption-key setup is automatic.
+A university networking application for graduates and lecturers, built with Java 25, Spring Boot and vanilla JavaScript. It supports registry-based enrollment, encrypted direct/group messaging, a career forum, announcements with comments, account settings and email-based recovery. Encryption-key setup is automatic.
 
-General profile editing and publication APIs remain unavailable in HTTP mode. See the [documentation index](docs/README.md) for current capabilities and limitations.
+General profile editing APIs remain unavailable in HTTP mode. Announcement and comment APIs are implemented behind `POSTS_ENABLED`; see the [posts implementation and rollout procedure](docs/posts_implementation.md). See the [documentation index](docs/README.md) for current capabilities and limitations.
 
 ## Requirements — Linux and macOS
 
@@ -42,15 +42,13 @@ Mail is captured at [http://localhost:8025](http://localhost:8025), not sent to 
 
 ### 3. Apply migrations explicitly
 
-Back up your existing database, stop any old backend, and use a migration-capable SQL account:
+Back up your existing database, stop any old backend, and set `MIGRATION_DB_USERNAME` / `MIGRATION_DB_PASSWORD` in your private environment to a migration-capable SQL account, separate from the runtime `DB_USERNAME` / `DB_PASSWORD`:
 
 ```sh
-export MIGRATION_DB_USERNAME="$DB_USERNAME"
-export MIGRATION_DB_PASSWORD="$DB_PASSWORD"
 ./backend/mvnw -f backend/pom.xml compile exec:java -Dexec.mainClass=am.polylink.database.SchemaCommand -Dexec.args=upgrade
 ```
 
-Use separate migration credentials if your runtime SQL user lacks permission. For an already-created **empty** database, use `-Dexec.args=fresh` instead. An existing database must pass the baseline guard; do not force it or delete tables. This applies/validates migrations through V15. If historical forum topics/replies exist, first stop at V12 and complete the [reviewed category/timezone backfill](docs/forum_implementation.md#existing-database-upgrade); V13 refuses unreviewed data. Application startup never migrates a database. See [schema details](docs/messenger/schema-and-migrations.md).
+For an already-created **empty** database, use `-Dexec.args=fresh` instead. An existing database must pass the baseline guard; do not force it or delete tables. This applies/validates migrations through V19. If historical forum topics/replies exist, first stop at V12 and complete the [reviewed category/timezone backfill](docs/forum_implementation.md#existing-database-upgrade); V13 refuses unreviewed data. Historical announcements/comments also require stopping at V18 for the [reviewed timestamp backfill](docs/posts_implementation.md#existing-database-upgrade-and-historical-review); V19 refuses unreviewed rows. Application startup never migrates a database. See [schema details](docs/messenger/schema-and-migrations.md).
 
 ### 4. Check registry eligibility
 
@@ -65,6 +63,7 @@ In each new terminal, open this checkout's root. For the **backend**, load the e
 ```sh
 source tools/local/env.sh
 export FORUM_ENABLED=true
+export POSTS_ENABLED=true # only after the V19 migration/review above
 (cd backend && ./mvnw spring-boot:run)
 ```
 
@@ -88,7 +87,7 @@ The test script handles dependency installation, a private Python virtual enviro
 bash tools/local/test.sh
 ```
 
-For focused forum SQL/mail/browser acceptance, run `bash tools/local/test.sh --forum`. For registration/recovery mail diagnostics and the Docker DNS regression, see [SMTP troubleshooting](tools/local/README.md#smtp-timeouts-in-disposable-acceptance-tests).
+For focused SQL/mail/browser acceptance, run `bash tools/local/test.sh --forum` or `bash tools/local/test.sh --posts`. For registration/recovery mail diagnostics and the Docker DNS regression, see [SMTP troubleshooting](tools/local/README.md#smtp-timeouts-in-disposable-acceptance-tests).
 
 For the complete disposable SQL/OpenBao/mail/browser acceptance suite:
 
@@ -96,7 +95,7 @@ For the complete disposable SQL/OpenBao/mail/browser acceptance suite:
 bash tools/local/test.sh --full
 ```
 
-`--full` and `--forum` need running Docker and SQL credentials allowed to create/drop **disposable** databases. The runner uses `DB_TEST_ADMIN_USERNAME`/`DB_TEST_ADMIN_PASSWORD` when supplied, otherwise your configured migration/runtime credentials. It creates its own temporary services and never migrates the working database. On Linux, Playwright may also request missing system browser libraries; follow its reported dependency instructions.
+`--full`, `--forum` and `--posts` need running Docker and SQL credentials allowed to create/drop **disposable** databases. The runner uses `DB_TEST_ADMIN_USERNAME`/`DB_TEST_ADMIN_PASSWORD` when supplied, otherwise your configured migration/runtime credentials. It creates its own temporary services and never migrates the working database. On Linux, Playwright may also request missing system browser libraries; follow its reported dependency instructions.
 
 A quick backend-only check remains a direct command:
 

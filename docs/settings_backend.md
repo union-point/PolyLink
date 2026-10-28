@@ -1,6 +1,6 @@
 # Settings backend
 
-Product authority: [approved decisions](settings_decisions.md).
+Product authority: [approved settings decisions](settings_decisions.md). For publications, the newer [posts decisions](posts_decisions.md) supersede historical new-announcement notification proposals.
 
 ## Deployment
 
@@ -10,21 +10,22 @@ V10 preserves visibility/language and existing notification values, fills missin
 
 ## API
 
-- `GET /settings`, `PATCH /settings`: seven mutable preference fields; `twoFactorEnabled` is read-only here. Unknown fields, nulls and boolean coercion are rejected. Theme and browser opt-in remain local.
+- `GET /settings`, `PATCH /settings`: eight mutable preference fields (including default-on `postCommentNotifications` from V18); `twoFactorEnabled` is read-only here. Unknown fields, nulls and boolean coercion are rejected. Theme and browser opt-in remain local.
 - `POST /account/email-change/start`: `email`, `loginSecret`, `expectedCredential`. Return `status: challenge`, `requestId`, `stage: OLD|NEW`, `expiresAt`, `resendAfter`.
 - `POST /account/email-change/verify`: `requestId`, `code`. OLD verification advances to NEW; NEW verification completes with the new email. New requests supersede old requests; email changes preserve sessions and crypto versions.
 - `POST /account/email-change/resend`: `requestId`; 60-second cooldown, 10-minute code expiry, five failed attempts per stage. Account rate limits additionally bound issuance and verification.
 - `PUT /account/email-factor`: `enabled`, `loginSecret`, `expectedCredential`; password proof only. Pending email-change requests and login challenges are cancelled.
 - `GET /notifications`: `cursor=initial` establishes a baseline without displaying history; subsequent opaque decimal cursors return up to 100 eligible events (50 default). Poll every 15 seconds with network backoff.
+- `GET /notifications/history?cursor=...`: retained eligible post-comment events, newest first in pages of 20, using signed account-scoped cursors. In-app history/live consumption works without browser notification permission or Web Locks.
 - `POST /account/export/authorize`: password-derived proof, return 15-minute `grant`. Send it exclusively in `X-Export-Grant` to `/account/export/data?category=...&offset=...`, `/account/export/messages` and `/account/export/files/{id}`. Grants also require the original authenticated session and credential version.
 
 Passwords remain in the browser; the existing PLK1 derivation produces loginSecret. Export DTOs exclude credential/key tables. Archive creation is client-side, uses ZIP STORE, and rejects source data above 100 MiB. Exports are paginated live reads, not a cross-table point-in-time snapshot. Missing/decryption-failed elements are recorded in manifest.json. Legacy external file URLs have no authenticated storage mapping: they remain references and are explicitly reported unavailable; the server never fetches arbitrary URLs. Messenger attachments are decrypted client-side and included as separate files.
 
 ## Notifications and deferred integrations
 
-The event schema reserves DIRECT_MESSAGE, ANNOUNCEMENT and FORUM_REPLY. Messenger sends and forum replies produce live events transactionally. Publication delivery remains deferred until its backend implements recipient/category-specific rules. Announcements target active members except the author; forum replies target the topic author except self-replies. See [forum notifications](forum_implementation.md#notifications-and-lifecycle) for the implemented reply producer.
+The schema supports DIRECT_MESSAGE, ANNOUNCEMENT, FORUM_REPLY and V18 POST_COMMENT. Chat sends, forum replies and post comments produce their distinct events transactionally. A non-self comment targets only the announcement author. `postCommentNotifications` gates in-app/browser/email delivery; EmailEnabled additionally gates email only. ANNOUNCEMENT stays reserved with no new-publication producer. See [posts notification and lifecycle behavior](posts_implementation.md#notifications-and-settings). Enable posts only after the V19 timestamp gate; existing settings category meanings are retained.
 
-Activity emails aggregate eligible unread chat events after a 60-second delay. Workers claim rows with a two-minute retry lease, release SQL locks before SMTP, and retry failures. Delivery is at least once: SMTP success followed by a process failure before recording completion can produce a duplicate. Browser notifications share category settings, use browser-specific opt-in/permission and coordinate tabs with Web Locks. Unsupported browsers show an actionable error. No notifications are delivered by this client after all site tabs close.
+Activity emails aggregate eligible unread chat events after a 60-second delay. Workers claim rows with a two-minute retry lease, release SQL locks before SMTP, and retry failures. Delivery is at least once: SMTP success followed by a process failure before recording completion can produce a duplicate. Browser notifications share category settings, use browser-specific opt-in/permission and coordinate tabs with Web Locks. Unsupported browsers show an actionable error. Live polling stops after site tabs close; retained post-comment activity remains available on reopening.
 
 Closed profiles remain in search with canOpenProfile=false; other members receive 404 for profile reads. Search never returns email. Public profile DTOs omit authentication metadata. V15 adds a separate public enrollment-avatar endpoint (see [enrollment avatars](registry_enrollment.md#enrollment-avatars-v15)); general profile-media editing and private media storage remain unavailable, and legacy public URLs cannot become private retroactively. New profile-media endpoints must enforce visibility rather than exposing private storage URLs.
 

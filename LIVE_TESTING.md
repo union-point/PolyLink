@@ -27,7 +27,7 @@ Use `http://localhost:8001` consistently. If ports 3004/8001 are already occupie
 7. Send a text message. In Bob's browser, open [Messages](http://localhost:8001/message.html). The text should appear within a few seconds while the page is visible. Reply from Bob and confirm Alice receives it.
 8. For the offline-recipient check, close Bob's browser after his setup has completed. Send another message from Alice, then reopen Bob's browser. Bob should be able to read it without any key exchange or action by Alice.
 
-Encrypted images and personal actions are implemented in [M5](docs/messenger/m5.md), and dynamic groups, export and lifecycle in [M6](docs/messenger/m6.md). Apply migrations through V7 before testing. Some unrelated profile/forum/settings actions remain unavailable; HTTP mode never substitutes mock data.
+Encrypted images and personal actions are implemented in [M5](docs/messenger/m5.md), and dynamic groups, export and lifecycle in [M6](docs/messenger/m6.md). Apply migrations through V19 before testing, completing required historical reviews. General profile editing remains unavailable; HTTP mode never substitutes mock data.
 
 ## 2. Test session continuity and password change
 
@@ -52,7 +52,7 @@ To test a genuinely new device, use another clean browser profile and log in wit
 5. In the other profile, refocus/reload or access Messages. Its old session should be rejected.
 6. Confirm the old password no longer logs in and the new password opens the same history in a clean profile.
 
-Unrelated settings toggles are currently disabled in HTTP mode. You do not need to enable any of them to change the password.
+Settings preferences are persisted in HTTP mode. Changing a notification preference is independent of the password-change flow.
 
 ## 3. If something fails
 
@@ -60,7 +60,7 @@ Unrelated settings toggles are currently disabled in HTTP mode. You do not need 
 | --- | --- |
 | Port 3004/8001 already in use, or old behavior still appears | Stop the old app processes and start both servers from this checkout. Reload the browser afterward. |
 | `release version 25 not supported`, missing `javac`, or wrong Maven JVM | Select the full JDK 25, export its `JAVA_HOME`/`PATH`, then check `./mvnw --version`. |
-| Backend does not start or reports missing auth tables | Check the SQL credentials and run the explicit upgrade through V4. Starting the backend never applies migrations. |
+| Backend does not start or reports missing auth tables | Check the SQL credentials and run the explicit upgrade through V19 with the required historical reviews. Starting the backend never applies migrations. |
 | Registration produces no verification email | Complete and save the academic profile, then submit for registry matching. Mail is sent only after a successful match. Check Mailpit and SMTP port 1025. Occupied-address registration is deliberately neutral; use login or recovery. |
 | Verification succeeds but key setup cannot finish | Check OpenBao is unsealed, the JVM trusts its certificate, and `OPENBAO_TOKEN_FILE` points to a valid narrow service token. Retry login after fixing the prerequisite. |
 | Token stopped working after a long shutdown | The backend token is periodic and needs renewal. If it expired while the backend was stopped, an operator must issue/install a replacement using the [runbook](infra/openbao/README.md). Keep the existing Transit key and volume. |
@@ -79,7 +79,7 @@ source tools/local/env.sh
 bash tools/local/test.sh --full
 ```
 
-Use separate test-administrator credentials if your runtime SQL user cannot create/drop disposable databases. Node 22+ is required for this optional suite. The runner provisions its own temporary SQL database, TLS OpenBao and Mailpit on separate ports, runs M1–M3 checks and cleans them up. It does not upgrade your working database or use your live OpenBao instance. It also proves clean-browser login/history and ordinary password change while its test OpenBao instance is sealed.
+Use separate test-administrator credentials if your runtime SQL user cannot create/drop disposable databases. Node 22+ is required for this optional suite. The runner provisions its own temporary SQL database, TLS OpenBao and Mailpit on separate ports, runs the existing identity/messenger/forum/enrollment checks plus posts SQL/live/mock acceptance and cleans them up. It does not upgrade your working database or use your live OpenBao instance. It also proves clean-browser login/history and ordinary password change while its test OpenBao instance is sealed.
 
 ## 5. Stop and resume later
 
@@ -111,3 +111,18 @@ After explicit V13 migration, start the backend with `FORUM_ENABLED=true`; no me
 6. Export own data and check topics/replies. Deleting an account retains discussions under a neutral deleted author; explicit topic deletion removes the complete discussion. Closed profiles do not create actionable author links.
 
 `bash tools/local/test.sh --forum` automates focused unit/contract/SQL/SMTP/live-browser/mock-browser checks in disposable resources. `--full` also runs the messenger/settings/lifecycle regressions and forum browsers. Public launch additionally requires a verified support channel and assigned takedown operator; code completion does not establish those operational facts.
+
+
+## Announcements and comments
+
+Use the [posts migration review/runbook](docs/posts_implementation.md) before explicitly enabling `POSTS_ENABLED=true`. This flag is independent of the forum flag.
+
+1. As a graduate, open Events and publish with an explicit title, rich body, type and database direction (including Other). Change the feed filters first and verify the form still requires its own direction.
+2. Open the announcement permalink in a separate lecturer profile. Expand comments and add plain text. Confirm only each comment author can edit/delete their own comment; owning the post does not grant moderation rights.
+3. In the announcement author's browser, open the shared Notifications dropdown. Disable/deny browser notifications: the in-app item must still appear, and reloading after an offline interval must retain it. Its link opens the single announcement.
+4. In Settings, disable the comment category and verify new delivery is suppressed. Re-enable it, disable email only, and verify in-app delivery still works while Mailpit receives no comment email. Enable email, add another non-self comment and verify a generic message with the announcement link. Self-comments and publication/editing produce no event.
+5. Edit all four announcement fields; publication order stays unchanged and an edited marker appears. Save from two devices: both succeed and the later committed save wins. Cancel dirty input via close/Escape/backdrop and decline discard; trigger a request failure and verify all entered formatting/choices remain.
+6. Use disposable fixtures for 45+ announcements/comments: batches are 20/20/5, combined filters apply before paging, and comments stay oldest first. A new comment across an unloaded gap updates the server count and waits for the remaining pages.
+7. Confirm post deletion, then reload its saved link: it shows unavailable. Its comments and activity disappear. Check own/public profile announcements still use the shared actions, pagination and lazy comments. Historical missing titles render no heading; editing requires missing metadata.
+
+Focused automated acceptance: `bash tools/local/test.sh --posts`. Full acceptance includes it via `bash tools/local/test.sh --full`. These checks use disposable infrastructure and controlled browser permission states; they do not establish native OS notification presentation or production restore readiness.

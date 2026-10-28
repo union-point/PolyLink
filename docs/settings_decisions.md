@@ -2,6 +2,8 @@
 
 Approved by the user on 23 October 2026. These decisions take precedence over older proposals for the same behavior in `specification_gaps.md`. They record approved policy; see [settings backend](settings_backend.md) for implemented behavior, deployment and acceptance evidence.
 
+Publication-policy update (29 October 2026): the newer [posts decisions](posts_decisions.md) supersede the historical new-announcement notification proposal below. This version notifies an announcement author about non-self comments; notifications for newly published announcements are deferred. The older decision text is retained as history.
+
 ## Email change
 
 Authorization policy addition approved on 24 October 2026: the proposed new email must use the exact normalized `polytechnic.am` domain, including for existing admitted accounts. Preserve any verified registry claim and role; changing a lecturer’s address does not require a new registry match. See [authorization plan](authorization_plan.md).
