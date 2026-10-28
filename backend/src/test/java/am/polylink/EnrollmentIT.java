@@ -3,9 +3,17 @@ package am.polylink;
 import static org.assertj.core.api.Assertions.*;
 
 import am.polylink.auth.*;
+import java.awt.image.BufferedImage;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
 import java.time.OffsetDateTime;
 import java.util.*;
 import java.util.concurrent.*;
+import javax.imageio.ImageIO;
 import org.junit.jupiter.api.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -133,6 +141,62 @@ class EnrollmentIT {
         var challenge = submit(a, saved.path("revision").asLong());
         var response = a.browser.post("/auth/email/verify", proof(a, challenge));
         assertThat(response.statusCode()).as(response.body()).isEqualTo(200);
+    }
+
+    @Test
+    void avatarUploadPersistsReplacesAndRemovesPhotoAndEnforcesRateLimit() throws Exception {
+        var a = applicant("graduate");
+        var source = new ByteArrayOutputStream();
+        ImageIO.write(new BufferedImage(320, 160, BufferedImage.TYPE_INT_RGB), "png", source);
+        var photo = Map.of("content", Base64.getEncoder().encodeToString(source.toByteArray()));
+        String previousUrl = null;
+        for (int i = 0; i < 2; i++) {
+            var uploaded = a.browser.call("PUT", "/auth/enrollment/avatar", photo);
+            assertThat(uploaded.statusCode()).as(uploaded.body()).isEqualTo(200);
+            String url = a.browser.json(uploaded).path("url").asText();
+            assertThat(url).contains("/auth/avatars/").isNotEqualTo(previousUrl);
+            assertThat(a.browser.json(a.browser.get("/auth/enrollment")).path("avatar").asText())
+                    .isEqualTo(url);
+            var image =
+                    HttpClient.newHttpClient()
+                            .send(
+                                    HttpRequest.newBuilder(URI.create(url)).GET().build(),
+                                    HttpResponse.BodyHandlers.ofByteArray());
+            assertThat(image.statusCode()).isEqualTo(200);
+            assertThat(image.headers().firstValue("Content-Type")).contains("image/jpeg");
+            var decoded = ImageIO.read(new ByteArrayInputStream(image.body()));
+            assertThat(decoded.getWidth()).isEqualTo(256);
+            assertThat(decoded.getHeight()).isEqualTo(256);
+            if (previousUrl != null) {
+                assertThat(a.browser.get(URI.create(previousUrl).getPath()).statusCode())
+                        .isEqualTo(404);
+            }
+            previousUrl = url;
+        }
+        assertThat(
+                        db.queryForObject(
+                                "SELECT COUNT(*) FROM auth.ProfileAvatars WHERE UserId=?",
+                                Integer.class,
+                                a.id))
+                .isEqualTo(1);
+        assertThat(
+                        db.queryForObject(
+                                "SELECT Attempts FROM auth.RateLimits WHERE Purpose='ENROLL_AVATAR'",
+                                Integer.class))
+                .isEqualTo(2);
+        db.update("UPDATE auth.RateLimits SET Attempts=20 WHERE Purpose='ENROLL_AVATAR'");
+        var limited = a.browser.call("PUT", "/auth/enrollment/avatar", photo);
+        assertThat(limited.statusCode()).as(limited.body()).isEqualTo(429);
+        assertThat(a.browser.json(limited).path("code").asText()).isEqualTo("RATE_LIMITED");
+        assertThat(a.browser.call("DELETE", "/auth/enrollment/avatar", Map.of()).statusCode())
+                .isEqualTo(200);
+        assertThat(a.browser.get(URI.create(previousUrl).getPath()).statusCode()).isEqualTo(404);
+        assertThat(
+                        db.queryForObject(
+                                "SELECT ProfilePhotoUrl FROM dbo.Users WHERE UserId=?",
+                                String.class,
+                                a.id))
+                .isNull();
     }
 
     @Test

@@ -49,7 +49,7 @@ public class EnrollmentAvatarController {
     public Map<String, String> upload(@Valid @RequestBody Photo photo, HttpServletRequest request) {
         // Authenticate before decoding, and bound dimensions before allocating image pixels.
         int user = tx.execute(status -> sessions.require(request, false).account().id());
-        limits.consume("ENROLLMENT_AVATAR", Integer.toString(user), 20, 3600);
+        limits.consume("ENROLL_AVATAR", Integer.toString(user), 20, 3600);
         byte[] normalized = normalize(photo.content());
         String url =
                 ServletUriComponentsBuilder.fromCurrentContextPath()
