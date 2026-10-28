@@ -5,7 +5,7 @@ import { upgradeChatState, preference, blocked as isBlocked, canSend, visibleMes
 import { validateImageBytes } from '../../crypto/images.js';
 import { transaction, nextId } from './store.js';
 import { DataError } from '../errors.js';
-import { universityEmail, email, password, required, validateEducation, validateCertificate, validatePost, validateImage, richContent } from '../validation.js';
+import { universityEmail, email, password, required, validateEducation, validateCertificate, validateImage } from '../validation.js';
 
 const now = () => new Date().toISOString();
 const defaults = () => ({ isProfilePublic: true, showEmail: false, twoFactorEnabled: false, language: 'hy', emailEnabled: true, newListingNotifications: true, forumReplyNotifications: true, directMessageNotifications: true, postCommentNotifications: true });

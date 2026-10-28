@@ -188,7 +188,7 @@ public class PostsService {
             result.put("text", row.get("Content"));
         } else {
             String title = (String) row.get("Title");
-            result.put("title", title == null || title.isBlank() ? null : title);
+            result.put("title", title == null || PostsContent.trim(title).isEmpty() ? null : title);
             result.put("content", PostsContent.sanitize((String) row.get("Content")));
             boolean supported =
                     Set.of("job", "internship", "training")

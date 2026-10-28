@@ -1,5 +1,4 @@
 import { DataError } from './errors.js';
-import { categories } from './models.js';
 import { plainText, sanitizeHtml } from '../shared/content.js';
 
 export function required(value, field, max = 1000) {
@@ -45,10 +44,6 @@ export function richContent(value) {
   const content = sanitizeHtml(value);
   required(plainText(content), 'content', 20000);
   return content;
-}
-export function validatePost(data) {
-  if (!Object.hasOwn(categories, data.category)) throw new DataError('VALIDATION', 'Ընտրեք կատեգորիան։', { category: 'Անվավեր կատեգորիա' });
-  return { title: required(data.title, 'title', 255), content: richContent(data.content), category: data.category, sphere: String(data.sphere || '') };
 }
 export function validateImage(file) {
   if (!(file instanceof Blob) || !['image/png', 'image/jpeg', 'image/webp', 'image/gif'].includes(file.type) || !file.size || file.size > 5 * 1024 * 1024) {

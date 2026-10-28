@@ -52,7 +52,11 @@ public final class PostsContent {
                                 text.append(value);
                             }
                         }));
-        return text.toString().replace('\u00a0', ' ').strip();
+        return trim(text.toString().replace('\u00a0', ' '));
+    }
+
+    public static String trim(String value) {
+        return value.replaceAll("^[\\s\\p{Z}\\uFEFF]+|[\\s\\p{Z}\\uFEFF]+$", "");
     }
 
     public static String title(Object value) {
@@ -64,11 +68,9 @@ public final class PostsContent {
     }
 
     private static String text(Object value, String field, int limit) {
-        if (!(value instanceof String s)
-                || s.replace('\u00a0', ' ').strip().isEmpty()
-                || s.strip().length() > limit)
+        if (!(value instanceof String s) || trim(s).isEmpty() || trim(s).length() > limit)
             throw PostsFailure.invalid(field, "Լրացրեք դաշտը՝ առավելագույնը " + limit + " նիշ։");
-        return s.strip();
+        return trim(s);
     }
 
     public static String content(Object value) {

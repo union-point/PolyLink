@@ -1,8 +1,8 @@
 import { createPostFeed } from '../posts/feed.js';
 import { openDirectWithUnblock } from '../chat/direct-contact.js';
-import { profiles, posts, chat } from '../services/index.js';
+import { profiles, chat } from '../services/index.js';
 import { selectedUserId } from '../services/navigation.js';
-import { educationEntry, certificateEntry, announcementEntry } from '../profile/profile-render.js';
+import { educationEntry, certificateEntry } from '../profile/profile-render.js';
 import { bootstrap, start, stateMessage, pending, confirmAction } from '../shared/ui.js';
 import { safeUrl } from '../shared/content.js';
 

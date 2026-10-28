@@ -1,9 +1,9 @@
 import { createPostFeed } from '../posts/feed.js';
 import { Modal } from './profile-modal.js';
 import { InlineEditor } from './profile-editor.js';
-import { showAddEducationModal, addEducationEntry, showAddLicenseModal, showAddAnnouncementModal, addLicenseEntry, addAnnouncementEntry, handleBannerUpload, handleProfilePhotoUpload } from './profile-sections.js';
+import { showAddEducationModal, addEducationEntry, showAddLicenseModal, showAddAnnouncementModal, addLicenseEntry, handleBannerUpload, handleProfilePhotoUpload } from './profile-sections.js';
 import { initializeKeyboardNavigation } from './profile-keyboard.js';
-import { profiles, posts } from '../services/index.js';
+import { profiles } from '../services/index.js';
 import { start, bootstrap, stateMessage } from '../shared/ui.js';
 import { safeUrl } from '../shared/content.js';
 

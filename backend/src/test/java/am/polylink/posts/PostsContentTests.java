@@ -19,6 +19,20 @@ class PostsContentTests {
     }
 
     @Test
+    void countsParagraphsWhitespaceAndBrowserTrimCharactersConsistently() {
+        assertThat(PostsContent.plain("<p>A   B</p><p>C<br>D</p>")).isEqualTo("A   B\nC\nD");
+        assertThat(PostsContent.title("\u00a0\uFEFF Title \u00a0")).isEqualTo("Title");
+        assertThatThrownBy(() -> PostsContent.title("\u00a0\uFEFF"))
+                .isInstanceOf(PostsFailure.class);
+        assertThat(PostsContent.content("<p>" + "A".repeat(19998) + "</p><p>B</p>")).isNotEmpty();
+        assertThatThrownBy(() -> PostsContent.content("<p>" + "A".repeat(19999) + "</p><p>B</p>"))
+                .isInstanceOf(PostsFailure.class);
+        assertThat(PostsContent.title("a".repeat(255))).hasSize(255);
+        assertThat(PostsContent.comment("a".repeat(2000))).hasSize(2000);
+        assertThat(PostsContent.sanitize("<a href='/relative'>text</a>")).doesNotContain("href");
+    }
+
+    @Test
     void validatesVisibleUtf16LengthsAndPlainComments() {
         assertThat(PostsContent.content("<p>" + "&#65;".repeat(10000) + "😀".repeat(5000) + "</p>"))
                 .isNotEmpty();

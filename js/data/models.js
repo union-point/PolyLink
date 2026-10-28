@@ -13,9 +13,13 @@
  * @typedef {{id:string, name:string, organization:string, issueDate:string|null,
  * credentialUrl:string, logo:string}} Certificate
  * @typedef {{id:string,name:string,avatar:string}} Author
- * @typedef {{id:string,postId:string,text:string,createdAt:string,author:Author}} Comment
- * @typedef {{id:string,title:string,content:string,category:string,sphere:string,
- * createdAt:string,author:Author,comments:Comment[]}} Post
+ * @typedef {{id:string|null,name:string,avatar:string,canOpenProfile:boolean}} PostAuthor
+ * @typedef {{id:string,postId:string,text:string,createdAt:string,updatedAt:string|null,
+ * author:PostAuthor,canEdit:boolean,canDelete:boolean}} Comment
+ * @typedef {{id:string,title:string|null,content:string,category:string|null,categoryName:string|null,
+ * sphereId:string|null,sphereName:string|null,createdAt:string,updatedAt:string|null,
+ * author:PostAuthor,commentCount:number,canEdit:boolean,canDelete:boolean}} Post
+ * @typedef {{items:Post[]|Comment[],nextCursor:string|null}} PostPage
  * @typedef {{id:string|null,name:string,avatar:string,canOpenProfile:boolean}} ForumAuthor
  * @typedef {{id:string,code:string,name:string}} ForumCategory
  * @typedef {{id:string,title:string,categoryCode:string,categoryName:string,content:string,excerpt:string,
@@ -29,7 +33,7 @@
  * attachment:{url:string,name:string,type:string}|null}} Message
  * @typedef {{isProfilePublic:boolean,showEmail:boolean,twoFactorEnabled:boolean,
  * language:string,emailEnabled:boolean,newListingNotifications:boolean,
- * forumReplyNotifications:boolean,directMessageNotifications:boolean}} Settings
+ * forumReplyNotifications:boolean,directMessageNotifications:boolean,postCommentNotifications:boolean}} Settings
  * @typedef {{status:'enrollment',next?:string}|{status:'authenticated',user:User}|{status:'challenge',challengeId:string,
  * expiresAt?:number,resendAfter?:number}} LoginResult
  */

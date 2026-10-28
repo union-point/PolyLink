@@ -109,6 +109,19 @@ class DatabaseMigrationIT {
                                             "SELECT COUNT(*) FROM auth.PostsLegacyReview",
                                             Integer.class))
                             .isEqualTo(2);
+                    db.execute(
+                            "ALTER INDEX UX_ActivityNotifications_Comment ON auth.ActivityNotifications DISABLE");
+                    assertThatThrownBy(() -> SchemaCommand.assertCurrentSchema(connection))
+                            .hasMessageContaining("Posts activity index differs");
+                    db.execute(
+                            "ALTER INDEX UX_ActivityNotifications_Comment ON auth.ActivityNotifications REBUILD");
+                    db.execute(
+                            "ALTER TABLE auth.ActivityNotifications NOCHECK CONSTRAINT CK_ActivityNotifications_Kind");
+                    assertThatThrownBy(() -> SchemaCommand.assertCurrentSchema(connection))
+                            .hasMessageContaining("kind guard missing");
+                    db.execute(
+                            "ALTER TABLE auth.ActivityNotifications WITH CHECK CHECK CONSTRAINT CK_ActivityNotifications_Kind");
+                    SchemaCommand.assertCurrentSchema(connection);
                     assertThatThrownBy(() -> db.update("DELETE dbo.Posts"))
                             .isInstanceOf(
                                     org.springframework.dao.DataIntegrityViolationException.class);

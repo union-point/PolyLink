@@ -176,6 +176,7 @@ export async function bootstrap({ protectedPage = true, requireOnboarding = true
     window.addEventListener('pageshow',event=>{if(event.persisted){leaving=false;check();}});
     window.addEventListener('focus',check);document.addEventListener('visibilitychange',check);
   }else window.addEventListener('pageshow', event => { if (event.persisted) { leaving = false; auth.me().then(next => validateSession(next)).catch(error => validateSession(null, error)); } });
+  document.body.dataset.accountId=user.id;
   const {startActivityNotifications}=await import('./activity-notifications.js');startActivityNotifications(user.id);
   return user;
 }

@@ -12,6 +12,8 @@ async function ready(){await page.waitForFunction(()=>document.querySelector('ma
 async function count(selector,n){await page.waitForFunction(({selector,n})=>document.querySelectorAll(selector).length===n,{selector,n});}
 try{
  await page.goto(origin+'/events.html');await ready();await count('.post-card',3);
+ await page.evaluate(async()=>{const {postPlainText,validatePostInput}=await import('/js/posts/content.js');if(postPlainText('<p>A   B</p><p>C<br>D</p>')!=='A   B\nC\nD')throw new Error('Visible-text parity');validatePostInput({title:'x'.repeat(255),content:'<p>'+'a'.repeat(19998)+'</p><p>B</p>',category:'job',sphereId:'4'});let failed=false;try{validatePostInput({title:'x',content:'<p>'+'a'.repeat(19999)+'</p><p>B</p>',category:'job',sphereId:'4'});}catch{failed=true;}if(!failed)throw new Error('Visible-text limit not enforced');});
+ await page.evaluate(async()=>{const {transaction}=await import('/js/data/mock/store.js');const {posts}=await import('/js/services/index.js');await transaction(state=>{for(const [id,createdAt] of [['999999','2030-01-01T00:00:00Z'],['999998','2030-01-01T00:00:00.100Z']])state.posts.push({...state.posts[0],id,createdAt,category:'training',sphereId:'4'});},{write:true});try{const result=await posts.list({category:'training',sphereId:'4'});if(result.items[0].id!=='999998')throw new Error('Mixed timestamp precision reordered mock feed');}finally{await transaction(state=>{state.posts=state.posts.filter(p=>!['999999','999998'].includes(p.id));},{write:true});}});
  await page.locator('.category-selector').selectOption('training');await page.locator('.filters .tag-selector:not(.category-selector)').selectOption('3');await count('.post-card',1);
  await page.locator('.create-post-btn').click();const form=page.locator('.posts-modal');await form.locator('select[name=sphereId] option[value="4"]').waitFor({state:'attached'});
  assert.equal(await form.locator('[name=sphereId]').inputValue(),'','Direction never comes from feed filter');assert.equal(await form.locator('[name=category]').inputValue(),'');
@@ -38,4 +40,4 @@ try{
  await page.goto(origin+'/profile.html');await ready();await page.locator('.announcements-section .post-card').first().waitFor();
  await page.goto(origin+'/post.html?id='+id);await ready();await page.locator('[data-post-delete]').click();await page.locator('[data-common-confirm]').getByRole('button',{name:'Այո',exact:true}).click();await page.getByText('Հայտարարությունը հասանելի չէ։',{exact:true}).waitFor();await page.reload();await ready();await page.getByText('Հայտարարությունը հասանելի չէ։',{exact:true}).waitFor();
  assert.deepEqual(errors,[]);console.log('Posts mock provider, feed, forms, comments, profiles, deep links and mobile acceptance passed.');
-}finally{await browser.close();}
+}catch(error){console.error(error);throw error;}finally{await context.unrouteAll({behavior:'ignoreErrors'});await browser.close();}

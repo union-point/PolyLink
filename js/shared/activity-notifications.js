@@ -17,7 +17,7 @@ export function startActivityNotifications(user){
   toggle.onclick=()=>{panel.hidden=!panel.hidden;toggle.setAttribute('aria-expanded',String(!panel.hidden));if(!panel.hidden)history(true);};more.onclick=()=>history();refresh.onclick=()=>history(true);
   const changed=()=>history(true);window.addEventListener('polylink-notifications-changed',changed);
   function stop(){if(stopped)return;stopped=true;clearTimeout(timer);presenter.stop();items.clear();root.remove();unsubscribe?.();window.removeEventListener('polylink-notifications-changed',changed);window.removeEventListener('pagehide',pagehide);window.removeEventListener('pageshow',pageshow);if(active?.stop===stop)active=null;}
-  const pageshow=event=>{if(event.persisted)startActivityNotifications(user);};const pagehide=event=>{stop();if(event.persisted)window.addEventListener('pageshow',pageshow,{once:true});};window.addEventListener('pagehide',pagehide,{once:true});
+  const pageshow=event=>{if(event.persisted)auth.me().then(current=>{if(current?.id===user)startActivityNotifications(user);}).catch(()=>{});};const pagehide=event=>{stop();if(event.persisted)window.addEventListener('pageshow',pageshow,{once:true});};window.addEventListener('pagehide',pagehide,{once:true});
   auth.subscribeSession((current,error)=>{if(!error&&current?.id!==user)stop();}).then(off=>{if(stopped)off();else unsubscribe=off;}).catch(()=>{});
   active={user,stop};
   // Establish the live watermark before history: comments arriving between reads deduplicate by ID.

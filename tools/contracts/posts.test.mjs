@@ -23,9 +23,19 @@ test('strict post DTOs reject fabricated fields and malformed envelopes',()=>{
 test('post options include exactly supported types and database identities with Other',()=>{
  const options={types:['job','internship','training'].map(code=>({code,name:code})),spheres:[{id:'5',name:'Այլ',isOther:true}]};assert.deepEqual(normalizePostOptions(options),options);
  assert.throws(()=>normalizePostOptions({...options,spheres:[]}),e=>e.code==='CONTRACT');
+ assert.throws(()=>normalizePostOptions({...options,spheres:[{id:'programming',name:'Programming',isOther:true}]}),e=>e.code==='CONTRACT');
  assert.throws(()=>normalizePostOptions({...options,types:[options.types[0]]}),e=>e.code==='CONTRACT');
 });
 test('post writes use full replacement and preserve unknown fields for server rejection',()=>{
  const input={title:'A',content:'B',category:'job',sphereId:'5',forged:true};assert.deepEqual(routes['posts.create'](input).data,input);assert.deepEqual(routes['posts.update']('1',input),{method:'put',url:'/posts/1',data:input});assert.equal(routes['posts.get']('1').url,'/posts/1');assert.ok(!('expectedVersion'in routes['posts.delete']('1')));
 });
 test('posts HTTP failures propagate without fallback data',async()=>{const failure=new Error('Offline'),provider=createHttpProvider(Promise.resolve({request:async()=>{throw failure;}}));await assert.rejects(provider.call('posts.list'),e=>e===failure);});
+
+test('browser notification targets dispatch explicit kinds and ignore unknown events',async()=>{
+ const {notificationTarget}=await import('../../js/shared/browser-notifications.js');
+ assert.equal(notificationTarget({kind:'POST_COMMENT',postId:'7'}),'post.html?id=7');
+ assert.equal(notificationTarget({kind:'FORUM_REPLY',topicId:'2',replyId:'3'}),'topic.html?id=2&reply=3');
+ assert.equal(notificationTarget({kind:'DIRECT_MESSAGE',roomId:'room'}),'message.html?room=room');
+ assert.equal(notificationTarget({kind:'ANNOUNCEMENT',roomId:'room'}),null);
+ assert.equal(notificationTarget({kind:'POST_COMMENT'}),null);
+});

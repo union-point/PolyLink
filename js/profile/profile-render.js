@@ -1,5 +1,4 @@
 import { createPostCard } from '../posts/cards.js';
-import { posts } from '../services/index.js';
 import { escapeHtml as e, sanitizeHtml, safeUrl } from '../shared/content.js';
 import { dateRange, monthLabel, relativeTime, pending, stateMessage } from '../shared/ui.js';
 

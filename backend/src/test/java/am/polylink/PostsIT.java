@@ -361,6 +361,7 @@ class PostsIT {
                     public void sendCode(String email, String purpose, String code) {}
 
                     public void sendNotice(String email, String subject, String body) {
+                        if (!email.equals(a.email())) return;
                         if (fail.getAndSet(false)) throw new RuntimeException("SMTP unavailable");
                         notices.add(email + " " + body);
                     }
@@ -482,5 +483,129 @@ class PostsIT {
                 .isZero();
         lifecycle.replayDeletion(a.id());
         assertThat(posts.get(b.id(), id).get("commentCount")).isEqualTo(3);
+    }
+
+    @Test
+    void combinedFiltersApplyBeforePagingAndAdmissionIsRechecked() throws Exception {
+        var a = fixture.enroll("graduate");
+        var b = fixture.enroll("lecturer");
+        var sphereIds = new ArrayList<String>();
+        sphereIds.add(input().get("sphereId").toString());
+        for (int i = 0; i < 2; i++)
+            sphereIds.add(
+                    db.queryForObject(
+                            "INSERT dbo.Spheres(Name) OUTPUT INSERTED.SphereId VALUES (?)",
+                            String.class,
+                            "Filter " + UUID.randomUUID()));
+        for (String category : List.of("job", "internship", "training"))
+            for (String sphere : sphereIds)
+                for (int i = 0; i < 3; i++) {
+                    var data = input();
+                    data.put("category", category);
+                    data.put("sphereId", sphere);
+                    posts.create(a.id(), data);
+                }
+        for (String category : List.of("job", "internship", "training")) {
+            assertThat((List<?>) posts.list(b.id(), category, "", "" + a.id(), "").get("items"))
+                    .hasSize(9);
+            for (String sphere : sphereIds)
+                assertThat(
+                                (List<?>)
+                                        posts.list(b.id(), category, sphere, "" + a.id(), "")
+                                                .get("items"))
+                        .hasSize(3);
+        }
+        for (String sphere : sphereIds)
+            assertThat((List<?>) posts.list(b.id(), "", sphere, "" + a.id(), "").get("items"))
+                    .hasSize(9);
+        assertThat((List<?>) posts.list(b.id(), "", "", "" + b.id(), "").get("items")).isEmpty();
+        try (var connection = Objects.requireNonNull(db.getDataSource()).getConnection();
+                var statement = connection.createStatement()) {
+            statement.execute("SET STATISTICS XML ON");
+            int type =
+                    db.queryForObject(
+                            "SELECT PostTypeId FROM dbo.PostTypes WHERE Code='job'", Integer.class);
+            statement.execute(
+                    "SELECT TOP (21) PostId,CreatedAtUtc FROM dbo.Posts WHERE PostTypeId="
+                            + type
+                            + " AND SphereId="
+                            + Integer.parseInt(sphereIds.getFirst())
+                            + " ORDER BY CreatedAtUtc DESC,PostId DESC");
+            try (var rows = statement.getResultSet()) {
+                while (rows.next()) {}
+            }
+            String plan = null;
+            while (statement.getMoreResults() || statement.getUpdateCount() != -1)
+                if (statement.getResultSet() != null) {
+                    try (var result = statement.getResultSet()) {
+                        if (result.next()) plan = result.getString(1);
+                    }
+                }
+            statement.execute("SET STATISTICS XML OFF");
+            assertThat(plan).contains("IX_Posts_TypeSphereDate", "ActualRows");
+            System.out.println(
+                    "Posts actual covering-filter plan uses IX_Posts_TypeSphereDate on disposable fixtures");
+        }
+        int role =
+                db.queryForObject(
+                        "INSERT dbo.Roles(Name) OUTPUT INSERTED.RoleId VALUES (?)",
+                        Integer.class,
+                        "reader-" + UUID.randomUUID());
+        db.update("UPDATE dbo.Users SET RoleId=? WHERE UserId=?", role, b.id());
+        call(b, "GET", "/posts/options", null, 200);
+        call(b, "POST", "/posts", input(), 403);
+        db.update(
+                "UPDATE auth.AccountSecurity SET AdmissionStatus='PENDING' WHERE UserId=?", b.id());
+        call(b, "GET", "/posts/options", null, 401);
+    }
+
+    @Test
+    void commentCreationSerializesWithAccountDeactivationAndDeletion() throws Exception {
+        for (boolean delete : List.of(false, true)) {
+            var a = fixture.enroll("graduate");
+            var b = fixture.enroll("lecturer");
+            int id = Integer.parseInt(posts.create(a.id(), input()).get("id").toString());
+            try (var pool = Executors.newFixedThreadPool(2)) {
+                var start = new CountDownLatch(1);
+                var comment =
+                        pool.submit(
+                                () -> {
+                                    start.await();
+                                    try {
+                                        posts.createComment(
+                                                b.id(), id, Map.of("text", "Lifecycle race"));
+                                    } catch (AuthFailure expected) {
+                                    }
+                                    return true;
+                                });
+                var change =
+                        pool.submit(
+                                () -> {
+                                    start.await();
+                                    lifecycle.apply(
+                                            new Sessions.Principal(
+                                                    accounts.get(a.id()), UUID.randomUUID()),
+                                            new am.polylink.chat.AccountLifecycle.Request(
+                                                    "1", a.secret()),
+                                            delete);
+                                    return true;
+                                });
+                start.countDown();
+                comment.get(15, TimeUnit.SECONDS);
+                change.get(15, TimeUnit.SECONDS);
+            }
+            assertThat(
+                            db.queryForObject(
+                                    "SELECT COUNT(*) FROM auth.ActivityNotifications WHERE UserId=? OR ActorId=?",
+                                    Integer.class,
+                                    a.id(),
+                                    a.id()))
+                    .isZero();
+            assertThat((List<?>) notifications.history(b.id(), "").get("items")).isEmpty();
+            if (delete) {
+                assertThat(((Map<?, ?>) posts.get(b.id(), id).get("author")).get("id")).isNull();
+                lifecycle.replayDeletion(a.id());
+            }
+        }
     }
 }

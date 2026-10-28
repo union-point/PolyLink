@@ -23,7 +23,7 @@ function common(state,item){const editable=item.userId===state.sessionUserId&&st
 function postView(state,item){const type=types.find(t=>t.code===item.category),sphere=spheres.find(s=>s.id===item.sphereId);return {...common(state,item),title:item.title?.trim()?item.title:null,content:sanitizePostHtml(item.content),category:type?.code??null,categoryName:type?.name??null,sphereId:sphere?.id??null,sphereName:sphere?.name??null,commentCount:state.comments.filter(c=>c.postId===item.id).length};}
 function commentView(state,item){return {...common(state,item),postId:item.postId,text:item.text};}
 function input(data){fields(data,['title','content','category','sphereId']);const result=validatePostInput(data);if(!spheres.some(s=>s.id===result.sphereId))throw invalid('sphereId');return result;}
-const compare=(a,b)=>a.createdAt.localeCompare(b.createdAt)||a.id.localeCompare(b.id,undefined,{numeric:true});
+const compare=(a,b)=>Date.parse(a.createdAt)-Date.parse(b.createdAt)||a.id.localeCompare(b.id,undefined,{numeric:true});
 function page(state,items,scope,cursor,view,descending=false){
   user(state);if(cursor){const key=state.postCursors[cursor];if(!key||key.scope!==scope||key.user!==state.sessionUserId)throw invalid('cursor');items=items.filter(item=>(descending?-1:1)*compare(item,key)>0);}
   items.sort((a,b)=>(descending?-1:1)*compare(a,b));const visible=items.slice(0,20);let nextCursor=null;

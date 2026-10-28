@@ -3,6 +3,7 @@ const bad = () => new DataError('CONTRACT','Հայտարարություններ
 const object = value => { if (!value || typeof value !== 'object' || Array.isArray(value)) throw bad(); return value; };
 const text = value => { if (typeof value !== 'string') throw bad(); return value; };
 const id = value => { if (!text(value) || value.length > 128) throw bad(); return value; };
+const referenceId = value => { if (!/^[1-9][0-9]{0,9}$/.test(text(value)) || Number(value)>2147483647) throw bad(); return value; };
 const flag = value => { if (typeof value !== 'boolean') throw bad(); return value; };
 const nullable = (value, normalize = text) => value === null ? null : normalize(value);
 const date = value => { if (!text(value) || !Number.isFinite(Date.parse(value)) || !/(Z|[+-]\d\d:\d\d)$/.test(value)) throw bad(); return value; };
@@ -12,7 +13,7 @@ function common(value) { object(value); return {id:id(value.id),author:author(va
 export function normalizePost(value) {
   const base=common(value);
   if (!Number.isSafeInteger(value.commentCount) || value.commentCount<0) throw bad();
-  return {...base,title:nullable(value.title),content:text(value.content),category:nullable(value.category,type),categoryName:nullable(value.categoryName),sphereId:nullable(value.sphereId,id),sphereName:nullable(value.sphereName),commentCount:value.commentCount};
+  return {...base,title:nullable(value.title),content:text(value.content),category:nullable(value.category,type),categoryName:nullable(value.categoryName),sphereId:nullable(value.sphereId,referenceId),sphereName:nullable(value.sphereName),commentCount:value.commentCount};
 }
 export function normalizeComment(value) { return {...common(value),postId:id(value.postId),text:text(value.text)}; }
 export function normalizePostPage(value, normalize=normalizePost) {
@@ -23,7 +24,7 @@ function idCursor(value) { if (!text(value) || value.length>1000) throw bad(); r
 export function normalizePostOptions(value) {
   object(value);if (!Array.isArray(value.types)||!Array.isArray(value.spheres))throw bad();
   const types=value.types.map(item=>({code:type(item.code),name:text(item.name)}));
-  const spheres=value.spheres.map(item=>({id:id(item.id),name:text(item.name),isOther:flag(item.isOther)}));
+  const spheres=value.spheres.map(item=>({id:referenceId(item.id),name:text(item.name),isOther:flag(item.isOther)}));
   if (new Set(types.map(t=>t.code)).size!==3 || types.length!==3 || new Set(spheres.map(s=>s.id)).size!==spheres.length || spheres.filter(s=>s.isOther).length!==1)throw bad();
   return {types,spheres};
 }

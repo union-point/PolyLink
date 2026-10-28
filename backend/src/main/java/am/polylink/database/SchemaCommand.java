@@ -173,6 +173,7 @@ public final class SchemaCommand {
                     }
                 }
             }
+            if (version >= 18) assertPostsAuxiliarySchema(connection);
             if (!expectedForum.equals(mapper.readTree(inventory(connection))))
                 throw new IllegalStateException(
                         "Schema differs from the inspected baseline; reviewed forum inventory required");
@@ -216,6 +217,69 @@ public final class SchemaCommand {
             throw new IllegalStateException(
                     "Legacy schema differs from the inspected baseline; inventory and review required");
         }
+    }
+
+    private static void assertPostsAuxiliarySchema(Connection connection) throws Exception {
+        var db =
+                new org.springframework.jdbc.core.JdbcTemplate(
+                        new org.springframework.jdbc.datasource.SingleConnectionDataSource(
+                                connection, true));
+        int targets =
+                db.queryForObject(
+                        "SELECT COUNT(*) FROM sys.columns WHERE object_id=OBJECT_ID(N'auth.ActivityNotifications') AND name IN ('PostId','CommentId') AND TYPE_NAME(user_type_id)='int' AND is_nullable=1",
+                        Integer.class);
+        int review =
+                db.queryForObject(
+                        "SELECT COUNT(*) FROM sys.columns WHERE object_id=OBJECT_ID(N'auth.PostsLegacyReview')",
+                        Integer.class);
+        int reviewColumns =
+                db.queryForObject(
+                        "SELECT COUNT(*) FROM sys.columns WHERE object_id=OBJECT_ID(N'auth.PostsLegacyReview') AND is_nullable=0 AND ((name='Kind' AND TYPE_NAME(user_type_id)='varchar' AND max_length=8) OR (name='RecordId' AND TYPE_NAME(user_type_id)='int') OR (name='OriginalCreatedAt' AND TYPE_NAME(user_type_id)='datetime2' AND scale=7) OR (name IN ('SourceTimezone','Operator') AND TYPE_NAME(user_type_id)='nvarchar' AND max_length=200) OR (name='ReviewedAt' AND TYPE_NAME(user_type_id)='datetimeoffset' AND scale=7))",
+                        Integer.class);
+        if (targets != 2 || review != 6 || reviewColumns != 6)
+            throw new IllegalStateException("Posts auxiliary inventory differs; review required");
+        var definitions =
+                db.queryForList(
+                        "SELECT definition FROM sys.check_constraints WHERE parent_object_id=OBJECT_ID(N'auth.ActivityNotifications') AND name='CK_ActivityNotifications_Kind' AND is_disabled=0 AND is_not_trusted=0",
+                        String.class);
+        if (definitions.size() != 1)
+            throw new IllegalStateException("Posts notification kind guard missing");
+        var actual =
+                new java.util.HashSet<>(
+                        java.util.Arrays.asList(
+                                definitions
+                                        .getFirst()
+                                        .replaceAll("[()\\[\\]]", "")
+                                        .replaceAll("\\s+", " ")
+                                        .split(" OR ")));
+        if (!actual.equals(
+                java.util.Set.of(
+                        "Kind='DIRECT_MESSAGE'",
+                        "Kind='ANNOUNCEMENT'",
+                        "Kind='FORUM_REPLY'",
+                        "Kind='POST_COMMENT'")))
+            throw new IllegalStateException("Posts notification kinds differ; review required");
+        for (var index :
+                java.util.Map.of(
+                                "IX_ActivityNotifications_Post",
+                                "PostId,CommentId",
+                                "UX_ActivityNotifications_Comment",
+                                "UserId,CommentId",
+                                "IX_ActivityNotifications_History",
+                                "UserId,Id")
+                        .entrySet()) {
+            var columns =
+                    db.queryForList(
+                            "SELECT c.name FROM sys.indexes i JOIN sys.index_columns ic ON ic.object_id=i.object_id AND ic.index_id=i.index_id JOIN sys.columns c ON c.object_id=ic.object_id AND c.column_id=ic.column_id WHERE i.object_id=OBJECT_ID(N'auth.ActivityNotifications') AND i.name=? AND i.is_disabled=0 AND ic.key_ordinal>0 ORDER BY ic.key_ordinal",
+                            String.class,
+                            index.getKey());
+            if (!String.join(",", columns).equals(index.getValue()))
+                throw new IllegalStateException("Posts activity index differs: " + index.getKey());
+        }
+        if (db.queryForObject(
+                        "SELECT COUNT(*) FROM sys.indexes WHERE object_id=OBJECT_ID(N'auth.ActivityNotifications') AND name='UX_ActivityNotifications_Comment' AND is_unique=1 AND filter_definition=N'([Kind]=''POST_COMMENT'')'",
+                        Integer.class)
+                != 1) throw new IllegalStateException("Posts unique event guard differs");
     }
 
     public static Flyway migrations(javax.sql.DataSource source) {
