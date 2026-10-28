@@ -32,7 +32,7 @@ For a manually managed backend-only configuration, copy `config/application-loca
 
 ## Migrations
 
-Current source includes **V1–V16**. Application startup never migrates: Flyway and SQL initialization are disabled, and Hibernate is configured for validation. Use migration credentials with schema-change permissions, separately from runtime credentials.
+Current source includes **V1–V17**. Application startup never migrates: Flyway and SQL initialization are disabled, and Hibernate is configured for validation. Use migration credentials with schema-change permissions, separately from runtime credentials.
 
 From the root, after loading the environment, set `MIGRATION_DB_USERNAME` and `MIGRATION_DB_PASSWORD`, then inspect the selected database:
 
@@ -42,7 +42,7 @@ From the root, after loading the environment, set `MIGRATION_DB_USERNAME` and `M
 
 Stop application access, verify a backup and use `-Dexec.args=upgrade` for an existing/restored database. The first upgrade validates the captured legacy structure before recording V1; later upgrades validate the versioned layout and checksums. Drift stops the command. For an already-created empty database use `-Dexec.args=fresh`; it refuses nonempty databases. Fresh migrations do not seed eligible user identities or usable credentials.
 
-Historical forum rows require `upgrade --target=12`, an offline reviewed category/timezone backfill, then `upgrade`; V13 refuses unreviewed rows. See [forum migration operations](../docs/forum_implementation.md#existing-database-upgrade). V8/V9 remove obsolete plaintext chat and authentication fields and require a matching backend after migration. V14 introduces registry enrollment; V15 adds enrollment avatars. V16 removes retired import staging, invitations (including `PendingEnrollments.InvitationId`) and the legacy forum review log. See [schema workflow](../docs/messenger/schema-and-migrations.md) and [enrollment rollout](../docs/registry_enrollment.md).
+Historical forum rows require `upgrade --target=12`, an offline reviewed category/timezone backfill, then `upgrade`; V13 refuses unreviewed rows. See [forum migration operations](../docs/forum_implementation.md#existing-database-upgrade). V8/V9 remove obsolete plaintext chat and authentication fields and require a matching backend after migration. V14 introduces registry enrollment; V15 adds enrollment avatars. V16 removes retired import staging, invitations (including `PendingEnrollments.InvitationId`) and the legacy forum review log. V17 adds the enrollment institute reference, allows unknown education degrees and backfills verified graduate education. See [schema workflow](../docs/messenger/schema-and-migrations.md) and [enrollment rollout](../docs/registry_enrollment.md).
 
 `SchemaCommand` reads environment variables, including an explicit database target; it does not read local Spring properties or `db/.env`. Never bypass its baseline guard or rewrite applied migrations. Add the next unused migration under `src/main/resources/db/migration/` and verify fresh/upgrade paths in disposable databases.
 

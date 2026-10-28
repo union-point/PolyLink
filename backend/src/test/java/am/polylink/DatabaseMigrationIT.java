@@ -14,6 +14,69 @@ import org.springframework.jdbc.datasource.SingleConnectionDataSource;
 
 class DatabaseMigrationIT {
     @Test
+    void v17BackfillsVerifiedEducationAndPreservesExistingReferences() throws Exception {
+        inIsolatedDatabase(
+                connection -> {
+                    var source = new SingleConnectionDataSource(connection, true);
+                    SchemaCommand.migrations(source, "16").migrate();
+                    var db = new org.springframework.jdbc.core.JdbcTemplate(source);
+                    db.execute(
+                            """
+                        INSERT dbo.Specializations(Name) VALUES (N'Education migration');
+                        INSERT dbo.Universities(Name) VALUES (N'Existing university');
+                        INSERT dbo.Degrees(Name) VALUES (N'Existing degree');
+                        INSERT dbo.Users(FirstName,LastName,Email,RoleId,LanguageId)
+                        SELECT N'Education',N'Fixture',v.Email,
+                            (SELECT RoleId FROM dbo.Roles WHERE Name=N'graduate'),
+                            (SELECT Id FROM dbo.Languages WHERE Code=N'en')
+                        FROM (VALUES (N'missing@example.invalid'),(N'existing@example.invalid'),
+                                     (N'pending@example.invalid'),(N'grandfathered@example.invalid')) v(Email);
+                        INSERT auth.AccountSecurity(UserId,AdmissionStatus,CredentialVersion,SchemeVersion,ClientSalt,ClientOpsLimit,ClientMemoryBytes,LoginVerifier,EmailFactorEnabled)
+                        SELECT UserId,CASE WHEN Email=N'pending@example.invalid' THEN 'PENDING' ELSE 'ADMITTED' END,
+                            1,1,0x112233,2,67108864,'VERIFIER',0 FROM dbo.Users;
+                        INSERT dbo.AlumniRegistry(FirstName,LastName,DiplomaNumber,StudyStartDate,StudyEndDate,SpecializationId)
+                        SELECT FirstName,LastName,Email,'2019-09-02','2023-06-17',
+                            (SELECT SpecializationId FROM dbo.Specializations) FROM dbo.Users;
+                        INSERT auth.RegistryClaims(UserId,AlumniRegistryId,VerifiedAt,ProfileRevision)
+                        SELECT u.UserId,r.AlumniRegistryId,SYSDATETIMEOFFSET(),2
+                        FROM dbo.Users u JOIN dbo.AlumniRegistry r ON r.DiplomaNumber=u.Email
+                        WHERE u.Email IN (N'missing@example.invalid',N'existing@example.invalid');
+                        INSERT dbo.Education(UserId,StartDate,EndDate,SpecializationId,UniversityId,DegreeId)
+                        SELECT UserId,'2019-09-02','2023-06-17',
+                            (SELECT SpecializationId FROM dbo.Specializations),
+                            (SELECT UniversityId FROM dbo.Universities),(SELECT DegreeId FROM dbo.Degrees)
+                        FROM dbo.Users WHERE Email=N'existing@example.invalid';
+                        """);
+                    var existing = db.queryForMap("SELECT * FROM dbo.Education");
+                    SchemaCommand.migrate(connection, "upgrade");
+                    assertThat(count(connection, "dbo.Education")).isEqualTo(2);
+                    var backfilled =
+                            db.queryForMap(
+                                    "SELECT e.* FROM dbo.Education e JOIN dbo.Users u ON u.UserId=e.UserId WHERE u.Email=N'missing@example.invalid'");
+                    assertThat(backfilled.get("StartDate").toString()).isEqualTo("2019-09-02");
+                    assertThat(backfilled.get("EndDate").toString()).isEqualTo("2023-06-17");
+                    assertThat(backfilled.get("SpecializationId")).isNotNull();
+                    assertThat(backfilled.get("UniversityId"))
+                            .isEqualTo(
+                                    db.queryForObject(
+                                            "SELECT UniversityId FROM dbo.Universities WHERE Name=N'Հայաստանի ազգային պոլիտեխնիկական համալսարան'",
+                                            Integer.class));
+                    assertThat(backfilled.get("DegreeId")).isNull();
+                    assertThat(backfilled.get("InstituteId")).isNull();
+                    assertThat(
+                                    db.queryForMap(
+                                            "SELECT * FROM dbo.Education WHERE DegreeId IS NOT NULL"))
+                            .isEqualTo(existing);
+                    assertThatThrownBy(
+                                    () -> db.update("UPDATE dbo.Education SET DegreeId=2147483647"))
+                            .isInstanceOf(
+                                    org.springframework.dao.DataIntegrityViolationException.class);
+                    SchemaCommand.migrate(connection, "upgrade");
+                    assertThat(count(connection, "dbo.Education")).isEqualTo(2);
+                });
+    }
+
+    @Test
     void v16RemovesRetiredTablesAndPreservesPendingEnrollments() throws Exception {
         inIsolatedDatabase(
                 connection -> {

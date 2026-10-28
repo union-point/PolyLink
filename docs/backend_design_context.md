@@ -1,6 +1,6 @@
 # PolyLink backend design context
 
-Reviewed 25 October 2026 against current Java controllers/services, migrations V1–V16, frontend provider clients and the settings/messenger handoffs. PolyLink now has an implemented Java 25 / Spring Boot 4.1.1 backend using Microsoft SQL Server, JDBC transactions, SMTP and OpenBao Transit. It is no longer only a design or scaffold.
+Reviewed 28 October 2026 against current Java controllers/services, migrations V1–V17, frontend provider clients and the settings/messenger handoffs. PolyLink now has an implemented Java 25 / Spring Boot 4.1.1 backend using Microsoft SQL Server, JDBC transactions, SMTP and OpenBao Transit. It is no longer only a design or scaffold.
 
 ## Evidence and authority
 
@@ -51,6 +51,7 @@ The code uses explicit JDBC/SQL service boundaries; domain JPA entity mappings a
 | V14 | Restricted enrollment sessions, persisted academic profiles, verified registry claims and grandfathered admission. |
 | V15 | Bounded normalized enrollment avatars, retained on admission. |
 | V16 | Remove retired import staging, invitations and enrollment invitation reference, and historical forum review log; retain 58 application tables. |
+| V17 | Add the enrollment institute reference, allow unknown education degrees and backfill study dates/specialization from verified alumni claims. |
 
 Use `SchemaCommand inventory`, guarded `upgrade` for restored/existing databases, and `fresh` only for empty databases. Migrations use separate migration credentials and run explicitly. Startup disables Flyway and SQL initialization; Hibernate is configured for validation. Never edit applied migration checksums or bypass baseline drift checks. V8/V9 removal requires a verified backup and stopped application access with matching backend deployment. See [schema workflow](messenger/schema-and-migrations.md).
 

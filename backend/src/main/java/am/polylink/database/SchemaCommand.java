@@ -135,6 +135,14 @@ public final class SchemaCommand {
                     if (tables.get(i).path("name").asText().equals("AlumniRegistry_Import"))
                         tables.remove(i);
             }
+            if (version >= 17) {
+                for (var table : expectedForum.path("tables"))
+                    if (table.path("name").asText().equals("Education"))
+                        for (var column : table.path("columns"))
+                            if (column.path("name").asText().equals("DegreeId"))
+                                ((tools.jackson.databind.node.ObjectNode) column)
+                                        .put("nullable", true);
+            }
             if (!expectedForum.equals(mapper.readTree(inventory(connection))))
                 throw new IllegalStateException(
                         "Schema differs from the inspected baseline; reviewed forum inventory required");
