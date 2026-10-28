@@ -1,0 +1,519 @@
+{
+  "PostComments": {
+    "schema": "dbo",
+    "name": "PostComments",
+    "columns": [
+      {
+        "name": "CommentId",
+        "type": "int",
+        "maxLength": 4,
+        "precision": 10,
+        "scale": 0,
+        "nullable": false,
+        "identitySeed": "1",
+        "identityIncrement": "1"
+      },
+      {
+        "name": "PostId",
+        "type": "int",
+        "maxLength": 4,
+        "precision": 10,
+        "scale": 0,
+        "nullable": false
+      },
+      {
+        "name": "UserId",
+        "type": "int",
+        "maxLength": 4,
+        "precision": 10,
+        "scale": 0,
+        "nullable": false
+      },
+      {
+        "name": "Content",
+        "type": "nvarchar",
+        "maxLength": -1,
+        "precision": 0,
+        "scale": 0,
+        "nullable": false,
+        "collation": "SQL_Latin1_General_CP1_CI_AS"
+      },
+      {
+        "name": "CreatedAt",
+        "type": "datetime2",
+        "maxLength": 8,
+        "precision": 27,
+        "scale": 7,
+        "nullable": false,
+        "defaultName": "DF__PostComme__Creat__08B54D69",
+        "defaultDefinition": "(sysdatetime())"
+      },
+      {
+        "name": "CreatedAtUtc",
+        "type": "datetimeoffset",
+        "maxLength": 10,
+        "precision": 34,
+        "scale": 7,
+        "nullable": true
+      },
+      {
+        "name": "UpdatedAtUtc",
+        "type": "datetimeoffset",
+        "maxLength": 10,
+        "precision": 34,
+        "scale": 7,
+        "nullable": true
+      }
+    ],
+    "indexes": [
+      {
+        "name": "PK__PostComm__C3B4DFCA3CDF2F57",
+        "type": "CLUSTERED",
+        "unique": true,
+        "primaryKey": true,
+        "uniqueConstraint": false,
+        "columns": [
+          {
+            "name": "CommentId",
+            "descendingKey": false,
+            "included": false
+          }
+        ]
+      }
+    ],
+    "foreignKeys": [
+      {
+        "name": "FK__PostComme__PostI__09A971A2",
+        "targetSchema": "dbo",
+        "targetTable": "Posts",
+        "onDelete": "NO_ACTION",
+        "onUpdate": "NO_ACTION",
+        "disabled": false,
+        "untrusted": false,
+        "columns": [
+          {
+            "source": "PostId",
+            "target": "PostId"
+          }
+        ]
+      },
+      {
+        "name": "FK__PostComme__UserI__0A9D95DB",
+        "targetSchema": "dbo",
+        "targetTable": "Users",
+        "onDelete": "NO_ACTION",
+        "onUpdate": "NO_ACTION",
+        "disabled": false,
+        "untrusted": false,
+        "columns": [
+          {
+            "source": "UserId",
+            "target": "UserId"
+          }
+        ]
+      }
+    ]
+  },
+  "Posts": {
+    "schema": "dbo",
+    "name": "Posts",
+    "columns": [
+      {
+        "name": "PostId",
+        "type": "int",
+        "maxLength": 4,
+        "precision": 10,
+        "scale": 0,
+        "nullable": false,
+        "identitySeed": "1",
+        "identityIncrement": "1"
+      },
+      {
+        "name": "UserId",
+        "type": "int",
+        "maxLength": 4,
+        "precision": 10,
+        "scale": 0,
+        "nullable": false
+      },
+      {
+        "name": "Title",
+        "type": "nvarchar",
+        "maxLength": 510,
+        "precision": 0,
+        "scale": 0,
+        "nullable": true,
+        "collation": "SQL_Latin1_General_CP1_CI_AS"
+      },
+      {
+        "name": "Content",
+        "type": "nvarchar",
+        "maxLength": -1,
+        "precision": 0,
+        "scale": 0,
+        "nullable": false,
+        "collation": "SQL_Latin1_General_CP1_CI_AS"
+      },
+      {
+        "name": "CreatedAt",
+        "type": "datetime2",
+        "maxLength": 8,
+        "precision": 27,
+        "scale": 7,
+        "nullable": false,
+        "defaultName": "DF__Posts__CreatedAt__04E4BC85",
+        "defaultDefinition": "(sysdatetime())"
+      },
+      {
+        "name": "SphereId",
+        "type": "int",
+        "maxLength": 4,
+        "precision": 10,
+        "scale": 0,
+        "nullable": true
+      },
+      {
+        "name": "PostTypeId",
+        "type": "int",
+        "maxLength": 4,
+        "precision": 10,
+        "scale": 0,
+        "nullable": true
+      },
+      {
+        "name": "CreatedAtUtc",
+        "type": "datetimeoffset",
+        "maxLength": 10,
+        "precision": 34,
+        "scale": 7,
+        "nullable": true
+      },
+      {
+        "name": "UpdatedAtUtc",
+        "type": "datetimeoffset",
+        "maxLength": 10,
+        "precision": 34,
+        "scale": 7,
+        "nullable": true
+      }
+    ],
+    "indexes": [
+      {
+        "name": "PK__Posts__AA12601828DF3586",
+        "type": "CLUSTERED",
+        "unique": true,
+        "primaryKey": true,
+        "uniqueConstraint": false,
+        "columns": [
+          {
+            "name": "PostId",
+            "descendingKey": false,
+            "included": false
+          }
+        ]
+      }
+    ],
+    "foreignKeys": [
+      {
+        "name": "FK__Posts__UserId__05D8E0BE",
+        "targetSchema": "dbo",
+        "targetTable": "Users",
+        "onDelete": "CASCADE",
+        "onUpdate": "NO_ACTION",
+        "disabled": false,
+        "untrusted": false,
+        "columns": [
+          {
+            "source": "UserId",
+            "target": "UserId"
+          }
+        ]
+      },
+      {
+        "name": "FK_Posts_PostType",
+        "targetSchema": "dbo",
+        "targetTable": "PostTypes",
+        "onDelete": "NO_ACTION",
+        "onUpdate": "NO_ACTION",
+        "disabled": false,
+        "untrusted": false,
+        "columns": [
+          {
+            "source": "PostTypeId",
+            "target": "PostTypeId"
+          }
+        ]
+      },
+      {
+        "name": "FK_Posts_Sphere",
+        "targetSchema": "dbo",
+        "targetTable": "Spheres",
+        "onDelete": "NO_ACTION",
+        "onUpdate": "NO_ACTION",
+        "disabled": false,
+        "untrusted": false,
+        "columns": [
+          {
+            "source": "SphereId",
+            "target": "SphereId"
+          }
+        ]
+      }
+    ]
+  },
+  "PostTypes": {
+    "schema": "dbo",
+    "name": "PostTypes",
+    "columns": [
+      {
+        "name": "PostTypeId",
+        "type": "int",
+        "maxLength": 4,
+        "precision": 10,
+        "scale": 0,
+        "nullable": false,
+        "identitySeed": "1",
+        "identityIncrement": "1"
+      },
+      {
+        "name": "Name",
+        "type": "nvarchar",
+        "maxLength": 200,
+        "precision": 0,
+        "scale": 0,
+        "nullable": false,
+        "collation": "SQL_Latin1_General_CP1_CI_AS"
+      },
+      {
+        "name": "Code",
+        "type": "varchar",
+        "maxLength": 16,
+        "precision": 0,
+        "scale": 0,
+        "nullable": true,
+        "collation": "SQL_Latin1_General_CP1_CI_AS"
+      }
+    ],
+    "indexes": [
+      {
+        "name": "PK__PostType__AB2125F0B444D574",
+        "type": "CLUSTERED",
+        "unique": true,
+        "primaryKey": true,
+        "uniqueConstraint": false,
+        "columns": [
+          {
+            "name": "PostTypeId",
+            "descendingKey": false,
+            "included": false
+          }
+        ]
+      },
+      {
+        "name": "UQ_PostTypes_Name",
+        "type": "NONCLUSTERED",
+        "unique": true,
+        "primaryKey": false,
+        "uniqueConstraint": true,
+        "columns": [
+          {
+            "name": "Name",
+            "descendingKey": false,
+            "included": false
+          }
+        ]
+      },
+      {
+        "name": "UX_PostTypes_Code",
+        "type": "NONCLUSTERED",
+        "unique": true,
+        "primaryKey": false,
+        "uniqueConstraint": false,
+        "filterDefinition": "([Code] IS NOT NULL)",
+        "columns": [
+          {
+            "name": "Code",
+            "descendingKey": false,
+            "included": false
+          }
+        ]
+      }
+    ]
+  },
+  "Spheres": {
+    "schema": "dbo",
+    "name": "Spheres",
+    "columns": [
+      {
+        "name": "SphereId",
+        "type": "int",
+        "maxLength": 4,
+        "precision": 10,
+        "scale": 0,
+        "nullable": false,
+        "identitySeed": "1",
+        "identityIncrement": "1"
+      },
+      {
+        "name": "Name",
+        "type": "nvarchar",
+        "maxLength": 300,
+        "precision": 0,
+        "scale": 0,
+        "nullable": false,
+        "collation": "SQL_Latin1_General_CP1_CI_AS"
+      },
+      {
+        "name": "Code",
+        "type": "varchar",
+        "maxLength": 32,
+        "precision": 0,
+        "scale": 0,
+        "nullable": true,
+        "collation": "SQL_Latin1_General_CP1_CI_AS"
+      }
+    ],
+    "indexes": [
+      {
+        "name": "PK__Spheres__AC9A4C75EB66E712",
+        "type": "CLUSTERED",
+        "unique": true,
+        "primaryKey": true,
+        "uniqueConstraint": false,
+        "columns": [
+          {
+            "name": "SphereId",
+            "descendingKey": false,
+            "included": false
+          }
+        ]
+      },
+      {
+        "name": "UQ_Spheres_Name",
+        "type": "NONCLUSTERED",
+        "unique": true,
+        "primaryKey": false,
+        "uniqueConstraint": true,
+        "columns": [
+          {
+            "name": "Name",
+            "descendingKey": false,
+            "included": false
+          }
+        ]
+      },
+      {
+        "name": "UX_Spheres_Code",
+        "type": "NONCLUSTERED",
+        "unique": true,
+        "primaryKey": false,
+        "uniqueConstraint": false,
+        "filterDefinition": "([Code] IS NOT NULL)",
+        "columns": [
+          {
+            "name": "Code",
+            "descendingKey": false,
+            "included": false
+          }
+        ]
+      }
+    ]
+  },
+  "UserNotificationSettings": {
+    "schema": "dbo",
+    "name": "UserNotificationSettings",
+    "columns": [
+      {
+        "name": "UserId",
+        "type": "int",
+        "maxLength": 4,
+        "precision": 10,
+        "scale": 0,
+        "nullable": false
+      },
+      {
+        "name": "NewListingNotifications",
+        "type": "bit",
+        "maxLength": 1,
+        "precision": 1,
+        "scale": 0,
+        "nullable": false,
+        "defaultName": "DF__UserNotif__NewLi__282DF8C2",
+        "defaultDefinition": "((1))"
+      },
+      {
+        "name": "ForumReplyNotifications",
+        "type": "bit",
+        "maxLength": 1,
+        "precision": 1,
+        "scale": 0,
+        "nullable": false,
+        "defaultName": "DF__UserNotif__Forum__29221CFB",
+        "defaultDefinition": "((1))"
+      },
+      {
+        "name": "DirectMessageNotifications",
+        "type": "bit",
+        "maxLength": 1,
+        "precision": 1,
+        "scale": 0,
+        "nullable": false,
+        "defaultName": "DF__UserNotif__Direc__2A164134",
+        "defaultDefinition": "((1))"
+      },
+      {
+        "name": "EmailEnabled",
+        "type": "bit",
+        "maxLength": 1,
+        "precision": 1,
+        "scale": 0,
+        "nullable": false,
+        "defaultName": "DF__UserNotif__Email__2B0A656D",
+        "defaultDefinition": "((1))"
+      },
+      {
+        "name": "PostCommentNotifications",
+        "type": "bit",
+        "maxLength": 1,
+        "precision": 1,
+        "scale": 0,
+        "nullable": false,
+        "defaultName": "DF_Notification_PostComment",
+        "defaultDefinition": "((1))"
+      }
+    ],
+    "indexes": [
+      {
+        "name": "PK__UserNoti__1788CC4C95CE4307",
+        "type": "CLUSTERED",
+        "unique": true,
+        "primaryKey": true,
+        "uniqueConstraint": false,
+        "columns": [
+          {
+            "name": "UserId",
+            "descendingKey": false,
+            "included": false
+          }
+        ]
+      }
+    ],
+    "foreignKeys": [
+      {
+        "name": "FK__UserNotif__UserI__2BFE89A6",
+        "targetSchema": "dbo",
+        "targetTable": "Users",
+        "onDelete": "CASCADE",
+        "onUpdate": "NO_ACTION",
+        "disabled": false,
+        "untrusted": false,
+        "columns": [
+          {
+            "source": "UserId",
+            "target": "UserId"
+          }
+        ]
+      }
+    ]
+  }
+}

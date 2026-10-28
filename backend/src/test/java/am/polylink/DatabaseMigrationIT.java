@@ -14,6 +14,114 @@ import org.springframework.jdbc.datasource.SingleConnectionDataSource;
 
 class DatabaseMigrationIT {
     @Test
+    void postsReviewPreservesNullMetadataDatesAndReferences() throws Exception {
+        inIsolatedDatabase(
+                connection -> {
+                    var source = new SingleConnectionDataSource(connection, true);
+                    SchemaCommand.migrations(source, "17").migrate();
+                    var db = new org.springframework.jdbc.core.JdbcTemplate(source);
+                    db.execute(
+                            "INSERT dbo.Users(FirstName,LastName,Email,RoleId,LanguageId) SELECT N'Posts',N'Legacy',N'posts@example.invalid',(SELECT TOP(1) RoleId FROM dbo.Roles),(SELECT TOP(1) Id FROM dbo.Languages)");
+                    db.execute(
+                            "INSERT dbo.PostTypes(Name) VALUES (N'Historical unsupported'),(N'Աշխատանք')");
+                    db.execute(
+                            "INSERT dbo.Posts(UserId,Content,CreatedAt,PostTypeId) SELECT UserId,N'<script>unsafe()</script><b>Legacy</b>','2020-01-01T12:00:00.1234567',(SELECT PostTypeId FROM dbo.PostTypes WHERE Name=N'Historical unsupported') FROM dbo.Users");
+                    db.execute(
+                            "INSERT dbo.PostComments(PostId,UserId,Content,CreatedAt) SELECT PostId,UserId,N'Legacy comment','2020-01-01T13:00:00.7654321' FROM dbo.Posts");
+                    SchemaCommand.migrate(connection, "upgrade", "18");
+                    var original = db.queryForMap("SELECT * FROM dbo.Posts");
+                    assertThat(original.get("Title")).isNull();
+                    assertThat(original.get("SphereId")).isNull();
+                    assertThat(original.get("CreatedAtUtc")).isNull();
+                    assertThat(
+                                    db.queryForObject(
+                                            "SELECT Code FROM dbo.PostTypes WHERE Name=N'Historical unsupported'",
+                                            String.class))
+                            .isNull();
+                    assertThat(
+                                    db.queryForObject(
+                                            "SELECT COUNT(*) FROM dbo.PostTypes WHERE Code IN ('job','internship','training')",
+                                            Integer.class))
+                            .isEqualTo(3);
+                    assertThat(
+                                    db.queryForObject(
+                                            "SELECT COUNT(*) FROM dbo.Spheres WHERE Code='other'",
+                                            Integer.class))
+                            .isEqualTo(1);
+                    var review =
+                            java.util.Map.of(
+                                    "operator",
+                                    "test operator",
+                                    "posts",
+                                    java.util.Map.of(
+                                            "1",
+                                            java.util.Map.of(
+                                                    "originalCreatedAt",
+                                                    "2020-01-01T12:00:00.1234567",
+                                                    "timezone",
+                                                    "Asia/Yerevan")),
+                                    "comments",
+                                    java.util.Map.of(
+                                            "1",
+                                            java.util.Map.of(
+                                                    "originalCreatedAt",
+                                                    "2020-01-01T13:00:00.7654321",
+                                                    "timezone",
+                                                    "+04:00")));
+                    assertThatThrownBy(() -> SchemaCommand.migrations(source).migrate())
+                            .hasMessageContaining("Posts legacy review required");
+                    SchemaCommand.assertCurrentSchema(connection);
+                    am.polylink.posts.PostsMaintenanceCommand.review(connection, review, false);
+                    assertThat(
+                                    db.queryForObject(
+                                            "SELECT COUNT(*) FROM auth.PostsLegacyReview",
+                                            Integer.class))
+                            .isZero();
+                    assertThat(db.queryForMap("SELECT * FROM dbo.Posts")).isEqualTo(original);
+                    assertThatThrownBy(
+                                    () ->
+                                            am.polylink.posts.PostsMaintenanceCommand.review(
+                                                    connection,
+                                                    java.util.Map.of(
+                                                            "operator",
+                                                            "test",
+                                                            "posts",
+                                                            java.util.Map.of(),
+                                                            "comments",
+                                                            java.util.Map.of()),
+                                                    true))
+                            .hasMessageContaining("exactly");
+                    am.polylink.posts.PostsMaintenanceCommand.review(connection, review, true);
+                    SchemaCommand.migrate(connection, "upgrade");
+                    SchemaCommand.migrate(connection, "upgrade");
+                    var after = db.queryForMap("SELECT * FROM dbo.Posts");
+                    for (String field :
+                            java.util.List.of(
+                                    "PostTypeId", "SphereId", "Title", "Content", "CreatedAt"))
+                        assertThat(after.get(field)).isEqualTo(original.get(field));
+                    assertThat(
+                                    db.queryForObject(
+                                            "SELECT CONVERT(varchar(40),CreatedAtUtc,127) FROM dbo.Posts",
+                                            String.class))
+                            .startsWith("2020-01-01T08:00:00.1234567");
+                    assertThat(
+                                    db.queryForObject(
+                                            "SELECT COUNT(*) FROM auth.PostsLegacyReview",
+                                            Integer.class))
+                            .isEqualTo(2);
+                    assertThatThrownBy(() -> db.update("DELETE dbo.Posts"))
+                            .isInstanceOf(
+                                    org.springframework.dao.DataIntegrityViolationException.class);
+                    assertThatThrownBy(
+                                    () ->
+                                            db.update(
+                                                    "INSERT auth.ActivityNotifications(UserId,Kind,EventKey,ActorId,CreatedAt,RetryAt) SELECT UserId,'UNKNOWN','bad',UserId,SYSDATETIMEOFFSET(),SYSDATETIMEOFFSET() FROM dbo.Users"))
+                            .isInstanceOf(
+                                    org.springframework.dao.DataIntegrityViolationException.class);
+                });
+    }
+
+    @Test
     void v17BackfillsVerifiedEducationAndPreservesExistingReferences() throws Exception {
         inIsolatedDatabase(
                 connection -> {
@@ -115,7 +223,7 @@ class DatabaseMigrationIT {
                                     db.queryForObject(
                                             "SELECT COUNT(*) FROM sys.tables WHERE is_ms_shipped=0 AND name<>'flyway_schema_history'",
                                             Integer.class))
-                            .isEqualTo(58);
+                            .isEqualTo(59);
                     assertThat(
                                     db.queryForObject(
                                             "SELECT FirstName FROM auth.PendingEnrollments",

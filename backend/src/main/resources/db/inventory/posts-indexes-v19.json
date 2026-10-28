@@ -1,0 +1,78 @@
+{
+  "Posts": [
+    {
+      "name": "IX_Posts_Date",
+      "type": "NONCLUSTERED",
+      "unique": false,
+      "primaryKey": false,
+      "uniqueConstraint": false,
+      "columns": [
+        {
+          "name": "CreatedAtUtc",
+          "descendingKey": true,
+          "included": false
+        },
+        {
+          "name": "PostId",
+          "descendingKey": true,
+          "included": false
+        }
+      ]
+    },
+    {
+      "name": "IX_Posts_TypeSphereDate",
+      "type": "NONCLUSTERED",
+      "unique": false,
+      "primaryKey": false,
+      "uniqueConstraint": false,
+      "columns": [
+        {
+          "name": "PostTypeId",
+          "descendingKey": false,
+          "included": false
+        },
+        {
+          "name": "SphereId",
+          "descendingKey": false,
+          "included": false
+        },
+        {
+          "name": "CreatedAtUtc",
+          "descendingKey": true,
+          "included": false
+        },
+        {
+          "name": "PostId",
+          "descendingKey": true,
+          "included": false
+        }
+      ]
+    }
+  ],
+  "PostComments": [
+    {
+      "name": "IX_PostComments_PostDate",
+      "type": "NONCLUSTERED",
+      "unique": false,
+      "primaryKey": false,
+      "uniqueConstraint": false,
+      "columns": [
+        {
+          "name": "PostId",
+          "descendingKey": false,
+          "included": false
+        },
+        {
+          "name": "CreatedAtUtc",
+          "descendingKey": false,
+          "included": false
+        },
+        {
+          "name": "CommentId",
+          "descendingKey": false,
+          "included": false
+        }
+      ]
+    }
+  ]
+}

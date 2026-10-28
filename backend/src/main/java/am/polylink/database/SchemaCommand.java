@@ -15,7 +15,8 @@ public final class SchemaCommand {
     public static void main(String[] args) throws Exception {
         if ((args.length != 1 && args.length != 2)
                 || !java.util.Set.of("inventory", "fresh", "upgrade").contains(args[0])) {
-            throw new IllegalArgumentException("Use inventory, fresh or upgrade [--target=12]");
+            throw new IllegalArgumentException(
+                    "Use inventory, fresh or upgrade [--target=12|--target=18]");
         }
         String database = required("DB_NAME");
         // Properties keep credentials and database names out of JDBC URL interpolation/logging.
@@ -38,10 +39,11 @@ public final class SchemaCommand {
                 System.out.println(inventory(connection));
                 return;
             }
-            if (args.length == 2 && !args[1].equals("--target=12"))
+            if (args.length == 2
+                    && !java.util.Set.of("--target=12", "--target=18").contains(args[1]))
                 throw new IllegalArgumentException(
-                        "Only --target=12 is supported for forum review");
-            migrate(connection, args[0], args.length == 2 ? "12" : null);
+                        "Use --target=12 for forum review or --target=18 for posts review");
+            migrate(connection, args[0], args.length == 2 ? args[1].substring(9) : null);
         }
     }
 
@@ -142,6 +144,34 @@ public final class SchemaCommand {
                             if (column.path("name").asText().equals("DegreeId"))
                                 ((tools.jackson.databind.node.ObjectNode) column)
                                         .put("nullable", true);
+            }
+            if (version >= 18) {
+                var replacements = mapper.readTree(resource("db/inventory/posts-schema-v18.json"));
+                var tables = (tools.jackson.databind.node.ArrayNode) expectedForum.path("tables");
+                for (int i = 0; i < tables.size(); i++) {
+                    var replacement = replacements.get(tables.get(i).path("name").asText());
+                    if (replacement != null) tables.set(i, replacement.deepCopy());
+                }
+                if (version >= 19) {
+                    for (var table : tables) {
+                        String name = table.path("name").asText();
+                        if (!java.util.Set.of("Posts", "PostComments").contains(name)) continue;
+                        for (var column : table.path("columns"))
+                            if (column.path("name").asText().equals("CreatedAtUtc"))
+                                ((tools.jackson.databind.node.ObjectNode) column)
+                                        .put("nullable", false);
+                        var additions =
+                                mapper.readTree(resource("db/inventory/posts-indexes-v19.json"))
+                                        .get(name);
+                        var indexes = (tools.jackson.databind.node.ArrayNode) table.path("indexes");
+                        var sorted =
+                                new java.util.TreeMap<String, tools.jackson.databind.JsonNode>();
+                        for (var index : indexes) sorted.put(index.path("name").asText(), index);
+                        for (var index : additions) sorted.put(index.path("name").asText(), index);
+                        indexes.removeAll();
+                        sorted.values().forEach(indexes::add);
+                    }
+                }
             }
             if (!expectedForum.equals(mapper.readTree(inventory(connection))))
                 throw new IllegalStateException(
