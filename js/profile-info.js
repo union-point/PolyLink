@@ -54,6 +54,9 @@ start(async () => {
         form.querySelectorAll('[name=role]').forEach(input => { input.checked = input.value === value; });
       } else if (element(key)) element(key).value = value ?? '';
     }
+    for (const name of ['startYear', 'endYear']) {
+      element(name).value = next.profile[name] ?? element(name).defaultValue;
+    }
     avatar.render(next.avatar);
     roleFields(); fields.disabled = busy; dirty = false;
     setChallenge(next.challenge);

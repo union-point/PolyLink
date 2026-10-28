@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="hy">
 <head>
+  <link rel="icon" type="image/svg+xml" href="./image/favicon.svg">
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Լրացրեք Ձեր պրոֆիլը | PolyLink</title>
@@ -43,12 +44,12 @@
           <h2 id="university-title">Համալսարանի տվյալներ</h2>
           <div class="university-field"><label for="instituteId">Ֆակուլտետ/ինստիտւտ</label><select id="instituteId" name="instituteId" required></select></div>
           <div data-graduate>
-            <div class="university-field"><label for="diplomaNumber">Դիպլոմի համար</label><input id="diplomaNumber" name="diplomaNumber" placeholder="օրինակ՝ AB123456" maxlength="100" autocomplete="off"></div>
             <div class="university-field"><label for="specializationId">Մասնագիտացում</label><select id="specializationId" name="specializationId"></select></div>
             <div class="form-grid">
-              <div><label for="startYear">Ուսման սկիզբ</label><input id="startYear" name="startYear" type="number" placeholder="2021" min="1900" max="2200"></div>
-              <div><label for="endYear">Ուսման ավարտ</label><input id="endYear" name="endYear" type="number" placeholder="2025" min="1900" max="2200"></div>
+              <div><label for="startYear">Ուսման սկիզբ</label><input id="startYear" name="startYear" type="number" value="2021" placeholder="2021" min="1900" max="2200"></div>
+              <div><label for="endYear">Ուսման ավարտ</label><input id="endYear" name="endYear" type="number" value="2025" placeholder="2025" min="1900" max="2200"></div>
             </div>
+            <div class="university-field"><label for="diplomaNumber">Դիպլոմի համար</label><input id="diplomaNumber" name="diplomaNumber" placeholder="օրինակ՝ AB123456" maxlength="100" autocomplete="off"></div>
           </div>
           <div data-lecturer hidden>
             <label for="departmentId">Ամբիոն</label><select id="departmentId" name="departmentId"></select>

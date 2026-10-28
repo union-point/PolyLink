@@ -70,6 +70,7 @@ venv.bak/
 # Project Specific Directories (Data & Models)
 docs/baseline/
 docs/verification/
+docs/database-modules-hy/
 
 # Tool Caches
 .ruff_cache/
