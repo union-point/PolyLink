@@ -58,12 +58,13 @@ async function assertReady(){
 }
 try{
   if(phase==='setup'){
-    await page.goto(origin+'/register.html');await page.locator('select[name=role]').waitFor();
+    await page.goto(origin+'/register.html');await page.waitForFunction(()=>typeof document.querySelector('#register-form')?.onsubmit==='function');
     for(const [id,value]of Object.entries({firstname:'Browser',lastname:'Fixture',email,password,confirm:password}))await page.locator('#'+id).fill(value);
     await page.locator('#register-form [type=submit]').click();
     await page.waitForURL('**/profile_info.html');await page.locator('#profile-fields:not([disabled])').waitFor();
     // Reload resumes the restricted enrollment without storing a password or a derived login proof.
     await page.reload();await page.locator('#profile-fields:not([disabled])').waitFor();
+    await page.locator('[name=role][value=graduate]').check();
     await page.locator('#instituteId').selectOption({index:1});
     await page.locator('#diplomaNumber').fill(email);await page.locator('#specializationId').selectOption({index:1});await page.locator('#startYear').fill('2021');await page.locator('#endYear').fill('2025');
     await page.locator('#submit-profile').click();await page.locator('#enrollment-code:not([hidden])').waitFor();
