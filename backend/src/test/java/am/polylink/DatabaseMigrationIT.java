@@ -14,6 +14,64 @@ import org.springframework.jdbc.datasource.SingleConnectionDataSource;
 
 class DatabaseMigrationIT {
     @Test
+    void v20RetiresSourceDatesAndReviewJournalWithoutChangingCanonicalData() throws Exception {
+        inIsolatedDatabase(
+                connection -> {
+                    var source = new SingleConnectionDataSource(connection, true);
+                    SchemaCommand.migrations(source, "19").migrate();
+                    var db = new org.springframework.jdbc.core.JdbcTemplate(source);
+                    db.execute(
+                            """
+                            INSERT dbo.Users(FirstName,LastName,Email,RoleId,LanguageId)
+                            SELECT N'Timestamp',N'Fixture',N'v20@example.invalid',
+                                (SELECT TOP(1) RoleId FROM dbo.Roles),(SELECT TOP(1) Id FROM dbo.Languages);
+                            INSERT dbo.Posts(UserId,Content,CreatedAt,CreatedAtUtc)
+                            SELECT UserId,N'Legacy post','2020-01-01T12:00:00.1234567','2020-01-01T08:00:00.1234567Z' FROM dbo.Users;
+                            INSERT dbo.PostComments(PostId,UserId,Content,CreatedAt,CreatedAtUtc)
+                            SELECT PostId,UserId,N'Legacy comment','2020-01-01T13:00:00.7654321','2020-01-01T09:00:00.7654321Z' FROM dbo.Posts;
+                            INSERT dbo.ForumTopics(UserId,Title,Content,CategoryId,CreatedAt,CreatedAtUtc)
+                            SELECT UserId,N'Legacy topic',N'Body',(SELECT TOP(1) CategoryId FROM dbo.ForumCategories),
+                                '2020-02-01T12:00:00.1234567','2020-02-01T08:00:00.1234567Z' FROM dbo.Users;
+                            INSERT dbo.ForumReplies(TopicId,UserId,Content,CreatedAt,CreatedAtUtc)
+                            SELECT TopicId,UserId,N'Legacy reply','2020-02-01T13:00:00.7654321','2020-02-01T09:00:00.7654321Z' FROM dbo.ForumTopics;
+                            INSERT auth.PostsLegacyReview(Kind,RecordId,OriginalCreatedAt,SourceTimezone,Operator,ReviewedAt)
+                            VALUES ('post',1,'2020-01-01T12:00:00.1234567','Asia/Yerevan','test',SYSDATETIMEOFFSET());
+                            """);
+                    var before = new java.util.HashMap<String, java.util.Map<String, Object>>();
+                    for (String table :
+                            java.util.List.of(
+                                    "Posts", "PostComments", "ForumTopics", "ForumReplies")) {
+                        var row = db.queryForMap("SELECT * FROM dbo." + table);
+                        row.remove("CreatedAt");
+                        before.put(table, row);
+                    }
+                    SchemaCommand.migrate(connection, "upgrade");
+                    SchemaCommand.migrate(connection, "upgrade");
+                    for (var entry : before.entrySet())
+                        assertThat(db.queryForMap("SELECT * FROM dbo." + entry.getKey()))
+                                .isEqualTo(entry.getValue());
+                    assertThat(
+                                    db.queryForObject(
+                                            "SELECT OBJECT_ID(N'auth.PostsLegacyReview')",
+                                            Integer.class))
+                            .isNull();
+                    assertThatThrownBy(
+                                    () ->
+                                            am.polylink.posts.PostsMaintenanceCommand.review(
+                                                    connection, java.util.Map.of(), true))
+                            .hasMessageContaining("unavailable after V20");
+                    assertThatThrownBy(
+                                    () ->
+                                            am.polylink.forum.ForumMaintenanceCommand.review(
+                                                    connection, java.util.Map.of(), true))
+                            .hasMessageContaining("unavailable after V20");
+                    db.execute("CREATE TABLE auth.PostsLegacyReview(Unexpected bit)");
+                    assertThatThrownBy(() -> SchemaCommand.assertCurrentSchema(connection))
+                            .hasMessageContaining("Posts auxiliary inventory differs");
+                });
+    }
+
+    @Test
     void postsReviewPreservesNullMetadataDatesAndReferences() throws Exception {
         inIsolatedDatabase(
                 connection -> {
@@ -92,8 +150,8 @@ class DatabaseMigrationIT {
                                                     true))
                             .hasMessageContaining("exactly");
                     am.polylink.posts.PostsMaintenanceCommand.review(connection, review, true);
-                    SchemaCommand.migrate(connection, "upgrade");
-                    SchemaCommand.migrate(connection, "upgrade");
+                    SchemaCommand.migrate(connection, "upgrade", "19");
+                    SchemaCommand.migrate(connection, "upgrade", "19");
                     var after = db.queryForMap("SELECT * FROM dbo.Posts");
                     for (String field :
                             java.util.List.of(
@@ -109,6 +167,7 @@ class DatabaseMigrationIT {
                                             "SELECT COUNT(*) FROM auth.PostsLegacyReview",
                                             Integer.class))
                             .isEqualTo(2);
+                    SchemaCommand.migrate(connection, "upgrade");
                     db.execute(
                             "ALTER INDEX UX_ActivityNotifications_Comment ON auth.ActivityNotifications DISABLE");
                     assertThatThrownBy(() -> SchemaCommand.assertCurrentSchema(connection))
@@ -236,7 +295,7 @@ class DatabaseMigrationIT {
                                     db.queryForObject(
                                             "SELECT COUNT(*) FROM sys.tables WHERE is_ms_shipped=0 AND name<>'flyway_schema_history'",
                                             Integer.class))
-                            .isEqualTo(59);
+                            .isEqualTo(58);
                     assertThat(
                                     db.queryForObject(
                                             "SELECT FirstName FROM auth.PendingEnrollments",
@@ -363,7 +422,7 @@ class DatabaseMigrationIT {
                     assertThatThrownBy(() -> SchemaCommand.migrations(source).migrate())
                             .hasMessageContaining("Forum legacy review required");
                     am.polylink.forum.ForumMaintenanceCommand.review(connection, review, true);
-                    SchemaCommand.migrate(connection, "upgrade");
+                    SchemaCommand.migrate(connection, "upgrade", "13");
                     assertThat(
                                     db.queryForObject(
                                             "SELECT COUNT(*) FROM dbo.ForumReplies WHERE CreatedAtUtc IS NULL",
@@ -383,6 +442,7 @@ class DatabaseMigrationIT {
                                     db.queryForObject(
                                             "SELECT Content FROM dbo.ForumTopics", String.class))
                             .isEqualTo("<b>Legacy</b>");
+                    SchemaCommand.migrate(connection, "upgrade");
                     db.execute("ALTER TABLE dbo.ForumTopics ADD UnexpectedForumState bit NULL");
                     assertThatThrownBy(() -> SchemaCommand.assertCurrentSchema(connection))
                             .hasMessageContaining("reviewed forum inventory");

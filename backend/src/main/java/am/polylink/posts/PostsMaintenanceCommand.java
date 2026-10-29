@@ -45,6 +45,7 @@ public final class PostsMaintenanceCommand {
             var db = new JdbcTemplate(new SingleConnectionDataSource(connection, true));
 
             if (args[0].equals("inspect") && args.length == 1) {
+                requireLegacyTimestamps(connection);
                 System.out.println(
                         JsonMapper.builder()
                                 .build()
@@ -77,8 +78,17 @@ public final class PostsMaintenanceCommand {
         }
     }
 
+    private static void requireLegacyTimestamps(Connection connection) throws SQLException {
+        try (var columns = connection.getMetaData().getColumns(null, "dbo", "Posts", "CreatedAt")) {
+            if (!columns.next())
+                throw new IllegalStateException(
+                        "Legacy timestamp review is unavailable after V20; review historical data before completing the upgrade");
+        }
+    }
+
     public static void review(Connection connection, Map<?, ?> input, boolean apply)
             throws Exception {
+        requireLegacyTimestamps(connection);
         if (!input.keySet().equals(Set.of("operator", "posts", "comments"))
                 || !(input.get("operator") instanceof String operator)
                 || operator.isBlank()

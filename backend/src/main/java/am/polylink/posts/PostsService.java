@@ -280,14 +280,13 @@ public class PostsService {
                     var time = now();
                     int id =
                             db.queryForObject(
-                                    "INSERT dbo.Posts(UserId,Title,Content,PostTypeId,SphereId,CreatedAt,CreatedAtUtc) OUTPUT INSERTED.PostId VALUES (?,?,?,?,?,?,?)",
+                                    "INSERT dbo.Posts(UserId,Title,Content,PostTypeId,SphereId,CreatedAtUtc) OUTPUT INSERTED.PostId VALUES (?,?,?,?,?,?)",
                                     Integer.class,
                                     user,
                                     input.title(),
                                     input.content(),
                                     input.type(),
                                     input.sphere(),
-                                    time.toLocalDateTime(),
                                     time);
                     return get(user, id);
                 });
@@ -343,12 +342,11 @@ public class PostsService {
                     var time = now();
                     int id =
                             db.queryForObject(
-                                    "INSERT dbo.PostComments(PostId,UserId,Content,CreatedAt,CreatedAtUtc) OUTPUT INSERTED.CommentId VALUES (?,?,?,?,?)",
+                                    "INSERT dbo.PostComments(PostId,UserId,Content,CreatedAtUtc) OUTPUT INSERTED.CommentId VALUES (?,?,?,?)",
                                     Integer.class,
                                     post,
                                     user,
                                     text,
-                                    time.toLocalDateTime(),
                                     time);
                     if (recipient != user)
                         db.update(

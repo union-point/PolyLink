@@ -173,7 +173,17 @@ public final class SchemaCommand {
                     }
                 }
             }
-            if (version >= 18) assertPostsAuxiliarySchema(connection);
+            if (version >= 20) {
+                for (var table : expectedForum.path("tables")) {
+                    if (!java.util.Set.of("Posts", "PostComments", "ForumTopics", "ForumReplies")
+                            .contains(table.path("name").asText())) continue;
+                    var columns = (tools.jackson.databind.node.ArrayNode) table.path("columns");
+                    for (int i = columns.size() - 1; i >= 0; i--)
+                        if (columns.get(i).path("name").asText().equals("CreatedAt"))
+                            columns.remove(i);
+                }
+            }
+            if (version >= 18) assertPostsAuxiliarySchema(connection, version);
             if (!expectedForum.equals(mapper.readTree(inventory(connection))))
                 throw new IllegalStateException(
                         "Schema differs from the inspected baseline; reviewed forum inventory required");
@@ -219,7 +229,8 @@ public final class SchemaCommand {
         }
     }
 
-    private static void assertPostsAuxiliarySchema(Connection connection) throws Exception {
+    private static void assertPostsAuxiliarySchema(Connection connection, int version)
+            throws Exception {
         var db =
                 new org.springframework.jdbc.core.JdbcTemplate(
                         new org.springframework.jdbc.datasource.SingleConnectionDataSource(
@@ -236,7 +247,10 @@ public final class SchemaCommand {
                 db.queryForObject(
                         "SELECT COUNT(*) FROM sys.columns WHERE object_id=OBJECT_ID(N'auth.PostsLegacyReview') AND is_nullable=0 AND ((name='Kind' AND TYPE_NAME(user_type_id)='varchar' AND max_length=8) OR (name='RecordId' AND TYPE_NAME(user_type_id)='int') OR (name='OriginalCreatedAt' AND TYPE_NAME(user_type_id)='datetime2' AND scale=7) OR (name IN ('SourceTimezone','Operator') AND TYPE_NAME(user_type_id)='nvarchar' AND max_length=200) OR (name='ReviewedAt' AND TYPE_NAME(user_type_id)='datetimeoffset' AND scale=7))",
                         Integer.class);
-        if (targets != 2 || review != 6 || reviewColumns != 6)
+        if (targets != 2
+                || (version < 20
+                        ? review != 6 || reviewColumns != 6
+                        : exists(connection, "auth", "PostsLegacyReview")))
             throw new IllegalStateException("Posts auxiliary inventory differs; review required");
         var definitions =
                 db.queryForList(

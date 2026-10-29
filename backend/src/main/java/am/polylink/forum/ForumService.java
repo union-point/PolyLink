@@ -248,13 +248,12 @@ public class ForumService {
                     var time = now();
                     int id =
                             db.queryForObject(
-                                    "INSERT dbo.ForumTopics(UserId,Title,Content,CategoryId,CreatedAt,CreatedAtUtc) OUTPUT INSERTED.TopicId VALUES (?,?,?,?,?,?)",
+                                    "INSERT dbo.ForumTopics(UserId,Title,Content,CategoryId,CreatedAtUtc) OUTPUT INSERTED.TopicId VALUES (?,?,?,?,?)",
                                     Integer.class,
                                     user,
                                     title,
                                     content,
                                     category,
-                                    time.toLocalDateTime(),
                                     time);
                     remember(user, "topic", request, fingerprint, id);
                     return topic(user, id);
@@ -275,12 +274,11 @@ public class ForumService {
                     var time = now();
                     int id =
                             db.queryForObject(
-                                    "INSERT dbo.ForumReplies(TopicId,UserId,Content,CreatedAt,CreatedAtUtc) OUTPUT INSERTED.ReplyId VALUES (?,?,?,?,?)",
+                                    "INSERT dbo.ForumReplies(TopicId,UserId,Content,CreatedAtUtc) OUTPUT INSERTED.ReplyId VALUES (?,?,?,?)",
                                     Integer.class,
                                     topic,
                                     user,
                                     content,
-                                    time.toLocalDateTime(),
                                     time);
                     remember(user, "reply", request, fingerprint, id);
                     int recipient = ((Number) parent.get("UserId")).intValue();
