@@ -4,7 +4,7 @@ The career forum follows `forum_decisions.md`. Access requires authoritative adm
 
 ## API
 
-Enable `FORUM_ENABLED=true` after explicitly applying the matching schema through V20 and completing the V13 historical review where needed. Forum access does not depend on the messenger flag. Every route requires the existing bearer session and admission; mutation origins follow the shared identity boundary.
+Enable `FORUM_ENABLED=true` after explicitly applying the matching schema through V21 and completing the V13 historical review where needed. Forum access does not depend on the messenger flag. Every route requires the existing bearer session and admission; mutation origins follow the shared identity boundary.
 
 | Method | Route | Input |
 | --- | --- | --- |
