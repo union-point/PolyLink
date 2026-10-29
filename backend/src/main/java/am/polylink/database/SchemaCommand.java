@@ -183,6 +183,21 @@ public final class SchemaCommand {
                             columns.remove(i);
                 }
             }
+            if (version >= 21) {
+                for (var table : expectedForum.path("tables")) {
+                    if (!java.util.Set.of("PostTypes", "Spheres")
+                            .contains(table.path("name").asText())) continue;
+                    for (var column : table.path("columns"))
+                        if (column.path("name").asText().equals("Code"))
+                            ((tools.jackson.databind.node.ObjectNode) column)
+                                    .put("nullable", false);
+                    for (var index : table.path("indexes"))
+                        if (java.util.Set.of("UX_PostTypes_Code", "UX_Spheres_Code")
+                                .contains(index.path("name").asText()))
+                            ((tools.jackson.databind.node.ObjectNode) index)
+                                    .remove("filterDefinition");
+                }
+            }
             if (version >= 18) assertPostsAuxiliarySchema(connection, version);
             if (!expectedForum.equals(mapper.readTree(inventory(connection))))
                 throw new IllegalStateException(

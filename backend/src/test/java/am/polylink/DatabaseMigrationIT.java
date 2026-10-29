@@ -14,6 +14,79 @@ import org.springframework.jdbc.datasource.SingleConnectionDataSource;
 
 class DatabaseMigrationIT {
     @Test
+    void v21RetiresUnsupportedTypesAndRequiresUniqueCodesWithoutLosingContent() throws Exception {
+        inIsolatedDatabase(
+                connection -> {
+                    var source = new SingleConnectionDataSource(connection, true);
+                    SchemaCommand.migrations(source, "20").migrate();
+                    var db = new org.springframework.jdbc.core.JdbcTemplate(source);
+                    db.execute(
+                            """
+                    INSERT dbo.Users(FirstName,LastName,Email,RoleId,LanguageId)
+                    SELECT N'Reference',N'Fixture',N'v21@example.invalid',
+                        (SELECT TOP(1) RoleId FROM dbo.Roles),(SELECT TOP(1) Id FROM dbo.Languages);
+                    INSERT dbo.PostTypes(Name) VALUES (N'Advice'),(N'Blog');
+                    INSERT dbo.Spheres(Name) VALUES (N'Engineering'),(N'Unmapped historical label');
+                    INSERT dbo.Posts(UserId,Content,PostTypeId,SphereId,CreatedAtUtc)
+                    SELECT u.UserId,N'Keep historical content',t.PostTypeId,s.SphereId,'2020-01-01T08:00:00.1234567Z'
+                    FROM dbo.Users u CROSS JOIN dbo.PostTypes t CROSS JOIN dbo.Spheres s
+                    WHERE t.Name IN(N'Advice',N'Blog') AND s.Name=N'Engineering';
+                    INSERT dbo.PostComments(PostId,UserId,Content,CreatedAtUtc)
+                    SELECT PostId,UserId,N'Keep comment','2020-01-01T09:00:00.7654321Z' FROM dbo.Posts;
+                    """);
+                    var before = db.queryForList("SELECT * FROM dbo.Posts ORDER BY PostId");
+                    before.forEach(row -> row.put("PostTypeId", null));
+                    var comments =
+                            db.queryForList("SELECT * FROM dbo.PostComments ORDER BY CommentId");
+                    SchemaCommand.migrate(connection, "upgrade");
+                    SchemaCommand.migrate(connection, "upgrade");
+                    assertThat(db.queryForList("SELECT * FROM dbo.Posts ORDER BY PostId"))
+                            .isEqualTo(before);
+                    assertThat(db.queryForList("SELECT * FROM dbo.PostComments ORDER BY CommentId"))
+                            .isEqualTo(comments);
+                    assertThat(
+                                    db.queryForList(
+                                            "SELECT Code FROM dbo.PostTypes ORDER BY Code",
+                                            String.class))
+                            .containsExactly("internship", "job", "training");
+                    assertThat(
+                                    db.queryForObject(
+                                            "SELECT Code FROM dbo.Spheres WHERE Name=N'Engineering'",
+                                            String.class))
+                            .isEqualTo("engineering");
+                    assertThat(
+                                    db.queryForObject(
+                                            "SELECT Code FROM dbo.Spheres WHERE Name=N'Unmapped historical label'",
+                                            String.class))
+                            .startsWith("sphere-");
+                    for (String table : java.util.List.of("PostTypes", "Spheres")) {
+                        assertThatThrownBy(
+                                        () ->
+                                                db.update(
+                                                        "INSERT dbo."
+                                                                + table
+                                                                + "(Name) VALUES (N'Missing code')"))
+                                .isInstanceOf(
+                                        org.springframework.dao.DataIntegrityViolationException
+                                                .class);
+                        assertThatThrownBy(
+                                        () ->
+                                                db.update(
+                                                        "INSERT dbo."
+                                                                + table
+                                                                + "(Name,Code) SELECT N'Duplicate code',Code FROM dbo."
+                                                                + table
+                                                                + " WHERE Code=(SELECT TOP(1) Code FROM dbo."
+                                                                + table
+                                                                + ")"))
+                                .isInstanceOf(
+                                        org.springframework.dao.DataIntegrityViolationException
+                                                .class);
+                    }
+                });
+    }
+
+    @Test
     void v20RetiresSourceDatesAndReviewJournalWithoutChangingCanonicalData() throws Exception {
         inIsolatedDatabase(
                 connection -> {

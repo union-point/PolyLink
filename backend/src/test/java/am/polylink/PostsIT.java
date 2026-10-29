@@ -494,9 +494,10 @@ class PostsIT {
         for (int i = 0; i < 2; i++)
             sphereIds.add(
                     db.queryForObject(
-                            "INSERT dbo.Spheres(Name) OUTPUT INSERTED.SphereId VALUES (?)",
+                            "INSERT dbo.Spheres(Name,Code) OUTPUT INSERTED.SphereId VALUES (?,?)",
                             String.class,
-                            "Filter " + UUID.randomUUID()));
+                            "Filter " + UUID.randomUUID(),
+                            "filter-" + UUID.randomUUID().toString().substring(0, 20)));
         for (String category : List.of("job", "internship", "training"))
             for (String sphere : sphereIds)
                 for (int i = 0; i < 3; i++) {
