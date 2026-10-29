@@ -23,6 +23,7 @@ Start with the [project quickstart](../README.md). This index separates current 
 ## Product and protocol authority
 
 - [Authorization decisions](authorization_plan.md), [settings decisions](settings_decisions.md) and [forum decisions](forum_decisions.md) preserve approved policy.
+- [Posts decisions](posts_decisions.md) define the approved announcement/comment behavior; the [posts implementation plan](posts_implementation_plan.md) covers the pending server, UI, migration and notification work.
 - [Messenger specification](messenger_spec.md) defines the agreed security and messaging behavior.
 - [PLK1 format](messenger/crypto-format.md), [OpenAPI](messenger/contracts/openapi.yaml) and [payload schemas](messenger/contracts/client-payloads.schema.json) define versioned formats. Later controllers and implementation handoffs cover additions to the original API snapshot.
 
