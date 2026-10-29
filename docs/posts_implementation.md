@@ -4,7 +4,7 @@ Implemented 29 October 2026 against [approved decisions](posts_decisions.md) and
 
 ## Availability and behavior
 
-Apply the matching schema through V20 and complete historical timestamp review before setting `POSTS_ENABLED=true`. The default is false. Posts require identity, independently of `FORUM_ENABLED` and `MESSENGER_ENABLED`. Startup never applies migrations. This work does not migrate the working database or deploy the application.
+Apply the matching schema through V21 and complete historical timestamp review before setting `POSTS_ENABLED=true`. The default is false. Posts require identity, independently of `FORUM_ENABLED` and `MESSENGER_ENABLED`. Startup never applies migrations. This work does not migrate the working database or deploy the application.
 
 Admitted members read the shared feed regardless of author profile privacy; graduates and lecturers publish and comment. Capabilities and author-only mutations come from the server. Announcement ownership grants no rights over another author's comment. Deletion removes activity, comments and the announcement in one transaction. Account locks are acquired in numeric order before parent/child locks; admission, ownership and target existence are rechecked under those locks.
 
@@ -12,7 +12,7 @@ New records and every edit require all four fields. Titles contain 1–255 UTF-1
 
 Edits replace title/body/type/direction atomically. They set `updatedAt` only for a persisted change and keep `createdAt` immutable. Concurrent saves serialize; the last successful committed save wins. There is no version precondition or stale-edit warning. A form cannot recreate a deleted target.
 
-Legacy null/blank titles serialize as null and render no heading or placeholder. Missing or unsupported types and missing directions remain unspecified. Unmapped historical foreign keys remain stored. Editing a legacy row requires completing its missing mandatory fields. Deleted accounts retain public discussion content with neutral attribution and no profile navigation.
+Legacy null/blank titles serialize as null and render no heading or placeholder. Missing types and directions remain unspecified. V21 clears unsupported historical type references and removes those types; historical sphere references remain stored. Editing a legacy row requires completing its missing mandatory fields. Deleted accounts retain public discussion content with neutral attribution and no profile navigation.
 
 ## HTTP contract
 
@@ -20,8 +20,8 @@ All endpoints require an authenticated admitted session. Mutations use the exist
 
 | Operation | Request | Result |
 | --- | --- | --- |
-| Options | `GET /posts/options` | `{types:[{code,name}],spheres:[{id,name,isOther}]}` |
-| Feed | `GET /posts?category=job&sphereId=1&userId=7&cursor=...` | `{items,nextCursor}` |
+| Options | `GET /posts/options` | `{types:[{code,name}],spheres:[{code,name}]}` |
+| Feed | `GET /posts?category=job&sphereCode=other&userId=7&cursor=...` | `{items,nextCursor}` |
 | Detail | `GET /posts/{id}` | Announcement |
 | Create | `POST /posts` | 201 + announcement |
 | Replace | `PUT /posts/{id}` | 200 + announcement |
@@ -34,12 +34,12 @@ All endpoints require an authenticated admitted session. Mutations use the exist
 Create and replacement payload:
 
 ```json
-{"title":"Աշխատանքային հնարավորություն","content":"<p><strong>Բարև</strong></p>","category":"job","sphereId":"1"}
+{"title":"Աշխատանքային հնարավորություն","content":"<p><strong>Բարև</strong></p>","category":"job","sphereCode":"other"}
 ```
 
-Use the actual ID returned by options; `1` above is only an example. Types are `job`, `internship`, `training`. Direction selection is independent of feed filters; labels and mock slugs are not API identifiers. Comment payload: `{"text":"Plain text\nAnother line"}`. No author, capability, expectedVersion or revision fields are accepted.
+Both type and direction selections use codes returned by options. Types are `job`, `internship`, `training`; direction codes are database reference values, for example `engineering`, `it` and `other`. Direction selection is independent of feed filters. Do not derive codes from display labels. Numeric PostTypeId/SphereId remain internal foreign keys; `sphereId` is no longer accepted in requests or returned in post DTOs. Comment payload: `{"text":"Plain text\nAnother line"}`. No author, capability, expectedVersion or revision fields are accepted.
 
-Announcements contain `id`, nullable `title`, sanitized `content`, nullable `category/categoryName`, nullable `sphereId/sphereName`, canonical `createdAt`, nullable `updatedAt`, `author`, `commentCount`, `canEdit`, `canDelete`. They never embed comment bodies. Comments contain `id`, `postId`, plain `text`, timestamps, author and capabilities. Authors expose only `id` (null after deletion), `name`, `avatar`, `canOpenProfile`.
+Announcements contain `id`, nullable `title`, sanitized `content`, nullable `category/categoryName`, nullable `sphereCode/sphereName`, canonical `createdAt`, nullable `updatedAt`, `author`, `commentCount`, `canEdit`, `canDelete`. They never embed comment bodies. Comments contain `id`, `postId`, plain `text`, timestamps, author and capabilities. Authors expose only `id` (null after deletion), `name`, `avatar`, `canOpenProfile`.
 
 Filters combine with AND before pagination. Feed order is `(CreatedAtUtc DESC, PostId DESC)`; comment order is `(CreatedAtUtc ASC, CommentId ASC)`. Each request reads 21 rows and returns at most 20. HMAC-protected cursors retain full SQL timestamp precision and bind to the normalized filter combination or parent post. Do not decode/rebuild them in clients. Editing never changes the sort key.
 
@@ -61,9 +61,9 @@ Mail workers claim two-minute leases, release SQL locks before SMTP, and recheck
 
 V1–V17 remain immutable. V18 extends existing Posts/PostComments with nullable canonical UTC publication/creation and edited timestamps, adds reference codes, the new setting, activity targets/indexes and `auth.PostsLegacyReview`. It replaces the system-named notification kind check after locating its existing definition and keeps all prior kinds. The legacy PostComments→Posts FK originally cascaded; V18 replaces it with a non-cascading FK for explicit service deletion.
 
-The explicit type-label mapping is `Աշխատանք → job`, `Պրակտիկա → internship`, `Դասընթաց → training`. Missing supported canonical options are inserted; unknown historical types keep their IDs, names and null codes. No existing post FK is reassigned. The sphere named `Այլ` receives stable code `other`, or it is created when absent. Other sphere IDs/names remain intact. Operators manage reference data offline; there is no direction creation or administration endpoint. Inspect actual reference rows on the disposable restore before approving this mapping for rollout.
+The explicit type-label mapping is `Աշխատանք → job`, `Պրակտիկա → internship`, `Դասընթաց → training`. Missing supported canonical options are inserted; V18 initially retains unknown historical types and their references. V21 clears those references to null and removes all types outside `job`/`internship`/`training`, preserving posts and comments. The sphere named `Այլ` receives stable code `other`, or it is created when absent. Other sphere IDs/names remain intact. V21 gives known historical directions explicit semantic codes and any unrecognized label a stable local `sphere-<SphereId>` code, preserving existing codes. Both Code columns become NOT NULL with unfiltered unique indexes. Future offline reference inserts must supply a unique lowercase code (letters/digits separated by hyphens; at most 16 characters for types and 32 for directions). Operators manage reference data offline; there is no direction creation or administration endpoint. Inspect actual reference rows on the disposable restore before approving this mapping for rollout.
 
-V19 refuses any post/comment without a reviewed canonical timestamp, then makes only those new timestamp columns NOT NULL. At V19, original CreatedAt values and nullable Title/PostTypeId/SphereId remain unchanged. Indexes cover publication time/ID, combined type/sphere/time/ID, and parent/comment time/ID. Rich bodies are not index keys. SchemaCommand checks versioned dbo inventories plus the posts activity targets, audit layout, named kind check and target/history/unique indexes. V20 removes the obsolete `CreatedAt` source column (and its default) from Posts/PostComments and ForumTopics/ForumReplies, and drops `auth.PostsLegacyReview`. Canonical `CreatedAtUtc`/`UpdatedAtUtc`, content and references remain unchanged. SchemaCommand requires the review journal at V18/V19 and its absence at V20. The matching backend writes only `CreatedAtUtc` and requires V20; stop older backends before upgrading.
+V19 refuses any post/comment without a reviewed canonical timestamp, then makes only those new timestamp columns NOT NULL. At V19, original CreatedAt values and nullable Title/PostTypeId/SphereId remain unchanged. Indexes cover publication time/ID, combined type/sphere/time/ID, and parent/comment time/ID. Rich bodies are not index keys. SchemaCommand checks versioned dbo inventories plus the posts activity targets, audit layout, named kind check and target/history/unique indexes. V20 removes the obsolete `CreatedAt` source column (and its default) from Posts/PostComments and ForumTopics/ForumReplies, and drops `auth.PostsLegacyReview`. Canonical `CreatedAtUtc`/`UpdatedAtUtc`, content and references remain unchanged. SchemaCommand requires the review journal at V18/V19 and its absence at V20. The matching backend writes only `CreatedAtUtc` and requires V21; stop older backends before upgrading.
 
 ### Fresh installation
 
@@ -74,7 +74,7 @@ source tools/local/env.sh
 ./backend/mvnw -f backend/pom.xml compile exec:java -Dexec.mainClass=am.polylink.database.SchemaCommand -Dexec.args=fresh
 ```
 
-An empty installation proceeds through V20 without inventing historical data. After V20, legacy inspect/dry-run/apply commands reject further timestamp review; they remain available for staged upgrades at V12/V18. It does not seed admitted users. Only after the complete schema and application checks succeed, explicitly enable `POSTS_ENABLED=true` for the matching backend.
+An empty installation proceeds through V21 without inventing historical data. After V20, legacy inspect/dry-run/apply commands reject further timestamp review; they remain available for staged upgrades at V12/V18. It does not seed admitted users. Only after the complete schema and application checks succeed, explicitly enable `POSTS_ENABLED=true` for the matching backend.
 
 ### Existing database upgrade and historical review
 
@@ -104,13 +104,13 @@ Use empty objects when there are no unresolved rows. Mixed historical sources ma
 ./backend/mvnw -f backend/pom.xml compile exec:java -Dexec.mainClass=am.polylink.database.SchemaCommand -Dexec.args=upgrade
 ```
 
-Dry-run rolls back both conversions and audit inserts. Apply commits all reviewed rows and audit metadata together. Original timestamps, null metadata, content and FKs are retained during review. The final upgrade passes the V19 review gate, then V20 removes the source timestamps and review journal. If the original dates or audit must be retained, export them privately after apply and before the final upgrade; keep the verified backup and review JSON outside Git. Reinspect before repeating a review: the file must cover exactly the remaining unresolved rows. Repeat final upgrade validates an already upgraded database without rewriting it. Failed migration steps roll back; never use clean, manual baselining or edit accepted migrations to bypass the gate.
+Dry-run rolls back both conversions and audit inserts. Apply commits all reviewed rows and audit metadata together. Original timestamps, null metadata, content and FKs are retained during review. V21 subsequently clears retired type references as described above. The final upgrade passes the V19 review gate, then V20 removes the source timestamps and review journal. If the original dates or audit must be retained, export them privately after apply and before the final upgrade; keep the verified backup and review JSON outside Git. Reinspect before repeating a review: the file must cover exactly the remaining unresolved rows. Repeat final upgrade validates an already upgraded database without rewriting it. Failed migration steps roll back; never use clean, manual baselining or edit accepted migrations to bypass the gate.
 
 Validate row counts, reviewed canonical dates/FK samples, neutral authors and activity cleanup on the restore, then run focused/full acceptance. Repeat the reviewed procedure explicitly against the intended target only after rehearsal approval. Once schema changes are applied, recover by verified backup or a reviewed forward fix with a matching application version; an older binary is not a safe rollback strategy.
 
 ## Client integration and validation
 
-`js/posts/contracts.js` validates strict option/post/comment/page DTOs. HTTP forwards filters/cursors, preserving envelopes; no local filtering or `/users/{id}/posts` route remains. The mock dataset upgrade maps the known programming/engineering/data-science/marketing/other direction slugs to stable numeric mock IDs while retaining missing metadata, records and saved state. Post/comment ownership, pagination, last-save-wins and comment activity run through the same provider facade.
+`js/posts/contracts.js` validates strict option/post/comment/page DTOs. HTTP forwards filters/cursors, preserving envelopes; no local filtering or `/users/{id}/posts` route remains. The version-2 mock dataset upgrade converts prior numeric mock direction IDs and original direction slugs to codes while retaining missing metadata, records and saved state; it clears cursors bound to the previous filter representation. Post/comment ownership, pagination, last-save-wins and comment activity run through the same provider facade.
 
 Feed, detail and profile surfaces use shared forms/cards. Forms load choices independently, retain all input/formatting after failure, prevent duplicate submissions, confirm dirty close/cancel/Escape/backdrop paths and register browser unsaved-navigation warnings. Comments load on expansion. Creating a comment across an unloaded older-first gap refreshes its server count and explains that more pages remain; it does not append across the gap. Next-page errors keep existing cards and drafts. Generation checks ignore superseded filter responses. Drafts and activity state are scoped to the signed-in account.
 

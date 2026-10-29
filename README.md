@@ -48,7 +48,7 @@ Back up your existing database, stop any old backend, and set `MIGRATION_DB_USER
 ./backend/mvnw -f backend/pom.xml compile exec:java -Dexec.mainClass=am.polylink.database.SchemaCommand -Dexec.args=upgrade
 ```
 
-For an already-created **empty** database, use `-Dexec.args=fresh` instead. An existing database must pass the baseline guard; do not force it or delete tables. This applies/validates migrations through V20. If historical forum topics/replies exist, first stop at V12 and complete the [reviewed category/timezone backfill](docs/forum_implementation.md#existing-database-upgrade); V13 refuses unreviewed data. Historical announcements/comments also require stopping at V18 for the [reviewed timestamp backfill](docs/posts_implementation.md#existing-database-upgrade-and-historical-review); V19 refuses unreviewed rows. V20 then removes the four obsolete source date columns and the completed posts review journal; use the matching backend. Application startup never migrates a database. See [schema details](docs/messenger/schema-and-migrations.md).
+For an already-created **empty** database, use `-Dexec.args=fresh` instead. An existing database must pass the baseline guard; do not force it or delete tables. This applies/validates migrations through V21. If historical forum topics/replies exist, first stop at V12 and complete the [reviewed category/timezone backfill](docs/forum_implementation.md#existing-database-upgrade); V13 refuses unreviewed data. Historical announcements/comments also require stopping at V18 for the [reviewed timestamp backfill](docs/posts_implementation.md#existing-database-upgrade-and-historical-review); V19 refuses unreviewed rows. V20 then removes the four obsolete source date columns and the completed posts review journal. V21 removes unsupported post types and requires unique codes in both post reference tables; use the matching backend. Application startup never migrates a database. See [schema details](docs/messenger/schema-and-migrations.md).
 
 ### 4. Check registry eligibility
 
@@ -63,7 +63,7 @@ In each new terminal, open this checkout's root. For the **backend**, load the e
 ```sh
 source tools/local/env.sh
 export FORUM_ENABLED=true
-export POSTS_ENABLED=true # only after the V20 migration/review above
+export POSTS_ENABLED=true # only after the V21 migration/review above
 (cd backend && ./mvnw spring-boot:run)
 ```
 

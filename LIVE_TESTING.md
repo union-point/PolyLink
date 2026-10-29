@@ -27,7 +27,7 @@ Use `http://localhost:8001` consistently. If ports 3004/8001 are already occupie
 7. Send a text message. In Bob's browser, open [Messages](http://localhost:8001/message.html). The text should appear within a few seconds while the page is visible. Reply from Bob and confirm Alice receives it.
 8. For the offline-recipient check, close Bob's browser after his setup has completed. Send another message from Alice, then reopen Bob's browser. Bob should be able to read it without any key exchange or action by Alice.
 
-Encrypted images and personal actions are implemented in [M5](docs/messenger/m5.md), and dynamic groups, export and lifecycle in [M6](docs/messenger/m6.md). Apply migrations through V20 before testing, completing required historical reviews. General profile editing remains unavailable; HTTP mode never substitutes mock data.
+Encrypted images and personal actions are implemented in [M5](docs/messenger/m5.md), and dynamic groups, export and lifecycle in [M6](docs/messenger/m6.md). Apply migrations through V21 before testing, completing required historical reviews. General profile editing remains unavailable; HTTP mode never substitutes mock data.
 
 ## 2. Test session continuity and password change
 
@@ -60,7 +60,7 @@ Settings preferences are persisted in HTTP mode. Changing a notification prefere
 | --- | --- |
 | Port 3004/8001 already in use, or old behavior still appears | Stop the old app processes and start both servers from this checkout. Reload the browser afterward. |
 | `release version 25 not supported`, missing `javac`, or wrong Maven JVM | Select the full JDK 25, export its `JAVA_HOME`/`PATH`, then check `./mvnw --version`. |
-| Backend does not start or reports missing auth tables | Check the SQL credentials and run the explicit upgrade through V20 with the required historical reviews. Starting the backend never applies migrations. |
+| Backend does not start or reports missing auth tables | Check the SQL credentials and run the explicit upgrade through V21 with the required historical reviews. Starting the backend never applies migrations. |
 | Registration produces no verification email | Complete and save the academic profile, then submit for registry matching. Mail is sent only after a successful match. Check Mailpit and SMTP port 1025. Occupied-address registration is deliberately neutral; use login or recovery. |
 | Verification succeeds but key setup cannot finish | Check OpenBao is unsealed, the JVM trusts its certificate, and `OPENBAO_TOKEN_FILE` points to a valid narrow service token. Retry login after fixing the prerequisite. |
 | Token stopped working after a long shutdown | The backend token is periodic and needs renewal. If it expired while the backend was stopped, an operator must issue/install a replacement using the [runbook](infra/openbao/README.md). Keep the existing Transit key and volume. |
