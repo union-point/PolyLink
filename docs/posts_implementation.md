@@ -4,7 +4,7 @@ Implemented 29 October 2026 against [approved decisions](posts_decisions.md) and
 
 ## Availability and behavior
 
-Apply the matching schema through V19 and complete historical timestamp review before setting `POSTS_ENABLED=true`. The default is false. Posts require identity, independently of `FORUM_ENABLED` and `MESSENGER_ENABLED`. Startup never applies migrations. This work does not migrate the working database or deploy the application.
+Apply the matching schema through V20 and complete historical timestamp review before setting `POSTS_ENABLED=true`. The default is false. Posts require identity, independently of `FORUM_ENABLED` and `MESSENGER_ENABLED`. Startup never applies migrations. This work does not migrate the working database or deploy the application.
 
 Admitted members read the shared feed regardless of author profile privacy; graduates and lecturers publish and comment. Capabilities and author-only mutations come from the server. Announcement ownership grants no rights over another author's comment. Deletion removes activity, comments and the announcement in one transaction. Account locks are acquired in numeric order before parent/child locks; admission, ownership and target existence are rechecked under those locks.
 
@@ -63,7 +63,7 @@ V1–V17 remain immutable. V18 extends existing Posts/PostComments with nullable
 
 The explicit type-label mapping is `Աշխատանք → job`, `Պրակտիկա → internship`, `Դասընթաց → training`. Missing supported canonical options are inserted; unknown historical types keep their IDs, names and null codes. No existing post FK is reassigned. The sphere named `Այլ` receives stable code `other`, or it is created when absent. Other sphere IDs/names remain intact. Operators manage reference data offline; there is no direction creation or administration endpoint. Inspect actual reference rows on the disposable restore before approving this mapping for rollout.
 
-V19 refuses any post/comment without a reviewed canonical timestamp, then makes only those new timestamp columns NOT NULL. Original CreatedAt values and nullable Title/PostTypeId/SphereId remain unchanged. Indexes cover publication time/ID, combined type/sphere/time/ID, and parent/comment time/ID. Rich bodies are not index keys. SchemaCommand checks versioned dbo inventories plus the posts activity targets, audit layout, named kind check and target/history/unique indexes. The review audit table is permanent and remains part of guarded inventory.
+V19 refuses any post/comment without a reviewed canonical timestamp, then makes only those new timestamp columns NOT NULL. At V19, original CreatedAt values and nullable Title/PostTypeId/SphereId remain unchanged. Indexes cover publication time/ID, combined type/sphere/time/ID, and parent/comment time/ID. Rich bodies are not index keys. SchemaCommand checks versioned dbo inventories plus the posts activity targets, audit layout, named kind check and target/history/unique indexes. V20 removes the obsolete `CreatedAt` source column (and its default) from Posts/PostComments and ForumTopics/ForumReplies, and drops `auth.PostsLegacyReview`. Canonical `CreatedAtUtc`/`UpdatedAtUtc`, content and references remain unchanged. SchemaCommand requires the review journal at V18/V19 and its absence at V20. The matching backend writes only `CreatedAtUtc` and requires V20; stop older backends before upgrading.
 
 ### Fresh installation
 
@@ -74,7 +74,7 @@ source tools/local/env.sh
 ./backend/mvnw -f backend/pom.xml compile exec:java -Dexec.mainClass=am.polylink.database.SchemaCommand -Dexec.args=fresh
 ```
 
-An empty installation proceeds through V19 without inventing historical data. It does not seed admitted users. Only after the complete schema and application checks succeed, explicitly enable `POSTS_ENABLED=true` for the matching backend.
+An empty installation proceeds through V20 without inventing historical data. After V20, legacy inspect/dry-run/apply commands reject further timestamp review; they remain available for staged upgrades at V12/V18. It does not seed admitted users. Only after the complete schema and application checks succeed, explicitly enable `POSTS_ENABLED=true` for the matching backend.
 
 ### Existing database upgrade and historical review
 
@@ -104,9 +104,9 @@ Use empty objects when there are no unresolved rows. Mixed historical sources ma
 ./backend/mvnw -f backend/pom.xml compile exec:java -Dexec.mainClass=am.polylink.database.SchemaCommand -Dexec.args=upgrade
 ```
 
-Dry-run rolls back both conversions and audit inserts. Apply commits all reviewed rows and audit metadata together. Original timestamps, null metadata, content and FKs are retained. Reinspect before repeating a review: the file must cover exactly the remaining unresolved rows. Repeat final upgrade validates an already upgraded database without rewriting it. Failed migration steps roll back; never use clean, manual baselining or edit accepted migrations to bypass the gate.
+Dry-run rolls back both conversions and audit inserts. Apply commits all reviewed rows and audit metadata together. Original timestamps, null metadata, content and FKs are retained during review. The final upgrade passes the V19 review gate, then V20 removes the source timestamps and review journal. If the original dates or audit must be retained, export them privately after apply and before the final upgrade; keep the verified backup and review JSON outside Git. Reinspect before repeating a review: the file must cover exactly the remaining unresolved rows. Repeat final upgrade validates an already upgraded database without rewriting it. Failed migration steps roll back; never use clean, manual baselining or edit accepted migrations to bypass the gate.
 
-Validate row counts, original date/FK samples, neutral authors and activity cleanup on the restore, then run focused/full acceptance. Repeat the reviewed procedure explicitly against the intended target only after rehearsal approval. Once schema changes are applied, recover by verified backup or a reviewed forward fix with a matching application version; an older binary is not a safe rollback strategy.
+Validate row counts, reviewed canonical dates/FK samples, neutral authors and activity cleanup on the restore, then run focused/full acceptance. Repeat the reviewed procedure explicitly against the intended target only after rehearsal approval. Once schema changes are applied, recover by verified backup or a reviewed forward fix with a matching application version; an older binary is not a safe rollback strategy.
 
 ## Client integration and validation
 

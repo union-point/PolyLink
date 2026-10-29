@@ -1,6 +1,6 @@
 # PolyLink backend design context
 
-Reviewed 29 October 2026 against current Java controllers/services, migrations V1–V19, frontend provider clients and the settings/messenger handoffs. PolyLink now has an implemented Java 25 / Spring Boot 4.1.1 backend using Microsoft SQL Server, JDBC transactions, SMTP and OpenBao Transit. It is no longer only a design or scaffold.
+Reviewed 29 October 2026 against current Java controllers/services, migrations V1–V20, frontend provider clients and the settings/messenger handoffs. PolyLink now has an implemented Java 25 / Spring Boot 4.1.1 backend using Microsoft SQL Server, JDBC transactions, SMTP and OpenBao Transit. It is no longer only a design or scaffold.
 
 ## Evidence and authority
 
@@ -52,8 +52,9 @@ The code uses explicit JDBC/SQL service boundaries; domain JPA entity mappings a
 | V15 | Bounded normalized enrollment avatars, retained on admission. |
 | V16 | Remove retired import staging, invitations and enrollment invitation reference, and historical forum review log; retain 58 application tables. |
 | V17 | Add the enrollment institute reference, allow unknown education degrees and backfill study dates/specialization from verified alumni claims. |
-| V18 | Stage posts codes/UTC timestamps, comment notifications, preference and permanent review audit. |
+| V18 | Stage posts codes/UTC timestamps, comment notifications, preference and staged review audit. |
 | V19 | Gate historical UTC review, enforce canonical dates and add feed/comment paging indexes. |
+| V20 | Remove obsolete CreatedAt source columns from posts/comments and forum topics/replies; drop the completed posts review journal. |
 
 Use `SchemaCommand inventory`, guarded `upgrade` for restored/existing databases, and `fresh` only for empty databases. Migrations use separate migration credentials and run explicitly. Startup disables Flyway and SQL initialization; Hibernate is configured for validation. Never edit applied migration checksums or bypass baseline drift checks. V8/V9 removal requires a verified backup and stopped application access with matching backend deployment. See [schema workflow](messenger/schema-and-migrations.md).
 
@@ -121,6 +122,6 @@ Remaining gates: M7 production backup retention/restore/deletion-ledger rehearsa
 
 ## Posts and comment activity (29 October 2026)
 
-The focused `am.polylink.posts` package implements admitted options, filtered cursor feed, detail and owner-only post/comment CRUD with a posts-specific sanitizer. V18 preserves nullable legacy metadata and original timestamps, adds staged canonical dates/reference codes, post-comment preference/activity targets and a permanent review audit; V19 requires reviewed canonical dates and adds feed/comment indexes. `POSTS_ENABLED` defaults off and is independent of forum/messenger flags.
+The focused `am.polylink.posts` package implements admitted options, filtered cursor feed, detail and owner-only post/comment CRUD with a posts-specific sanitizer. V18 preserves nullable legacy metadata and original timestamps, adds staged canonical dates/reference codes, post-comment preference/activity targets and a staged review audit; V19 requires reviewed canonical dates and adds feed/comment indexes. V20 removes the four legacy creation columns and the posts review journal; runtime writes use only canonical UTC creation timestamps. `POSTS_ENABLED` defaults off and is independent of forum/messenger flags.
 
 Feed, detail and profile callers share strict DTOs, database directions, forms and lazy comment cards. Comment creation and its non-self author event are atomic; deletes explicitly clear activity and children. Retained activity uses a separate signed history cursor and a shared live poller independent of browser permission. Email eligibility rechecks category, email master switch, admission and target existence. New-announcement notifications remain deferred under [posts decisions](posts_decisions.md). See [posts implementation](posts_implementation.md) for contracts, migration review, lifecycle/export and validation evidence.

@@ -4,7 +4,7 @@ The career forum follows `forum_decisions.md`. Access requires authoritative adm
 
 ## API
 
-Enable `FORUM_ENABLED=true` after explicitly applying V13. Forum access does not depend on the messenger flag. Every route requires the existing bearer session and admission; mutation origins follow the shared identity boundary.
+Enable `FORUM_ENABLED=true` after explicitly applying the matching schema through V20 and completing the V13 historical review where needed. Forum access does not depend on the messenger flag. Every route requires the existing bearer session and admission; mutation origins follow the shared identity boundary.
 
 | Method | Route | Input |
 | --- | --- | --- |
@@ -38,9 +38,9 @@ Stop application access and verify a backup. Use the existing explicit migration
 3. Prepare a JSON file outside the checkout: `{"operator":"responsible operator","timezone":"Asia/Yerevan","topics":{"123":"informatics"}}`. The timezone is an example, not an inferred historical timezone. Supply exactly the topic IDs requiring review. Confirm every category and the actual source timezone. Ambiguous/nonexistent DST timestamps are rejected and require explicit data correction/review.
 4. `ForumMaintenanceCommand dry-run /absolute/review.json` validates the complete input transactionally and rolls it back.
 5. `ForumMaintenanceCommand apply /absolute/review.json` fills category and UTC projections atomically while preserving original `CreatedAt` values. Keep the reviewed JSON and command output externally if an operational record is required; V16 removes the historical review log.
-6. `SchemaCommand upgrade` applies V13 enforcement. A missing review blocks migration. Fresh empty databases can apply all migrations without review.
+6. `SchemaCommand upgrade` passes V13 enforcement and proceeds to V20; historical posts/comments also require the separate V18 review described in [posts operations](posts_implementation.md#existing-database-upgrade-and-historical-review). A missing review blocks migration. V20 removes the old `CreatedAt` columns from forum topics/replies and posts/comments, retaining canonical UTC dates, and removes the posts review journal. Preserve any required original dates privately before completing the upgrade. Fresh empty databases can apply all migrations without review.
 
-Invoke commands through the existing Maven exec entry point, e.g. `./backend/mvnw -f backend/pom.xml compile exec:java -Dexec.mainClass=am.polylink.database.SchemaCommand -Dexec.args='upgrade --target=12'`; use `am.polylink.forum.ForumMaintenanceCommand` for maintenance. Schema inventories validate the V12 and V13 dbo shapes without modifying earlier baselines.
+Invoke commands through the existing Maven exec entry point, e.g. `./backend/mvnw -f backend/pom.xml compile exec:java -Dexec.mainClass=am.polylink.database.SchemaCommand -Dexec.args='upgrade --target=12'`; use `am.polylink.forum.ForumMaintenanceCommand` for maintenance. Schema inventories validate the versioned dbo shapes without modifying earlier baselines. After V20, legacy inspect/dry-run/apply commands refuse further timestamp review; `takedown-topic` remains available.
 
 ## Notifications and lifecycle
 
