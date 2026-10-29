@@ -71,10 +71,9 @@ class PostsIT {
                         "<p><b>Բարև 😀</b><img src=x onerror=bad()></p>",
                         "category",
                         "job",
-                        "sphereId",
+                        "sphereCode",
                         db.queryForObject(
-                                "SELECT SphereId FROM dbo.Spheres WHERE Code='other'",
-                                String.class)));
+                                "SELECT Code FROM dbo.Spheres WHERE Code='other'", String.class)));
     }
 
     int uid(IdentityIT.Enrolled user) {
@@ -94,7 +93,7 @@ class PostsIT {
         var forged = input();
         forged.put("userId", b.id());
         call(a, "POST", "/posts", forged, 400);
-        for (String field : List.of("title", "content", "category", "sphereId")) {
+        for (String field : List.of("title", "content", "category", "sphereCode")) {
             var missing = input();
             missing.remove(field);
             call(a, "POST", "/posts", missing, 400);
@@ -103,7 +102,17 @@ class PostsIT {
         call(b, "PUT", "/posts/" + id, input(), 403);
         call(b, "DELETE", "/posts/" + id, null, 403);
         call(a, "GET", "/posts?category=unsupported", null, 400);
-        call(a, "GET", "/posts?sphereId=999999", null, 400);
+        call(a, "GET", "/posts?sphereCode=999999", null, 400);
+        call(a, "GET", "/posts?sphereCode=unknown-direction", null, 400);
+        call(a, "GET", "/posts?sphereId=1", null, 400);
+        var oldSelector = input();
+        oldSelector.put("sphereId", "1");
+        call(a, "POST", "/posts", oldSelector, 400);
+        var unknownSphere = input();
+        unknownSphere.put("sphereCode", "unknown-direction");
+        call(a, "POST", "/posts", unknownSphere, 400);
+        assertThat(post.path("sphereCode").asText()).isEqualTo("other");
+        assertThat(post.has("sphereId")).isFalse();
         call(a, "GET", "/posts?userId=invalid", null, 400);
         call(a, "GET", "/posts?sphere=other", null, 400);
         var c =
@@ -142,7 +151,7 @@ class PostsIT {
         int page = 0;
         do {
             var result =
-                    posts.list(user, "job", data.get("sphereId").toString(), "" + a.id(), cursor);
+                    posts.list(user, "job", data.get("sphereCode").toString(), "" + a.id(), cursor);
             var items = (List<Map<String, Object>>) result.get("items");
             assertThat(items.size()).isEqualTo(page++ < 2 ? 20 : 5);
             items.forEach(p -> seen.add(p.get("id").toString()));
@@ -198,7 +207,7 @@ class PostsIT {
         var legacy = posts.get(uid(b), id);
         assertThat(legacy.get("title")).isNull();
         assertThat(legacy.get("category")).isNull();
-        assertThat(legacy.get("sphereId")).isNull();
+        assertThat(legacy.get("sphereCode")).isNull();
         assertThat(legacy.get("content")).isEqualTo("<p>Legacy</p>");
         assertThat(((Map<?, ?>) legacy.get("author")).get("canOpenProfile")).isEqualTo(false);
         assertThat(((List<?>) posts.list(uid(b), "", "", "" + a.id(), "").get("items"))).hasSize(1);
@@ -489,34 +498,34 @@ class PostsIT {
     void combinedFiltersApplyBeforePagingAndAdmissionIsRechecked() throws Exception {
         var a = fixture.enroll("graduate");
         var b = fixture.enroll("lecturer");
-        var sphereIds = new ArrayList<String>();
-        sphereIds.add(input().get("sphereId").toString());
+        var sphereCodes = new ArrayList<String>();
+        sphereCodes.add(input().get("sphereCode").toString());
         for (int i = 0; i < 2; i++)
-            sphereIds.add(
+            sphereCodes.add(
                     db.queryForObject(
-                            "INSERT dbo.Spheres(Name,Code) OUTPUT INSERTED.SphereId VALUES (?,?)",
+                            "INSERT dbo.Spheres(Name,Code) OUTPUT INSERTED.Code VALUES (?,?)",
                             String.class,
                             "Filter " + UUID.randomUUID(),
                             "filter-" + UUID.randomUUID().toString().substring(0, 20)));
         for (String category : List.of("job", "internship", "training"))
-            for (String sphere : sphereIds)
+            for (String sphere : sphereCodes)
                 for (int i = 0; i < 3; i++) {
                     var data = input();
                     data.put("category", category);
-                    data.put("sphereId", sphere);
+                    data.put("sphereCode", sphere);
                     posts.create(a.id(), data);
                 }
         for (String category : List.of("job", "internship", "training")) {
             assertThat((List<?>) posts.list(b.id(), category, "", "" + a.id(), "").get("items"))
                     .hasSize(9);
-            for (String sphere : sphereIds)
+            for (String sphere : sphereCodes)
                 assertThat(
                                 (List<?>)
                                         posts.list(b.id(), category, sphere, "" + a.id(), "")
                                                 .get("items"))
                         .hasSize(3);
         }
-        for (String sphere : sphereIds)
+        for (String sphere : sphereCodes)
             assertThat((List<?>) posts.list(b.id(), "", sphere, "" + a.id(), "").get("items"))
                     .hasSize(9);
         assertThat((List<?>) posts.list(b.id(), "", "", "" + b.id(), "").get("items")).isEmpty();
@@ -530,7 +539,10 @@ class PostsIT {
                     "SELECT TOP (21) PostId,CreatedAtUtc FROM dbo.Posts WHERE PostTypeId="
                             + type
                             + " AND SphereId="
-                            + Integer.parseInt(sphereIds.getFirst())
+                            + db.queryForObject(
+                                    "SELECT SphereId FROM dbo.Spheres WHERE Code=?",
+                                    Integer.class,
+                                    sphereCodes.getFirst())
                             + " ORDER BY CreatedAtUtc DESC,PostId DESC");
             try (var rows = statement.getResultSet()) {
                 while (rows.next()) {}

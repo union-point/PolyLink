@@ -47,13 +47,13 @@ public class PostsController {
     @GetMapping("/posts")
     public Object list(
             @RequestParam(defaultValue = "") String category,
-            @RequestParam(defaultValue = "") String sphereId,
+            @RequestParam(defaultValue = "") String sphereCode,
             @RequestParam(defaultValue = "") String userId,
             @RequestParam(defaultValue = "") String cursor,
             HttpServletRequest r) {
         int user = caller(r, false);
-        query(r, Set.of("category", "sphereId", "userId", "cursor"));
-        return posts.list(user, category, sphereId, userId, cursor);
+        query(r, Set.of("category", "sphereCode", "userId", "cursor"));
+        return posts.list(user, category, sphereCode, userId, cursor);
     }
 
     @GetMapping("/posts/{post}")

@@ -17,7 +17,7 @@
  * @typedef {{id:string,postId:string,text:string,createdAt:string,updatedAt:string|null,
  * author:PostAuthor,canEdit:boolean,canDelete:boolean}} Comment
  * @typedef {{id:string,title:string|null,content:string,category:string|null,categoryName:string|null,
- * sphereId:string|null,sphereName:string|null,createdAt:string,updatedAt:string|null,
+ * sphereCode:string|null,sphereName:string|null,createdAt:string,updatedAt:string|null,
  * author:PostAuthor,commentCount:number,canEdit:boolean,canDelete:boolean}} Post
  * @typedef {{items:Post[]|Comment[],nextCursor:string|null}} PostPage
  * @typedef {{id:string|null,name:string,avatar:string,canOpenProfile:boolean}} ForumAuthor

@@ -22,7 +22,7 @@ public class PostsService {
     private static final String AUTHOR =
             "u.FirstName,u.LastName,u.ProfilePhotoUrl,u.IsProfilePublic,a.AdmissionStatus";
     private static final String POST =
-            "SELECT p.*,t.Code AS Category,t.Name AS CategoryName,s.Name AS SphereName,"
+            "SELECT p.*,t.Code AS Category,t.Name AS CategoryName,s.Name AS SphereName,s.Code AS SphereCode,"
                     + AUTHOR
                     + ",(SELECT COUNT(*) FROM dbo.PostComments c WHERE c.PostId=p.PostId) AS CommentCount FROM dbo.Posts p LEFT JOIN dbo.PostTypes t ON t.PostTypeId=p.PostTypeId LEFT JOIN dbo.Spheres s ON s.SphereId=p.SphereId LEFT JOIN dbo.Users u ON u.UserId=p.UserId LEFT JOIN auth.AccountSecurity a ON a.UserId=p.UserId";
     private static final String COMMENT =
@@ -52,26 +52,15 @@ public class PostsService {
     public Map<String, Object> options() {
         return Map.of(
                 "types",
-                Rows.query(
-                                db,
-                                "SELECT Code,Name FROM dbo.PostTypes WHERE Code IN ('job','internship','training') ORDER BY PostTypeId")
-                        .stream()
+                Rows.query(db, "SELECT Code,Name FROM dbo.PostTypes ORDER BY PostTypeId").stream()
                         .map(r -> Map.of("code", r.get("Code"), "name", r.get("Name")))
                         .toList(),
                 "spheres",
                 Rows.query(
                                 db,
-                                "SELECT SphereId,Name,Code FROM dbo.Spheres ORDER BY CASE WHEN Code='other' THEN 1 ELSE 0 END,Name,SphereId")
+                                "SELECT Code,Name FROM dbo.Spheres ORDER BY CASE WHEN Code='other' THEN 1 ELSE 0 END,Name,SphereId")
                         .stream()
-                        .map(
-                                r ->
-                                        Map.of(
-                                                "id",
-                                                r.get("SphereId").toString(),
-                                                "name",
-                                                r.get("Name"),
-                                                "isOther",
-                                                "other".equals(r.get("Code"))))
+                        .map(r -> Map.of("code", r.get("Code"), "name", r.get("Name")))
                         .toList());
     }
 
@@ -190,14 +179,9 @@ public class PostsService {
             String title = (String) row.get("Title");
             result.put("title", title == null || PostsContent.trim(title).isEmpty() ? null : title);
             result.put("content", PostsContent.sanitize((String) row.get("Content")));
-            boolean supported =
-                    Set.of("job", "internship", "training")
-                            .contains(Objects.toString(row.get("Category"), ""));
-            result.put("category", supported ? row.get("Category") : null);
-            result.put("categoryName", supported ? row.get("CategoryName") : null);
-            result.put(
-                    "sphereId",
-                    row.get("SphereId") == null ? null : row.get("SphereId").toString());
+            result.put("category", row.get("Category"));
+            result.put("categoryName", row.get("CategoryName"));
+            result.put("sphereCode", row.get("SphereCode"));
             result.put("sphereName", row.get("SphereName"));
             result.put("commentCount", row.get("CommentCount"));
         }
@@ -207,30 +191,34 @@ public class PostsService {
     private record Input(String title, String content, int type, int sphere) {}
 
     private Input input(Map<String, Object> input) {
-        fields(input, Set.of("title", "content", "category", "sphereId"));
+        fields(input, Set.of("title", "content", "category", "sphereCode"));
         return new Input(
                 PostsContent.title(input.get("title")),
                 PostsContent.content(input.get("content")),
                 type(input.get("category")),
-                sphere(input.get("sphereId")));
+                sphere(input.get("sphereCode")));
     }
 
     private int type(Object value) {
-        if (!(value instanceof String code)
-                || !Set.of("job", "internship", "training").contains(code))
-            throw PostsFailure.invalid("category", "Ընտրեք հայտարարության տեսակը։");
-        var ids =
-                db.queryForList(
-                        "SELECT PostTypeId FROM dbo.PostTypes WHERE Code=?", Integer.class, code);
-        if (ids.size() != 1) throw PostsFailure.invalid("category", "Անվավեր տեսակ։");
-        return ids.getFirst();
+        return reference(value, "category", "PostTypes", "PostTypeId", 16);
     }
 
     private int sphere(Object value) {
-        int id = id(value, "sphereId");
-        if (db.queryForList("SELECT SphereId FROM dbo.Spheres WHERE SphereId=?", Integer.class, id)
-                .isEmpty()) throw PostsFailure.invalid("sphereId", "Ընտրեք ուղղությունը։");
-        return id;
+        return reference(value, "sphereCode", "Spheres", "SphereId", 32);
+    }
+
+    private int reference(Object value, String field, String table, String key, int max) {
+        if (!(value instanceof String code)
+                || code.length() > max
+                || !code.matches("[a-z][a-z0-9]*(?:-[a-z0-9]+)*"))
+            throw PostsFailure.invalid(field, "Ընտրեք վավեր արժեք։");
+        var ids =
+                db.queryForList(
+                        "SELECT " + key + " FROM dbo." + table + " WHERE Code=?",
+                        Integer.class,
+                        code);
+        if (ids.size() != 1) throw PostsFailure.invalid(field, "Ընտրեք վավեր արժեք։");
+        return ids.getFirst();
     }
 
     public static int id(Object value, String field) {

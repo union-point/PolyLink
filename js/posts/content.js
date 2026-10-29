@@ -22,9 +22,9 @@ export function validatePostInput(value) {
   const content = sanitizePostHtml(raw), text = postPlainText(content);
   if (raw.length > 100000 || !text || text.length > 20000) errors.content = 'Բովանդակությունը պետք է պարունակի 1–20000 նիշ։';
   if (!['job','internship','training'].includes(value.category)) errors.category = 'Ընտրեք տեսակը։';
-  if (typeof value.sphereId !== 'string' || !/^[1-9][0-9]{0,9}$/.test(value.sphereId)) errors.sphereId = 'Ընտրեք ուղղությունը։';
+  if (typeof value.sphereCode !== 'string' || (value.sphereCode.length > 32 || !/^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/.test(value.sphereCode))) errors.sphereCode = 'Ընտրեք ուղղությունը։';
   if (Object.keys(errors).length) throw new DataError('VALIDATION','Ստուգեք լրացված դաշտերը։',errors);
-  return { title, content, category: value.category, sphereId: value.sphereId };
+  return { title, content, category: value.category, sphereCode: value.sphereCode };
 }
 export function validateComment(value) {
   if (typeof value !== 'string' || !value.replace(/\u00a0/g,' ').trim() || value.trim().length > 2000) throw new DataError('VALIDATION','Մեկնաբանությունը պետք է պարունակի 1–2000 նիշ։',{text:'Առավելագույնը 2000 նիշ։'});
