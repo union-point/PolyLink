@@ -18,8 +18,30 @@ try{
  await page.evaluate(async()=>{const {upgradePostsState}=await import('/js/data/mock/posts-state.js');const state={posts:[{sphereId:'2'}],comments:[],settings:{},postsDataVersion:1,postCursors:{old:{}}};upgradePostsState(state);if(state.posts[0].sphereCode!=='engineering'||'sphereId'in state.posts[0]||Object.keys(state.postCursors).length)throw new Error('Saved numeric direction upgrade failed');});
  await page.locator('.category-selector').selectOption('training');await page.locator('.filters .tag-selector:not(.category-selector)').selectOption('data-science');await count('.post-card',1);
  await page.locator('.create-post-btn').click();const form=page.locator('.posts-modal');await form.locator('select[name=sphereCode] option[value="other"]').waitFor({state:'attached'});
+ await form.locator('[data-author-name]:not([aria-busy])').waitFor();
+ assert((await form.locator('[data-author-name]').textContent()).trim());
+ assert.equal(await form.locator('h2,.forum-editor-hint,[data-title-count],[data-body-count]').count(),0);
+ const composerBounds=()=>form.evaluate(dialog=>{
+   const bounds=selector=>{const r=dialog.querySelector(selector).getBoundingClientRect();return [r.x,r.y,r.width,r.height];};
+   return {dialog:[dialog.getBoundingClientRect().width,dialog.getBoundingClientRect().height],writing:bounds('.posts-composer-writing'),footer:bounds('footer')};
+ });
+ const beforePopover=await composerBounds();
+ await form.locator('[contenteditable]').fill('Selected link');await form.locator('[contenteditable]').press('ControlOrMeta+A');
+ await form.locator('[data-link]').click();
+ assert.deepEqual(await composerBounds(),beforePopover,'Link popover preserves the composer geometry');
+ await form.locator('.forum-link input').fill('https://example.org/article');await form.locator('.forum-link input').press('Enter');
+ assert.equal(await form.locator('[contenteditable] a').textContent(),'Selected link');
+ assert.equal(await form.locator('[contenteditable] a').getAttribute('href'),'https://example.org/article');
+ assert(await form.isVisible(),'Enter applies the link without saving');
+ await form.locator('[data-link]').click();await form.locator('.forum-link input').fill('javascript:alert(1)');await form.locator('[data-apply-link]').click();
+ assert.equal(await form.locator('.forum-link input').evaluate(input=>input.validity.customError),true);
+ await form.locator('.forum-link input').press('Escape');assert(await form.isVisible());assert(await form.locator('.forum-link').isHidden());
+ await form.locator('[data-link]').click();await form.locator('[data-dismiss-link]').click();assert(await form.locator('.forum-link').isHidden());
+ await form.locator('[data-link]').click();await form.locator('[name=title]').click();assert(await form.locator('.forum-link').isHidden());
+ assert.deepEqual(await form.locator('.posts-composer-selectors select,footer button').evaluateAll(elements=>elements.map(el=>getComputedStyle(el).borderRadius)),['20px','20px','20px','20px']);
+ await page.screenshot({path:(process.env.M1_ARTIFACT_DIR||'/tmp')+'/posts-form-desktop.png'});
  assert.equal(await form.locator('[name=sphereCode]').inputValue(),'','Direction never comes from feed filter');assert.equal(await form.locator('[name=category]').inputValue(),'');
- await form.locator('[name=title]').fill('Հայտարարության ստուգում');await form.locator('[name=category]').selectOption('job');await form.locator('[name=sphereCode]').selectOption('other');await form.locator('[contenteditable]').fill('Առաջին պարբերություն');await form.locator('[contenteditable]').press('ControlOrMeta+A');await form.locator('[data-command=bold]').click();
+ await form.locator('[name=title]').fill('Հայտարարության ստուգում');await form.locator('[name=category]').selectOption('job');await form.locator('[name=sphereCode]').selectOption('other');await form.locator('[contenteditable]').fill('Առաջին պարբերություն');await form.locator('[contenteditable]').press('ControlOrMeta+A');await form.locator('[data-command=bold]').click();assert.equal(await form.locator('[data-command=bold]').getAttribute('aria-pressed'),'true');
  page.once('dialog',d=>d.dismiss());await page.keyboard.press('Escape');assert(await form.isVisible());
  await page.evaluate(async()=>{const {mockControls}=await import('/js/data/client.js');await(await mockControls()).failNext('posts.create','NETWORK','Ցանցի սխալ');});
  await form.locator('[type=submit]').click();await form.locator('[role=alert]').last().waitFor();assert.equal(await form.locator('[name=title]').inputValue(),'Հայտարարության ստուգում');assert.equal(await form.locator('[name=sphereCode]').inputValue(),'other');assert.match(await form.locator('[contenteditable]').innerHTML(),/<(b|strong)>/);
@@ -32,7 +54,14 @@ try{
  await page.reload();await ready();assert.equal(await page.locator('.announcement-content h2').count(),0);assert.equal(await page.evaluate(()=>window.__unsafe),undefined);await page.locator('.comments-toggle').click();await count('.comment',20);await page.locator('.comments-more').click();await count('.comment',40);await page.locator('.comment-input').fill('Նորագույն');await page.locator('.comment-btn').click();await page.locator('[data-comment-status]').getByText('Նոր մեկնաբանությունն ավելացվել է։ Շարունակեք բեռնել՝ այն տեսնելու համար։').waitFor();assert.equal(await page.locator('.comment').count(),40);await page.locator('.comments-more').click();await count('.comment',46);
  await page.locator('[data-post-edit]').click();assert.equal(await form.locator('[name=category]').inputValue(),'');assert.equal(await form.locator('[name=sphereCode]').inputValue(),'');await form.locator('[type=submit]').click();await form.locator('[aria-invalid]').first().waitFor();await form.locator('[data-cancel]').click();
  await page.goto(origin+'/events.html');await ready();await page.evaluate(async()=>{const {posts}=await import('/js/services/index.js');for(let i=0;i<45;i++)await posts.create({title:`Batch ${i}`,content:'<p>Բովանդակություն</p>',category:'job',sphereCode:'engineering'});});await page.reload();await ready();await count('.post-card',20);await page.locator('.post-more').click();await count('.post-card',40);await page.locator('.post-more').click();await count('.post-card',49);
- await page.setViewportSize({width:390,height:844});assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),'No horizontal overflow');await page.locator('.create-post-btn').click();await page.screenshot({path:(process.env.M1_ARTIFACT_DIR||'/tmp')+'/posts-form-mobile.png'});page.once('dialog',d=>d.accept());await form.locator('[name=title]').fill('Dirty');await form.locator('[data-close]').click();await form.waitFor({state:'detached'});
+ await page.setViewportSize({width:390,height:844});assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),'No horizontal overflow');await page.locator('.create-post-btn').click();await form.locator('[name=sphereCode] option[value="other"]').waitFor({state:'attached'});await form.locator('[data-author-name]:not([aria-busy])').waitFor();
+ for(const width of [390,320]){
+   await page.setViewportSize({width,height:844});
+   assert(await form.evaluate(dialog=>dialog.scrollWidth<=dialog.clientWidth),'Composer has no horizontal overflow');
+   const selectors=await form.locator('select').evaluateAll(elements=>elements.map(el=>el.getBoundingClientRect().top));assert.equal(selectors[0],selectors[1]);
+   await form.locator('[data-link]').click();assert(await form.locator('.forum-link').evaluate(panel=>{const p=panel.getBoundingClientRect(),d=panel.closest('dialog').getBoundingClientRect();return p.left>=d.left&&p.right<=d.right;}));await form.locator('.forum-link input').press('Escape');
+ }
+ await page.setViewportSize({width:390,height:844});await page.screenshot({path:(process.env.M1_ARTIFACT_DIR||'/tmp')+'/posts-form-mobile.png'});await page.emulateMedia({reducedMotion:'reduce'});await page.evaluate(()=>document.documentElement.classList.add('theme-dark'));await page.screenshot({path:(process.env.M1_ARTIFACT_DIR||'/tmp')+'/posts-form-dark.png'});await page.evaluate(()=>document.documentElement.classList.remove('theme-dark'));page.once('dialog',d=>d.accept());await form.locator('[name=title]').fill('Dirty');await form.locator('[data-close]').click();await form.waitFor({state:'detached'});
  // Offline events are retained without browser permission or Web Locks, scoped to the author.
  await page.evaluate(async id=>{const {transaction}=await import('/js/data/mock/store.js');const {posts}=await import('/js/services/index.js');await transaction(state=>{state.sessionUserId='2';},{write:true});await posts.comments.create(id,{text:'Offline other comment'});await transaction(state=>{state.sessionUserId='1';},{write:true});await posts.comments.create(id,{text:'Self is suppressed'});},id);
  await page.reload();await ready();await page.locator('[data-activity-toggle]').click();await page.locator(`[data-activity-items] a[href="post.html?id=${id}"]`).waitFor();assert.equal(await page.locator('[data-activity-items] a').count(),1);
