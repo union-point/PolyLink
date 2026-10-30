@@ -45,6 +45,8 @@ export function createPostCard(post,{onChanged=()=>{},onDeleted=()=>{}}={}) {
     document.addEventListener('pointerdown',event=>{if(!emojiPanel.contains(event.target)&&!emojiButton.contains(event.target))hideEmoji();},{signal:emojiListeners.signal});
     emojiPanel.querySelector('button').focus();
   };
+  // Keep pointer presses from blurring the focused emoji before its click runs.
+  emojiPanel.addEventListener('pointerdown',event=>{if(event.target.closest('[data-emoji]'))event.preventDefault();});
   emojiPanel.onclick=event=>{
     const button=event.target.closest('[data-emoji]');if(!button)return;
     if(input.value.length-(selectionEnd-selectionStart)+button.dataset.emoji.length>input.maxLength)return;
@@ -52,7 +54,7 @@ export function createPostCard(post,{onChanged=()=>{},onDeleted=()=>{}}={}) {
     input.dispatchEvent(new Event('input',{bubbles:true}));rememberSelection();hideEmoji();input.focus();
   };
   card.addEventListener('keydown',event=>{if(event.key==='Escape'&&!emojiPanel.hidden){event.preventDefault();event.stopPropagation();hideEmoji(true);}});
-  emojiPanel.addEventListener('focusout',()=>queueMicrotask(()=>{if(!emojiPanel.contains(document.activeElement)&&document.activeElement!==emojiButton)hideEmoji();}));
+  emojiPanel.addEventListener('focusout',event=>{if(!emojiPanel.contains(event.relatedTarget)&&event.relatedTarget!==emojiButton)hideEmoji();});
   function summary(saved){post=saved;card.record=saved;card.dataset.category=saved.category||'';card.querySelector('[data-post-summary]').innerHTML=renderPostSummary(saved);card.querySelector('.post-owner-actions').innerHTML=renderPostOwnerActions(saved);toggle.innerHTML=renderCommentToggle(saved.commentCount);toggle.setAttribute('aria-label',`Մեկնաբանություններ (${saved.commentCount})`);}
   card.updatePost=summary;
   async function refreshCount(){try{summary(await posts.get(post.id));}catch(error){notify(error.message);}}
