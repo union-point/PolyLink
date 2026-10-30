@@ -4,7 +4,7 @@ import { escapeHtml as e, safeUrl } from '../shared/content.js';
 import { pending, stateMessage, notify } from '../shared/ui.js';
 import { sanitizePostHtml, validatePostInput } from './content.js';
 export function postsStyles() {
-  if (document.querySelector('link[data-posts-style]')) return;
+  if (document.querySelector('link[data-posts-style],link[href="./css/posts.css"]')) return;
   const link=document.createElement('link');link.rel='stylesheet';link.href='./css/posts.css';link.dataset.postsStyle='';document.head.append(link);
 }
 export function openPostForm({record=null,onSaved=()=>{}}={}) {
