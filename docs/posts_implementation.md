@@ -26,7 +26,7 @@ All endpoints require an authenticated admitted session. Mutations use the exist
 | Create | `POST /posts` | 201 + announcement |
 | Replace | `PUT /posts/{id}` | 200 + announcement |
 | Delete | `DELETE /posts/{id}` | 204 |
-| Comments | `GET /posts/{id}/comments?cursor=...` | `{items,nextCursor}` |
+| Comments | `GET /posts/{id}/comments?sort=newest&cursor=...` | `{items,nextCursor}` |
 | Add comment | `POST /posts/{id}/comments` | 201 + comment |
 | Replace comment | `PUT /posts/{id}/comments/{commentId}` | 200 + comment |
 | Delete comment | `DELETE /posts/{id}/comments/{commentId}` | 204 |
@@ -41,7 +41,7 @@ Both type and direction selections use codes returned by options. Types are `job
 
 Announcements contain `id`, nullable `title`, sanitized `content`, nullable `category/categoryName`, nullable `sphereCode/sphereName`, canonical `createdAt`, nullable `updatedAt`, `author`, `commentCount`, `canEdit`, `canDelete`. They never embed comment bodies. Comments contain `id`, `postId`, plain `text`, timestamps, author and capabilities. Authors expose only `id` (null after deletion), `name`, `avatar`, `canOpenProfile`.
 
-Filters combine with AND before pagination. Feed order is `(CreatedAtUtc DESC, PostId DESC)`; comment order is `(CreatedAtUtc ASC, CommentId ASC)`. Each request reads 21 rows and returns at most 20. HMAC-protected cursors retain full SQL timestamp precision and bind to the normalized filter combination or parent post. Do not decode/rebuild them in clients. Editing never changes the sort key.
+Filters combine with AND before pagination. Feed order is `(CreatedAtUtc DESC, PostId DESC)`; comment order is `(CreatedAtUtc ASC, CommentId ASC)` for `sort=oldest` (the API default), or both columns descending for `sort=newest`. Comment cursors are bound to the post and sort order; switching order starts a new page sequence. Each request reads 21 rows and returns at most 20. HMAC-protected cursors retain full SQL timestamp precision and bind to the normalized filter combination or parent post. Do not decode/rebuild them in clients. Editing never changes the sort key.
 
 Errors follow `{code,message,fieldErrors}`: 400 for malformed IDs/cursors, unsupported choices, missing/over-limit fields or unknown input; 401 for unavailable authentication/admission; 403 for an admitted non-owner or disallowed publishing role; 404 for missing targets or a comment-parent mismatch; 429 for the existing rate limiter. Temporary failures retain input and offer retry. A deleted parent makes all comment operations unavailable.
 

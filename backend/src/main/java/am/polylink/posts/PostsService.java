@@ -105,14 +105,27 @@ public class PostsService {
     }
 
     public Map<String, Object> comments(int user, int post, String cursor) {
+        return comments(user, post, cursor, "oldest");
+    }
+
+    public Map<String, Object> comments(int user, int post, String cursor, String sort) {
+        if (!Set.of("oldest", "newest").contains(sort))
+            throw PostsFailure.invalid("sort", "Անվավեր դասավորում։");
+        boolean newest = sort.equals("newest");
         parent(post, false);
-        String scope = "comments:" + post;
+        String scope = "comments:" + post + ":" + sort;
         var next = cursor(cursor, scope);
         var args = new ArrayList<Object>();
         args.add(post);
         String where = " WHERE c.PostId=?";
         if (next != null) {
-            where += " AND (c.CreatedAtUtc>? OR (c.CreatedAtUtc=? AND c.CommentId>?))";
+            String comparison = newest ? "<" : ">";
+            where +=
+                    " AND (c.CreatedAtUtc"
+                            + comparison
+                            + "? OR (c.CreatedAtUtc=? AND c.CommentId"
+                            + comparison
+                            + "?))";
             args.add(next.time());
             args.add(next.time());
             args.add(next.id());
@@ -122,7 +135,10 @@ public class PostsService {
                         db,
                         COMMENT
                                 + where
-                                + " ORDER BY c.CreatedAtUtc,c.CommentId OFFSET 0 ROWS FETCH NEXT 21 ROWS ONLY",
+                                + (newest
+                                        ? " ORDER BY c.CreatedAtUtc DESC,c.CommentId DESC"
+                                        : " ORDER BY c.CreatedAtUtc,c.CommentId")
+                                + " OFFSET 0 ROWS FETCH NEXT 21 ROWS ONLY",
                         args.toArray()),
                 scope,
                 user,

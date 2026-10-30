@@ -13,7 +13,7 @@ test('posts forward combined filters and preserve page envelope and full timesta
 });
 test('posts comments retain independent parent paging and permissions',async()=>{
  const requests=[],provider=createHttpProvider(Promise.resolve({request:async r=>{requests.push(r);return {items:[comment],nextCursor:null};}}));
- const page=await provider.call('posts.comments.list','1',{cursor:'earlier'});assert.deepEqual(requests[0].params,{cursor:'earlier'});assert.equal(page.items[0].text,'<b>plain</b>');assert.equal(page.items[0].canDelete,false);
+ const page=await provider.call('posts.comments.list','1',{cursor:'earlier',sort:'newest'});assert.deepEqual(requests[0].params,{cursor:'earlier',sort:'newest'});assert.equal(page.items[0].text,'<b>plain</b>');assert.equal(page.items[0].canDelete,false);
 });
 test('strict post DTOs reject fabricated fields and malformed envelopes',()=>{
  for(const value of [{...post,commentCount:'45'},{...post,category:'unknown'},{...post,title:undefined},{...post,createdAt:'2026-01-01 12:00:00'},{...post,canEdit:1},{...post,sphereCode:'13'}])assert.throws(()=>normalizePost(value),e=>e.code==='CONTRACT');

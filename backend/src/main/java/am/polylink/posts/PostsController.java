@@ -84,10 +84,11 @@ public class PostsController {
     public Object comments(
             @PathVariable String post,
             @RequestParam(defaultValue = "") String cursor,
+            @RequestParam(defaultValue = "oldest") String sort,
             HttpServletRequest r) {
         int user = caller(r, false);
-        query(r, Set.of("cursor"));
-        return posts.comments(user, id(post), cursor);
+        query(r, Set.of("cursor", "sort"));
+        return posts.comments(user, id(post), cursor, sort);
     }
 
     @PostMapping("/posts/{post}/comments")

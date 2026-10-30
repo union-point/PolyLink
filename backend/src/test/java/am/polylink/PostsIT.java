@@ -183,6 +183,25 @@ class PostsIT {
         } while (cursor != null);
         assertThat(comments).hasSize(45).doesNotHaveDuplicates();
         assertThat(comments.stream().map(Integer::parseInt).toList()).isSorted();
+        cursor = "";
+        var newest = new ArrayList<String>();
+        do {
+            var result = posts.comments(user, Integer.parseInt(post), cursor, "newest");
+            var items = (List<Map<String, Object>>) result.get("items");
+            items.forEach(c -> newest.add(c.get("id").toString()));
+            cursor = (String) result.get("nextCursor");
+        } while (cursor != null);
+        var reversed = new ArrayList<>(comments);
+        Collections.reverse(reversed);
+        assertThat(newest).containsExactlyElementsOf(reversed);
+        var newestPage = posts.comments(user, Integer.parseInt(post), "", "newest");
+        call(
+                a,
+                "GET",
+                "/posts/" + post + "/comments?sort=oldest&cursor=" + newestPage.get("nextCursor"),
+                null,
+                400);
+        call(a, "GET", "/posts/" + post + "/comments?sort=invalid", null, 400);
         var page1 = posts.comments(user, Integer.parseInt(post), "");
         call(
                 a,
