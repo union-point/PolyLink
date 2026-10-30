@@ -50,7 +50,7 @@ export async function pending(button, container, action) {
 export function notify(message) {
   document.querySelector('[data-toast]')?.remove();
   const toast = document.createElement('div'); toast.dataset.toast = ''; toast.setAttribute('role', 'status'); toast.textContent = message;
-  toast.style.cssText = 'position:fixed;bottom:24px;right:24px;padding:16px 24px;background:#2c3e50;color:white;border-radius:8px;z-index:10000;max-width:90vw';
+  toast.style.cssText = 'position:fixed;bottom:calc(24px + var(--activity-dock-space,0px));right:24px;padding:16px 24px;background:#2c3e50;color:white;border-radius:8px;z-index:10000;max-width:90vw';
   document.body.appendChild(toast); setTimeout(() => toast.remove(), 3500);
 }
 export function stateMessage(container, message, { retry } = {}) {
