@@ -11,7 +11,7 @@ const service=(method,...args)=>page.evaluate(async({method,args})=>{const {post
 async function ready(){await page.waitForFunction(()=>document.querySelector('main')&&!document.querySelector('body > [inert]'));}
 async function count(selector,n){await page.waitForFunction(({selector,n})=>document.querySelectorAll(selector).length===n,{selector,n});}
 try{
- await page.goto(origin+'/events.html');await ready();await count('.post-card',3);
+ await page.goto(origin+'/events.html');await ready();await count('.post-card',3);assert(await page.locator('.post-more').isHidden(),'No extra pagination space at the end of the feed');
  assert.equal(await page.locator('.filters label').count(),0);
  assert.equal(await page.locator('.container').evaluate(el=>Math.round(el.getBoundingClientRect().width)),1128);
  assert(await page.evaluate(()=>document.querySelector('.upper-container').getBoundingClientRect().top-document.querySelector('.header').getBoundingClientRect().bottom<=24));
