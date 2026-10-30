@@ -68,6 +68,7 @@ export function startActivityNotifications(user) {
   async function history(reset = false) {
     if (stopped || historyLoading) return;
     historyLoading = true;
+    const focusedControl = [more, refresh].includes(document.activeElement) ? document.activeElement : null;
     more.disabled = refresh.disabled = true;
     status.setAttribute('aria-busy', 'true');
     stateMessage(status, 'Բեռնվում է...');
@@ -85,6 +86,7 @@ export function startActivityNotifications(user) {
       historyLoading = false;
       status.removeAttribute('aria-busy');
       more.disabled = refresh.disabled = false;
+      if (focusedControl && !panel.hidden && document.activeElement === document.body) (focusedControl.hidden ? refresh : focusedControl).focus({ preventScroll: true });
     }
   }
   async function poll() {
@@ -125,7 +127,15 @@ export function startActivityNotifications(user) {
       setOpen(false, true);
     }
   };
-  const focusOut = event => { if (event.relatedTarget && !root.contains(event.relatedTarget)) setOpen(false); };
+  const focusOut = event => {
+    if (event.relatedTarget) {
+      if (!root.contains(event.relatedTarget)) setOpen(false);
+      return;
+    }
+    queueMicrotask(() => {
+      if (!stopped && !historyLoading && !root.contains(document.activeElement)) setOpen(false);
+    });
+  };
   document.addEventListener('pointerdown', outside);
   root.addEventListener('keydown', escape);
   root.addEventListener('focusout', focusOut);

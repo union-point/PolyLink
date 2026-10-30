@@ -1,7 +1,7 @@
 import { bootstrap, start, notify } from './shared/ui.js';
 
 start(async () => {
-  await bootstrap({ protectedPage: false });
+  await bootstrap({ protectedPage: false, showNotifications: true });
   const buttons = [...document.querySelectorAll('.filter-btn')];
   const categories = [...document.querySelectorAll('.tutorial-category')];
   buttons.forEach(button => {

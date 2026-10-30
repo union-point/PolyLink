@@ -2,7 +2,7 @@ import { bootstrap, start, showError } from './shared/ui.js';
 import { DataError } from './data/errors.js';
 
 start(async () => {
-  await bootstrap({ protectedPage: false });
+  await bootstrap({ protectedPage: false, showNotifications: true });
   document.querySelectorAll('.faq-item').forEach((item, index) => {
     const question = item.querySelector('.faq-question'), answer = item.querySelector('.faq-answer');
     answer.id = `faq-answer-${index}`;

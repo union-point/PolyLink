@@ -107,7 +107,7 @@ export function confirmAction(message) {
   });
 }
 
-export async function bootstrap({ protectedPage = true, requireOnboarding = true } = {}) {
+export async function bootstrap({ protectedPage = true, requireOnboarding = true, showNotifications = protectedPage } = {}) {
   initializeTheme();
   document.querySelectorAll('.dropdown-container').forEach(container => {
     const button = container.querySelector('.dropdown-btn'), menu = container.querySelector('.dropdown-menu');
@@ -134,7 +134,17 @@ export async function bootstrap({ protectedPage = true, requireOnboarding = true
     const done = await pending(null, document.querySelector('main') || document.body, async () => { await auth.logout(); location.href = 'login.html'; });
     if (!done) leaving = false;
   }));
-  if (!protectedPage) return null;
+  if (!protectedPage) {
+    if (showNotifications) {
+      const user = await auth.me().catch(() => null);
+      if (user?.onboardingComplete && !user.cryptoLocked) {
+        document.body.dataset.accountId = user.id;
+        const { startActivityNotifications } = await import('./activity-notifications.js');
+        startActivityNotifications(user.id);
+      }
+    }
+    return null;
+  }
   let user = await auth.me();
   if (user?.cryptoLocked) {
     const { unlockIdentity } = await import('./auth-ui.js');
