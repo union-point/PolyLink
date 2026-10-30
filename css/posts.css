@@ -1,7 +1,7 @@
 /* Post composer styles are scoped to the native dialog. */
 .posts-modal {
   width: min(720px, calc(100vw - 32px));
-  height: auto;
+  height: fit-content;
   max-height: calc(100dvh - 32px);
   margin: auto;
   padding: 28px;
@@ -120,12 +120,14 @@
 .post-card button:disabled { opacity: .5; cursor: wait; }
 .post-card .post-actions { display: flex; align-items: center; gap: 4px; margin: 0; padding: 12px 0 0; border-top: 1px solid var(--border-color, #e6e6e6); }
 .post-card .comments-toggle { margin: 0 auto 0 0; padding-inline: 0 10px; color: var(--primary-blue, #0a66c2); white-space: nowrap; }
+.post-card .post-actions button { display: inline-flex; align-items: center; justify-content: center; gap: 6px; }
+.post-card .post-actions svg { flex-shrink: 0; }
 .post-card .post-owner-actions { display: flex; gap: 2px; }
 .post-card [data-post-delete]:hover, .post-card [data-comment-delete]:hover { color: #b42318; background: #b423180a; }
 .post-card .comment-sort { width: 145px; max-width: 100%; min-width: 0; padding: 8px 0 8px 8px; border: 0; border-radius: 8px; background: transparent; color: var(--font-color-secondary, #666); font-size: 12px; cursor: pointer; }
 .post-card .comment-sort option { background: var(--card-background, #fff); color: var(--font-color-primary, #18212f); }
 .post-card [data-comments] { margin-top: 16px; }
-.post-card [data-comments][hidden], .post-card [hidden] { display: none; }
+.post-card [data-comments][hidden], .post-card button[hidden], .post-card .emoji-popover[hidden] { display: none; }
 .post-card .comments { display: flex; flex-direction: column; gap: 10px; max-height: 440px; overflow: auto; overscroll-behavior: contain; scrollbar-width: thin; scrollbar-color: var(--border-color, #ccc) transparent; }
 .post-card .comment { display: flex; align-items: flex-start; gap: 12px; margin: 0; padding: 14px; border: 1px solid var(--border-color, #e6e6e6); border-radius: 14px; background: var(--window-background, #f4f7fb); }
 .post-card .comment-content { flex: 1; min-width: 0; }
@@ -156,19 +158,15 @@
   .post-card .post-type-badge { padding: 5px 9px; font-size: 11px; }
   .post-card .announcement-content h2 { font-size: 20px; }
   .post-card .post-actions { gap: 2px; }
-  .post-card .post-actions button { font-size: 11px; padding-inline: 5px; }
+  .post-card .post-actions button { font-size: 11px; padding-inline: 8px; }
+  .post-card .post-action-label, .post-card .comments-label { display: none; }
   .post-card .comment-sort { width: 115px; font-size: 11px; padding-left: 2px; }
   .post-card .comment-field { gap: 8px; }
   .post-card .comment-avatar { width: 30px; height: 30px; }
   .post-card .comment-btn { padding-inline: 10px; font-size: 12px; }
   .post-card .comment-input { font-size: 13px; }
 }
-@media (max-width: 400px) {
-  .post-card .post-actions { flex-wrap: wrap; }
-  .post-card .comments-toggle { flex-basis: 100%; text-align: left; }
-  .post-card .comment-sort { margin-left: auto; }
-}
 @media (prefers-reduced-motion: reduce) {
-  .post-card button, .post-card textarea, .post-card a, .post-more { transition: none; }
+  .post-card button, .post-card textarea, .post-card :is(.user-name, .comment-author) a, .post-more { transition: none; }
   .post-card button:active:not(:disabled), .post-more:active { transform: none; }
 }

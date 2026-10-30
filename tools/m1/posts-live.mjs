@@ -31,7 +31,7 @@ try{
  await a.page.locator('.create-post-btn').click();const form=a.page.locator('.posts-modal');await form.locator('select[name=sphereCode] option').nth(1).waitFor({state:'attached'});
  await form.locator('[name=title]').fill('Իրական հայտարարություն');await form.locator('[name=category]').selectOption('job');await form.locator('[name=sphereCode]').selectOption({index:1});await form.locator('[contenteditable]').fill('Իրական բովանդակություն');await form.locator('[type=submit]').click();await form.waitFor({state:'detached'});await a.page.locator('.post-card').first().waitFor();
  const first=(await service(a.page,'list')).items[0],id=first.id;assert.match(id,/^\d+$/);
- await a.page.locator(`[data-post-id="${id}"] .post-permalink`).click();await a.page.waitForURL('**/post.html?id=*');await ready(a.page);
+ assert.equal(await a.page.locator('.post-permalink').count(),0);await a.page.goto(origin+'/post.html?id='+id);await ready(a.page);
  await a.page.evaluate(async()=>{const {settings}=await import('/js/services/index.js');await settings.update({emailEnabled:false});});
  await b.page.goto(origin+'/post.html?id='+id);await ready(b.page);assert.equal(await b.page.locator('[data-post-edit]').count(),0);await b.page.locator('.comments-toggle').click();await b.page.locator('.comment-input').fill('Դասախոսի իրական մեկնաբանություն');await b.page.locator('.comment-btn').click();await b.page.locator('.comment-text').getByText('Դասախոսի իրական մեկնաբանություն',{exact:true}).waitFor();
  await a.page.locator('[data-activity-toggle]').click();await a.page.locator(`[data-activity-items] a[href="post.html?id=${id}"]`).waitFor({timeout:25000});assert.equal(await a.page.locator('[data-activity-items] a').count(),1);

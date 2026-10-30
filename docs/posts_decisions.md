@@ -39,11 +39,11 @@ Approved through the product discussion concluded on 29 October 2026. This docum
 - Order announcements from newest to oldest by publication time.
 - Load announcements in batches of 20 using a “Show more” button.
 - Apply type and direction filters together.
-- Load comments on demand, in batches of 20, ordered from oldest to newest.
+- Load comments on demand in batches of 20, with newest-first and oldest-first choices. The UI starts newest-first; the API retains oldest-first when no sort is specified.
 
 ## Individual announcement page
 
-- Give each announcement its own link and page containing its body and comments.
+- Keep individual announcement pages for direct links and notifications; feed cards show a static post-type badge instead of an open-announcement link.
 - Notification navigation opens the relevant announcement.
 - Show an unavailable state for a deleted announcement.
 

@@ -1,6 +1,7 @@
 /* Posts page shell. Reusable cards, comments and dialogs live in posts.css.
    Shared navigation and theme tokens remain in style.css. */
 .posts-page, .posts-page * { box-sizing: border-box; }
+.posts-page :where(h1, h2, h3, p, ul) { margin: 0; padding: 0; }
 .posts-page { margin: 0; font-family: "Segoe UI", sans-serif;
   background: linear-gradient(rgba(0, 0, 0, .6), rgba(0, 0, 0, .6)), url('../image/background1.jpg') center/cover no-repeat fixed;
   min-height: 100vh; position: relative;
