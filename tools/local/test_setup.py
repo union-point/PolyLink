@@ -120,6 +120,9 @@ class LocalSetupTests(unittest.TestCase):
             self.assertEqual(first["DB_PASSWORD"], "synthetic-existing-password")
             self.assertEqual(Path(first["OPENBAO_TOKEN_FILE"]).read_text(), "synthetic-existing-token")
             shutil.rmtree(old)
+            (new / "infra/seaweedfs").mkdir(parents=True)
+            for name in ("compose.yaml", "filer.toml"):
+                shutil.copyfile(setup.ROOT / "infra/seaweedfs" / name, new / "infra/seaweedfs" / name)
             with patch.object(setup, "ROOT", new):
                 second = setup.setup(state, java, discovery=False)
             self.assertEqual(first, second)

@@ -1,0 +1,34 @@
+# Copy to the private local state directory with tools/local/setup.sh.
+name: polylink-storage
+x-weed: &weed
+  image: chrislusf/seaweedfs:4.52@sha256:57877e32bb90073b37dc109b438ba66e84fd5ed9ced5f5c04f56444ef243ce59
+  user: "${SEAWEED_UID:-1000}:${SEAWEED_GID:-1000}"
+  restart: unless-stopped
+  networks: [storage]
+services:
+  master:
+    <<: *weed
+    command: master -ip=master -ip.bind=0.0.0.0 -mdir=/data/master -volumeSizeLimitMB=1024
+    volumes: ["./data/master:/data/master"]
+  volume:
+    <<: *weed
+    command: volume -ip=volume -ip.bind=0.0.0.0 -master=master:9333 -dir=/data/volume -max=0
+    depends_on: [master]
+    volumes: ["./data/volume:/data/volume"]
+  filer:
+    <<: *weed
+    command: >-
+      filer -ip=filer -ip.bind=0.0.0.0 -master=master:9333
+      -defaultStoreDir=/data/filer -s3 -s3.config=/config/s3.json
+      -s3.cert.file=/tls/server.crt -s3.key.file=/tls/server.key
+      -s3.port.https=8334 -s3.port.iceberg=0 -s3.port.lance=0
+    depends_on: [master, volume]
+    ports: ["127.0.0.1:${S3_HOST_PORT:-18333}:8334"]
+    volumes:
+      - ./data/filer:/data/filer
+      - ./filer.toml:/etc/seaweedfs/filer.toml:ro
+      - ./s3.json:/config/s3.json:ro
+      - ./tls:/tls:ro
+networks:
+  storage:
+    internal: true

@@ -111,6 +111,7 @@ public final class SchemaCommand {
     }
 
     private static void assertSchema(Connection connection, int version) throws Exception {
+        if (version >= 22) assertStorageSchema(connection);
         var mapper = JsonMapper.builder().build();
         if (version >= 12) {
             var expectedForum =
@@ -309,6 +310,51 @@ public final class SchemaCommand {
                         "SELECT COUNT(*) FROM sys.indexes WHERE object_id=OBJECT_ID(N'auth.ActivityNotifications') AND name='UX_ActivityNotifications_Comment' AND is_unique=1 AND filter_definition=N'([Kind]=''POST_COMMENT'')'",
                         Integer.class)
                 != 1) throw new IllegalStateException("Posts unique event guard differs");
+    }
+
+    private static void assertStorageSchema(Connection connection) {
+        var db =
+                new org.springframework.jdbc.core.JdbcTemplate(
+                        new org.springframework.jdbc.datasource.SingleConnectionDataSource(
+                                connection, true));
+        for (var entry :
+                java.util.Map.of(
+                                "messaging.Attachments",
+                                java.util.Set.of(
+                                        "StorageState",
+                                        "LeaseToken",
+                                        "LeaseUntil",
+                                        "RetryAt",
+                                        "Attempts",
+                                        "VerifiedAt"),
+                                "auth.ProfileAvatars",
+                                java.util.Set.of(
+                                        "ObjectKey",
+                                        "ContentBytes",
+                                        "ContentDigest",
+                                        "IsCurrent",
+                                        "ExpectedPhotoId",
+                                        "StorageState",
+                                        "CreatedAt",
+                                        "LeaseToken",
+                                        "LeaseUntil",
+                                        "RetryAt",
+                                        "Attempts",
+                                        "VerifiedAt"))
+                        .entrySet()) {
+            var names =
+                    new java.util.HashSet<>(
+                            db.queryForList(
+                                    "SELECT name FROM sys.columns WHERE object_id=OBJECT_ID(?)",
+                                    String.class,
+                                    entry.getKey()));
+            if (!names.containsAll(entry.getValue()))
+                throw new IllegalStateException("Object storage schema differs; review required");
+        }
+        if (db.queryForObject(
+                        "SELECT COUNT(*) FROM sys.indexes WHERE object_id=OBJECT_ID('auth.ProfileAvatars') AND name='UX_ProfileAvatarCurrent' AND is_unique=1 AND has_filter=1 AND is_disabled=0",
+                        Integer.class)
+                != 1) throw new IllegalStateException("Current avatar uniqueness guard missing");
     }
 
     public static Flyway migrations(javax.sql.DataSource source) {

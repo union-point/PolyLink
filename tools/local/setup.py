@@ -267,8 +267,33 @@ def setup(state, java=None, discovery=True):
         write(target, source.read_bytes(), 0o644)
     trust = ensure_truststore(state, java, tls / "server.crt")
     values.update({"JAVA_HOME": java, "POLYLINK_LOCAL_DIR": str(state), "POLYLINK_SECURITY_COMPOSE": str(security / "compose.yaml"), "OPENBAO_CACERT": str(tls / "server.crt"), "OPENBAO_TOKEN_FILE": str(token), "POLYLINK_TRUSTSTORE": str(trust)})
+    prepare_storage(state, values, java)
     write(state / "local.env", env_text(values))
     return values
+
+
+def prepare_storage(state, values, java):
+    storage = state / "storage"
+    for directory in (storage, storage / "data", storage / "data/master", storage / "data/volume", storage / "data/filer", storage / "tls", state / "ciphertext"):
+        private_dir(directory)
+    ensure_tls(storage / "tls")
+    ensure_truststore(state, java, storage / "tls/server.crt")
+    for name in ("compose.yaml", "filer.toml"):
+        write(storage / name, (ROOT / "infra/seaweedfs" / name).read_bytes(), 0o644)
+    credentials = storage / "s3.json"
+    if not credentials.exists():
+        identities = []
+        for name, actions in (("backend", ["Read:polylink", "Write:polylink", "List:polylink"]), ("operator", ["Admin", "Read", "Write", "List"])):
+            access, secret = secrets.token_hex(16), secrets.token_hex(32)
+            identities.append({"name": name, "credentials": [{"accessKey": access, "secretKey": secret}], "actions": actions})
+        write(credentials, json.dumps({"identities": identities}, indent=2) + "\n")
+    identities = json.loads(credentials.read_text())["identities"]
+    for identity in identities:
+        if identity["name"] in ("backend", "operator"):
+            credential = identity["credentials"][0]
+            write(storage / (identity["name"] + ".properties"), "accessKey=" + credential["accessKey"] + "\nsecretKey=" + credential["secretKey"] + "\n")
+    write(storage / ".env", "SEAWEED_UID=" + str(os.getuid()) + "\nSEAWEED_GID=" + str(os.getgid()) + "\n")
+    values.update({"POLYLINK_STORAGE_COMPOSE": str(storage / "compose.yaml"), "S3_ENDPOINT": values.get("S3_ENDPOINT", "https://localhost:18333"), "S3_BUCKET": values.get("S3_BUCKET", "polylink"), "S3_REGION": "us-east-1", "S3_CREDENTIALS_FILE": str(storage / "backend.properties"), "S3_ADMIN_CREDENTIALS_FILE": str(storage / "operator.properties"), "OBJECT_STORAGE_TEMP_DIR": str(state / "ciphertext"), "OBJECT_STORAGE_ENABLED": values.get("OBJECT_STORAGE_ENABLED", "false")})
 
 
 def java_options():
