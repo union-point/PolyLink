@@ -14,6 +14,9 @@ import tools.jackson.databind.json.JsonMapper;
 @Service
 @IdentityEnabled
 public class ChatService {
+    @org.springframework.beans.factory.annotation.Autowired
+    am.polylink.storage.StorageService storage;
+
     final JdbcTemplate db;
     final Accounts accounts;
     final TransactionTemplate tx;
@@ -378,7 +381,8 @@ public class ChatService {
                         if (!room.toString().equalsIgnoreCase(upload.get("RoomId").toString())
                                 || ((Number) upload.get("OwnerId")).intValue() != caller)
                             throw missing();
-                        if (upload.get("Sequence") != null
+                        if (!Set.of("READY", "LEGACY").contains(upload.get("StorageState"))
+                                || upload.get("Sequence") != null
                                 || !((OffsetDateTime) upload.get("ExpiresAt")).isAfter(now()))
                             throw conflict("ATTACHMENT_UNAVAILABLE_NOT_SAVED");
                     }
@@ -751,23 +755,153 @@ public class ChatService {
                 row.get("ExpiresAt").toString());
     }
 
-    public byte[] download(int caller, UUID id) {
+    public am.polylink.storage.ObjectStorage.Download download(int caller, UUID id) {
         var rows =
                 Rows.query(db, "SELECT RoomId FROM messaging.Attachments WHERE AttachmentId=?", id);
         if (rows.isEmpty()) throw missing();
         UUID room = UUID.fromString(rows.getFirst().get("RoomId").toString());
-        return transaction(
+        var reference =
+                transaction(
+                        () -> {
+                            locked(caller, room);
+                            var objects =
+                                    Rows.query(
+                                            db,
+                                            "SELECT a.ObjectKey,a.CiphertextBytes,a.StorageState FROM messaging.Attachments a JOIN messaging.Messages m ON m.RoomId=a.RoomId AND m.Sequence=a.Sequence JOIN messaging.Participants p ON p.RoomId=m.RoomId AND p.UserId=? WHERE a.AttachmentId=? AND a.StorageState IN ('LEGACY','READY') AND m.DeletedAt IS NULL AND m.Sequence>=p.JoinedSequence AND m.Sequence>p.HistoryCutoff",
+                                            caller,
+                                            id);
+                            if (objects.isEmpty()) throw missing();
+                            var row = objects.getFirst();
+                            if (row.get("StorageState").equals("LEGACY")) {
+                                var bodies =
+                                        db.queryForList(
+                                                "SELECT Ciphertext FROM messaging.AttachmentBodies WHERE AttachmentId=?",
+                                                byte[].class,
+                                                id);
+                                if (bodies.isEmpty()) throw missing();
+                                row.put("LegacyBody", bodies.getFirst());
+                            }
+                            return row;
+                        });
+        if (reference.get("LegacyBody") instanceof byte[] bytes)
+            return new am.polylink.storage.ObjectStorage.Download(
+                    new java.io.ByteArrayInputStream(bytes), bytes.length);
+        return storage.get(
+                reference.get("ObjectKey").toString(),
+                ((Number) reference.get("CiphertextBytes")).longValue());
+    }
+
+    public Map<String, Object> uploadStream(
+            int caller, UUID room, UUID id, java.io.InputStream source) {
+        // Permission precedes reading even a chunked body.
+        transaction(
                 () -> {
-                    locked(caller, room);
-                    var objects =
-                            Rows.query(
-                                    db,
-                                    "SELECT b.Ciphertext FROM messaging.Attachments a JOIN messaging.AttachmentBodies b ON b.AttachmentId=a.AttachmentId JOIN messaging.Messages m ON m.RoomId=a.RoomId AND m.Sequence=a.Sequence JOIN messaging.Participants p ON p.RoomId=m.RoomId AND p.UserId=? WHERE a.AttachmentId=? AND m.DeletedAt IS NULL AND m.Sequence>=p.JoinedSequence AND m.Sequence>p.HistoryCutoff",
-                                    caller,
-                                    id);
-                    if (objects.isEmpty()) throw missing();
-                    return (byte[]) objects.getFirst().get("Ciphertext");
+                    var row = locked(caller, room);
+                    sendable(room, row);
+                    return null;
                 });
+        try (var spool = storage.spool(source, 17, 5242896)) {
+            if (!storage.enabled()) {
+                try {
+                    return upload(caller, room, id, java.nio.file.Files.readAllBytes(spool.path()));
+                } catch (java.io.IOException e) {
+                    throw AuthFailure.unavailable();
+                }
+            }
+            UUID lease = UUID.randomUUID();
+            var reserved =
+                    transaction(
+                            () -> {
+                                var roomRow = locked(caller, room);
+                                var existing =
+                                        Rows.query(
+                                                db,
+                                                "SELECT * FROM messaging.Attachments WITH(UPDLOCK,HOLDLOCK) WHERE AttachmentId=?",
+                                                id);
+                                if (!existing.isEmpty()) {
+                                    var old = existing.getFirst();
+                                    if (((Number) old.get("OwnerId")).intValue() != caller
+                                            || !room.toString()
+                                                    .equalsIgnoreCase(old.get("RoomId").toString()))
+                                        throw missing();
+                                    if (!Secrets.equal(
+                                                    spool.digest(),
+                                                    (byte[]) old.get("CiphertextDigest"))
+                                            || spool.size()
+                                                    != ((Number) old.get("CiphertextBytes"))
+                                                            .longValue())
+                                        throw conflict("OPERATION_PAYLOAD_CONFLICT");
+                                    if (Set.of("DELETED", "DELETE_PENDING")
+                                                    .contains(old.get("StorageState"))
+                                            || old.get("Sequence") == null
+                                                    && !((OffsetDateTime) old.get("ExpiresAt"))
+                                                            .isAfter(now()))
+                                        throw conflict("ATTACHMENT_UNAVAILABLE_NOT_SAVED");
+                                    if (Set.of("READY", "LEGACY").contains(old.get("StorageState")))
+                                        return old;
+                                    if (old.get("LeaseUntil") instanceof OffsetDateTime until
+                                            && until.isAfter(now()))
+                                        throw AuthFailure.unavailable();
+                                    sendable(room, roomRow);
+                                } else {
+                                    sendable(room, roomRow);
+                                    long staged =
+                                            db.queryForObject(
+                                                    "SELECT COALESCE(SUM(CiphertextBytes),0) FROM messaging.Attachments WHERE OwnerId=? AND Sequence IS NULL AND ExpiresAt>?",
+                                                    Long.class,
+                                                    caller,
+                                                    now());
+                                    int count =
+                                            db.queryForObject(
+                                                    "SELECT COUNT(*) FROM messaging.Attachments WHERE OwnerId=? AND Sequence IS NULL AND ExpiresAt>?",
+                                                    Integer.class,
+                                                    caller,
+                                                    now());
+                                    if (staged + spool.size() > 104857920 || count >= 20)
+                                        throw new AuthFailure(
+                                                429,
+                                                "RATE_LIMITED",
+                                                "Too many pending image uploads.");
+                                    db.update(
+                                            "INSERT messaging.Attachments(AttachmentId,RoomId,OwnerId,ObjectKey,CiphertextBytes,CiphertextDigest,ExpiresAt,StorageState) VALUES (?,?,?,?,?,?,?,'UPLOADING')",
+                                            id,
+                                            room,
+                                            caller,
+                                            "attachments/" + id + "/" + lease,
+                                            spool.size(),
+                                            spool.digest(),
+                                            now().plusHours(24));
+                                }
+                                db.update(
+                                        "UPDATE messaging.Attachments SET ObjectKey=?,StorageState='UPLOADING',LeaseToken=?,LeaseUntil=? WHERE AttachmentId=?",
+                                        "attachments/" + id + "/" + lease,
+                                        lease,
+                                        now().plusMinutes(2),
+                                        id);
+                                return Rows.query(
+                                                db,
+                                                "SELECT * FROM messaging.Attachments WHERE AttachmentId=?",
+                                                id)
+                                        .getFirst();
+                            });
+            if (!reserved.get("StorageState").equals("UPLOADING")) return uploadResult(reserved);
+            storage.put(reserved.get("ObjectKey").toString(), spool, "application/octet-stream");
+            return transaction(
+                    () -> {
+                        var row = locked(caller, room);
+                        sendable(room, row);
+                        int updated =
+                                db.update(
+                                        "UPDATE messaging.Attachments SET StorageState='READY',VerifiedAt=?,LeaseToken=NULL,LeaseUntil=NULL WHERE AttachmentId=? AND StorageState='UPLOADING' AND LeaseToken=? AND LeaseUntil>? AND ExpiresAt>?",
+                                        now(),
+                                        id,
+                                        lease,
+                                        now(),
+                                        now());
+                        if (updated != 1) throw conflict("ATTACHMENT_UNAVAILABLE_NOT_SAVED");
+                        return uploadResult(reserved);
+                    });
+        }
     }
 
     public Map<String, Object> exportOwn(int caller, String cursor, int limit) {

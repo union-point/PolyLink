@@ -111,7 +111,7 @@ def main():
             if args.browser_only:
                 run(maven+['-DskipTests','package'],cwd=ROOT,env=env)
             else:
-                run(maven+['-Pdatabase-tests','verify']+(['-Dit.test=EnrollmentIT,IdentityIT,RecoveryIT'] if args.mail else ['-Dit.test=SearchIT,ChatIT,GroupIT'] if args.search else ['-Dit.test=EnrollmentIT,IdentityIT,DatabaseMigrationIT,RecoveryIT'] if args.enrollment else ['-Dit.test=PostsIT,DatabaseMigrationIT'] if args.posts else ['-Dit.test=ForumIT'] if args.forum else ['-Dit.test=GroupIT,MessengerStateIT'] if args.groups_only else ['-Dit.test=MessengerStateIT'] if args.messenger_ui_only else []),cwd=ROOT,env=env)
+                run(maven+['-Pdatabase-tests','verify']+(['-Dit.test=EnrollmentIT,IdentityIT,RecoveryIT'] if args.mail else ['-Dit.test=SearchIT,ChatIT,GroupIT'] if args.search else ['-Dit.test=EnrollmentIT,IdentityIT,DatabaseMigrationIT,RecoveryIT'] if args.enrollment else ['-Dit.test=PostsIT,DatabaseMigrationIT'] if args.posts else ['-Dit.test=ForumIT'] if args.forum else ['-Dit.test=GroupIT,MessengerStateIT,ObjectStorageIT'] if args.groups_only else ['-Dit.test=MessengerStateIT'] if args.messenger_ui_only else []),cwd=ROOT,env=env)
             if args.browser or args.messenger or args.forum or args.enrollment or args.posts:
                 import browser_check
                 browser_check.run(ROOT,env,admin_sql,request,root,messenger=args.messenger,continuity=args.continuity,recovery=args.recovery,messenger_ui=args.messenger_ui,messenger_ui_only=args.messenger_ui_only,groups=args.groups,groups_only=args.groups_only,forum=args.forum,enrollment=args.enrollment,posts=args.posts)

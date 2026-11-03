@@ -5,10 +5,12 @@ ALTER TABLE messaging.Attachments ADD
  RetryAt datetimeoffset(3) NULL, Attempts int NOT NULL CONSTRAINT DF_AttachmentAttempts DEFAULT 0,
  VerifiedAt datetimeoffset(3) NULL,
  CONSTRAINT CK_AttachmentStorageState CHECK(StorageState IN ('LEGACY','UPLOADING','READY','DELETE_PENDING','DELETED'));
+GO
 CREATE INDEX IX_AttachmentStorageWork ON messaging.Attachments(StorageState,RetryAt);
 GO
 DECLARE @pk sysname=(SELECT name FROM sys.key_constraints WHERE parent_object_id=OBJECT_ID('auth.ProfileAvatars') AND type='PK');
-EXEC('ALTER TABLE auth.ProfileAvatars DROP CONSTRAINT '+QUOTENAME(@pk));
+DECLARE @drop nvarchar(max)='ALTER TABLE auth.ProfileAvatars DROP CONSTRAINT '+QUOTENAME(@pk);
+EXEC(@drop);
 ALTER TABLE auth.ProfileAvatars ADD CONSTRAINT PK_ProfileAvatars PRIMARY KEY(PhotoId);
 ALTER TABLE auth.ProfileAvatars ALTER COLUMN Content varbinary(max) NULL;
 ALTER TABLE auth.ProfileAvatars ADD
@@ -22,6 +24,7 @@ ALTER TABLE auth.ProfileAvatars ADD
  VerifiedAt datetimeoffset(3) NULL,
  CONSTRAINT CK_AvatarStorageState CHECK(StorageState IN ('LEGACY','UPLOADING','READY','DELETE_PENDING','DELETED')),
  CONSTRAINT CK_AvatarCurrentState CHECK(IsCurrent=0 OR StorageState IN ('LEGACY','READY'));
+GO
 CREATE UNIQUE INDEX UX_ProfileAvatarCurrent ON auth.ProfileAvatars(UserId) WHERE IsCurrent=1;
 CREATE UNIQUE INDEX UX_ProfileAvatarObject ON auth.ProfileAvatars(ObjectKey) WHERE ObjectKey IS NOT NULL;
 CREATE INDEX IX_AvatarStorageWork ON auth.ProfileAvatars(StorageState,RetryAt);

@@ -163,8 +163,8 @@ public class ExportController {
     }
 
     @GetMapping("/account/export/files/{id}")
-    public org.springframework.http.ResponseEntity<byte[]> file(
-            @PathVariable UUID id, HttpServletRequest request) {
+    public org.springframework.http.ResponseEntity<org.springframework.core.io.InputStreamResource>
+            file(@PathVariable UUID id, HttpServletRequest request) {
         var caller = authorized(request);
         if (db.queryForObject(
                         "SELECT COUNT(*) FROM messaging.Attachments WHERE AttachmentId=? AND OwnerId=? AND Sequence IS NOT NULL",
@@ -174,10 +174,8 @@ public class ExportController {
                 != 1) throw new AuthFailure(404, "NOT_FOUND", "File unavailable.");
         var service = chat.getIfAvailable();
         if (service == null) throw AuthFailure.unavailable();
-        return org.springframework.http.ResponseEntity.ok()
-                .contentType(org.springframework.http.MediaType.APPLICATION_OCTET_STREAM)
-                .header("Content-Disposition", "attachment")
-                .body(service.download(caller.account().id(), id));
+        return am.polylink.storage.StorageService.response(
+                service.download(caller.account().id(), id), "application/octet-stream", true);
     }
 
     @GetMapping("/account/export/messages")

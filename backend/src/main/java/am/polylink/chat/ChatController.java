@@ -166,19 +166,20 @@ public class ChatController {
     public Map<String, Object> upload(
             @PathVariable String roomId,
             @RequestHeader("X-Attachment-Id") String id,
-            @RequestBody byte[] bytes,
-            HttpServletRequest request) {
+            HttpServletRequest request)
+            throws java.io.IOException {
         int caller = user(request);
         limits.consume("UPLOAD_ACCOUNT", "" + caller, 60, 3600);
-        return chat.upload(caller, ChatDtos.uuid(roomId), ChatDtos.uuid(id), bytes);
+        return chat.uploadStream(
+                caller, ChatDtos.uuid(roomId), ChatDtos.uuid(id), request.getInputStream());
     }
 
     @GetMapping("/chat/attachments/{attachmentId}")
-    public org.springframework.http.ResponseEntity<byte[]> download(
-            @PathVariable String attachmentId, HttpServletRequest request) {
-        return org.springframework.http.ResponseEntity.ok()
-                .header("Content-Disposition", "attachment")
-                .contentType(org.springframework.http.MediaType.APPLICATION_OCTET_STREAM)
-                .body(chat.download(user(request), ChatDtos.uuid(attachmentId)));
+    public org.springframework.http.ResponseEntity<org.springframework.core.io.InputStreamResource>
+            download(@PathVariable String attachmentId, HttpServletRequest request) {
+        return am.polylink.storage.StorageService.response(
+                chat.download(user(request), ChatDtos.uuid(attachmentId)),
+                "application/octet-stream",
+                true);
     }
 }

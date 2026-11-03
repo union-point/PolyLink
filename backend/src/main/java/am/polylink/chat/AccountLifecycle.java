@@ -92,7 +92,15 @@ public class AccountLifecycle {
                                             chat.db,
                                             "SELECT UserId FROM auth.AccountDeletions WHERE UserId=?",
                                             caller)
-                                    .isEmpty()) return null;
+                                    .isEmpty()) {
+                        chat.db.update(
+                                "UPDATE messaging.Attachments SET StorageState='DELETE_PENDING',LeaseToken=NULL,LeaseUntil=NULL,RetryAt=NULL WHERE OwnerId=? AND StorageState NOT IN ('DELETED','DELETE_PENDING')",
+                                caller);
+                        chat.db.update(
+                                "UPDATE auth.ProfileAvatars SET IsCurrent=0,StorageState='DELETE_PENDING',LeaseToken=NULL,LeaseUntil=NULL,RetryAt=NULL WHERE UserId=? AND StorageState NOT IN ('DELETED','DELETE_PENDING')",
+                                caller);
+                        return null;
+                    }
                     if (!restoring) {
                         account.requireAdmitted();
                         if (account.credential() != credential) throw AuthFailure.conflict();
@@ -172,6 +180,12 @@ public class AccountLifecycle {
                                             room);
                             }
                         }
+                        chat.db.update(
+                                "UPDATE messaging.Attachments SET StorageState='DELETE_PENDING',LeaseToken=NULL,LeaseUntil=NULL,RetryAt=NULL WHERE OwnerId=? AND StorageState<>'DELETED'",
+                                caller);
+                        chat.db.update(
+                                "UPDATE auth.ProfileAvatars SET IsCurrent=0,StorageState='DELETE_PENDING',LeaseToken=NULL,LeaseUntil=NULL,RetryAt=NULL WHERE UserId=? AND StorageState<>'DELETED'",
+                                caller);
                         chat.db.update(
                                 "DELETE b FROM messaging.AttachmentBodies b JOIN messaging.Attachments a ON a.AttachmentId=b.AttachmentId WHERE a.OwnerId=?",
                                 caller);
