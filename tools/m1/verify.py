@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Real SQL/OpenBao TLS/SMTP acceptance in uniquely named disposable resources."""
+import contextlib
 import argparse, base64, json, os, pathlib, secrets, socket, ssl, subprocess, tempfile, time, urllib.error, urllib.request, uuid, shutil, smtplib
 
 ROOT=pathlib.Path(__file__).resolve().parents[2]
@@ -58,7 +59,7 @@ def wait_for_mailpit(base, smtp_port, timeout=10):
     raise TimeoutError('Mailpit API/SMTP did not become ready') from last
 
 def main():
-    parser=argparse.ArgumentParser(description=__doc__);parser.add_argument('--mail',action='store_true',help='Run enrollment, identity and recovery SQL/SMTP checks without browser checks');parser.add_argument('--search',action='store_true');parser.add_argument('--enrollment',action='store_true');parser.add_argument('--posts',action='store_true');parser.add_argument('--forum',action='store_true');parser.add_argument('--browser-only',action='store_true',help='Package and migrate fresh disposable infrastructure, then run selected browser phases without repeating SQL tests');parser.add_argument('--browser',action='store_true');parser.add_argument('--messenger',action='store_true');parser.add_argument('--continuity',action='store_true');parser.add_argument('--recovery',action='store_true');parser.add_argument('--messenger-ui',action='store_true');parser.add_argument('--messenger-ui-only',action='store_true');parser.add_argument('--groups',action='store_true');parser.add_argument('--groups-only',action='store_true');args=parser.parse_args();args.browser=args.browser or args.browser_only;args.groups=args.groups or args.groups_only;args.messenger_ui=args.messenger_ui or (args.groups and not args.groups_only);args.messenger_ui=args.messenger_ui or args.messenger_ui_only;args.recovery=args.recovery or (args.messenger_ui and not args.messenger_ui_only);args.continuity=args.continuity or args.recovery;args.messenger=args.messenger or args.continuity or args.messenger_ui or args.groups
+    parser=argparse.ArgumentParser(description=__doc__);parser.add_argument('--storage',action='store_true',help='Use real private SeaweedFS and run storage migration/restore checks');parser.add_argument('--mail',action='store_true',help='Run enrollment, identity and recovery SQL/SMTP checks without browser checks');parser.add_argument('--search',action='store_true');parser.add_argument('--enrollment',action='store_true');parser.add_argument('--posts',action='store_true');parser.add_argument('--forum',action='store_true');parser.add_argument('--browser-only',action='store_true',help='Package and migrate fresh disposable infrastructure, then run selected browser phases without repeating SQL tests');parser.add_argument('--browser',action='store_true');parser.add_argument('--messenger',action='store_true');parser.add_argument('--continuity',action='store_true');parser.add_argument('--recovery',action='store_true');parser.add_argument('--messenger-ui',action='store_true');parser.add_argument('--messenger-ui-only',action='store_true');parser.add_argument('--groups',action='store_true');parser.add_argument('--groups-only',action='store_true');args=parser.parse_args();args.browser=args.browser or args.browser_only;args.groups=args.groups or args.groups_only;args.messenger_ui=args.messenger_ui or (args.groups and not args.groups_only);args.messenger_ui=args.messenger_ui or args.messenger_ui_only;args.recovery=args.recovery or (args.messenger_ui and not args.messenger_ui_only);args.continuity=args.continuity or args.recovery;args.messenger=args.messenger or args.continuity or args.messenger_ui or args.groups
     password=os.environ.get('DB_TEST_ADMIN_PASSWORD')
     if not password:raise SystemExit('Set DB_TEST_ADMIN_PASSWORD for an isolated SQL Server administrator.')
     name='polylink_m1_'+uuid.uuid4().hex;bao=name+'-bao';mail=name+'-mail';database_created=False
@@ -79,7 +80,11 @@ def main():
         trust=temp/'trust.jks';shutil.copyfile(java_home/'lib/security/cacerts',trust);keytool=java_home/'bin/keytool'
         run([str(keytool),'-importcert','-noprompt','-alias','openbao-test','-file',str(cert),'-keystore',str(trust),'-storepass','changeit'],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
         env['JAVA_TOOL_OPTIONS']=(env.get('JAVA_TOOL_OPTIONS','')+f' -Djavax.net.ssl.trustStore={trust} -Djavax.net.ssl.trustStorePassword=changeit').strip()
+        resources=contextlib.ExitStack()
         try:
+            if args.storage:
+                import storage_fixture
+                storage_compose=resources.enter_context(storage_fixture.fixture(ROOT,temp,env,java_home))
             run(['docker','run','-d','--name',bao,'--user',f'{os.getuid()}:{os.getgid()}','--entrypoint','bao','-p',f'127.0.0.1:{port}:8200','-v',f'{temp}:/fixture:Z','openbao/openbao:2.7.1','server','-config=/fixture/openbao.hcl'],stdout=subprocess.DEVNULL)
             for attempt in range(100):
                 try:
@@ -106,17 +111,23 @@ def main():
             def admin_sql(sql):
                 child=env.copy();child['M1_ADMIN_SQL']=sql
                 run([str(java),'--class-path',cp,str(helper)],cwd=ROOT,env=child,stdout=subprocess.DEVNULL)
+            if args.storage:
+                run([str(java),'--class-path',str(ROOT/'backend/target/classes')+os.pathsep+cp,'am.polylink.storage.StorageCommand','init-bucket'],cwd=ROOT,env=env)
             admin_sql('CREATE DATABASE ['+name+'] COLLATE SQL_Latin1_General_CP1_CI_AS');database_created=True
             run(maven+['exec:java','-Dexec.mainClass=am.polylink.database.SchemaCommand','-Dexec.args=fresh'],cwd=ROOT,env=env)
             if args.browser_only:
                 run(maven+['-DskipTests','package'],cwd=ROOT,env=env)
             else:
-                run(maven+['-Pdatabase-tests','verify']+(['-Dit.test=EnrollmentIT,IdentityIT,RecoveryIT'] if args.mail else ['-Dit.test=SearchIT,ChatIT,GroupIT'] if args.search else ['-Dit.test=EnrollmentIT,IdentityIT,DatabaseMigrationIT,RecoveryIT'] if args.enrollment else ['-Dit.test=PostsIT,DatabaseMigrationIT'] if args.posts else ['-Dit.test=ForumIT'] if args.forum else ['-Dit.test=GroupIT,MessengerStateIT,ObjectStorageIT'] if args.groups_only else ['-Dit.test=MessengerStateIT'] if args.messenger_ui_only else []),cwd=ROOT,env=env)
+                run(maven+['-Pdatabase-tests','verify']+(['-Dit.test=SeaweedStorageIT,EnrollmentIT,DatabaseMigrationIT,MessengerStateIT,GroupIT,ObjectStorageIT'] if args.storage else ['-Dit.test=EnrollmentIT,IdentityIT,RecoveryIT'] if args.mail else ['-Dit.test=SearchIT,ChatIT,GroupIT'] if args.search else ['-Dit.test=EnrollmentIT,IdentityIT,DatabaseMigrationIT,RecoveryIT'] if args.enrollment else ['-Dit.test=PostsIT,DatabaseMigrationIT'] if args.posts else ['-Dit.test=ForumIT'] if args.forum else ['-Dit.test=GroupIT,MessengerStateIT,ObjectStorageIT'] if args.groups_only else ['-Dit.test=MessengerStateIT'] if args.messenger_ui_only else []),cwd=ROOT,env=env)
+            if args.storage:
+                import storage_restore
+                storage_restore.rehearse(ROOT,temp,env,java,cp,admin_sql,name,bao,request,admin,storage_compose)
             if args.browser or args.messenger or args.forum or args.enrollment or args.posts:
                 import browser_check
                 browser_check.run(ROOT,env,admin_sql,request,root,messenger=args.messenger,continuity=args.continuity,recovery=args.recovery,messenger_ui=args.messenger_ui,messenger_ui_only=args.messenger_ui_only,groups=args.groups,groups_only=args.groups_only,forum=args.forum,enrollment=args.enrollment,posts=args.posts)
             print(('Mail' if args.mail else 'Search' if args.search else 'Enrollment' if args.enrollment else 'Posts' if args.posts else 'Forum' if args.forum else 'M6 focused' if args.groups_only else 'M1–M6' if args.groups else 'M5 focused' if args.messenger_ui_only else 'M1–M5' if args.messenger_ui else 'M1/M2/M3/M4' if args.recovery else 'M1/M2/M3' if args.continuity else 'M1/M2' if args.messenger else 'M1')+(' browser acceptance passed (SQL tests not rerun).' if args.browser_only else ' SQL, TLS Transit, SMTP and HTTP acceptance passed.'))
         finally:
+            resources.close()
             if database_created:admin_sql('ALTER DATABASE ['+name+'] SET SINGLE_USER WITH ROLLBACK IMMEDIATE; DROP DATABASE ['+name+']')
             subprocess.run(['docker','rm','-f',bao,mail],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
 if __name__=='__main__':main()

@@ -278,7 +278,7 @@ def prepare_storage(state, values, java):
         private_dir(directory)
     ensure_tls(storage / "tls")
     ensure_truststore(state, java, storage / "tls/server.crt")
-    for name in ("compose.yaml", "filer.toml"):
+    for name in ("compose.yaml", "filer.toml", "start-filer.sh"):
         write(storage / name, (ROOT / "infra/seaweedfs" / name).read_bytes(), 0o644)
     credentials = storage / "s3.json"
     if not credentials.exists():
@@ -288,6 +288,10 @@ def prepare_storage(state, values, java):
             identities.append({"name": name, "credentials": [{"accessKey": access, "secretKey": secret}], "actions": actions})
         write(credentials, json.dumps({"identities": identities}, indent=2) + "\n")
     identities = json.loads(credentials.read_text())["identities"]
+    if not identities or any(identity.get("name") == "anonymous" or not identity.get("credentials") or any(not entry.get("accessKey") or not entry.get("secretKey") for entry in identity["credentials"]) for identity in identities):
+        raise SetupError("Storage requires nonempty authenticated identities; anonymous access is forbidden.")
+    if {identity.get("name") for identity in identities} != {"backend", "operator"}:
+        raise SetupError("Storage config must contain the backend and operator identities.")
     for identity in identities:
         if identity["name"] in ("backend", "operator"):
             credential = identity["credentials"][0]

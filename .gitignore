@@ -89,3 +89,10 @@ Desktop.ini
 # Contract verification dependencies
 /tools/contracts/node_modules/
 /tools/m1/node_modules/
+
+# Private SeaweedFS state (normal setup keeps this outside the checkout)
+infra/seaweedfs/data/
+infra/seaweedfs/tls/
+infra/seaweedfs/s3.json
+infra/seaweedfs/backend.properties
+infra/seaweedfs/operator.properties

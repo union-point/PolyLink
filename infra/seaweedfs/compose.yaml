@@ -17,18 +17,17 @@ services:
     volumes: ["./data/volume:/data/volume"]
   filer:
     <<: *weed
-    command: >-
-      filer -ip=filer -ip.bind=0.0.0.0 -master=master:9333
-      -defaultStoreDir=/data/filer -s3 -s3.config=/config/s3.json
-      -s3.cert.file=/tls/server.crt -s3.key.file=/tls/server.key
-      -s3.port.https=8334 -s3.port.iceberg=0 -s3.port.lance=0
+    networks: [storage, gateway]
+    entrypoint: ["/bin/sh", "/config/start-filer.sh"]
     depends_on: [master, volume]
     ports: ["127.0.0.1:${S3_HOST_PORT:-18333}:8334"]
     volumes:
       - ./data/filer:/data/filer
       - ./filer.toml:/etc/seaweedfs/filer.toml:ro
       - ./s3.json:/config/s3.json:ro
+      - ./start-filer.sh:/config/start-filer.sh:ro
       - ./tls:/tls:ro
 networks:
   storage:
     internal: true
+  gateway: {}
