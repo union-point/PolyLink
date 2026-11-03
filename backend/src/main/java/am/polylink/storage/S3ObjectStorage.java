@@ -18,7 +18,11 @@ public final class S3ObjectStorage implements ObjectStorage {
 
     public S3ObjectStorage(String endpoint, String region, String bucket, Path credentials) {
         URI uri = URI.create(endpoint);
-        if (!"https".equals(uri.getScheme()) || uri.getUserInfo() != null || uri.getHost() == null)
+        if (!"https".equals(uri.getScheme())
+                || uri.getUserInfo() != null
+                || uri.getHost() == null
+                || uri.getQuery() != null
+                || uri.getFragment() != null)
             throw new IllegalArgumentException("S3_ENDPOINT must be an HTTPS endpoint");
         try (var input = Files.newInputStream(credentials)) {
             var values = new Properties();
@@ -34,6 +38,12 @@ public final class S3ObjectStorage implements ObjectStorage {
                             .credentialsProvider(
                                     StaticCredentialsProvider.create(
                                             AwsBasicCredentials.create(access, secret)))
+                            .httpClientBuilder(
+                                    software.amazon.awssdk.http.apache.ApacheHttpClient.builder()
+                                            .maxConnections(32)
+                                            .connectionTimeout(Duration.ofSeconds(5))
+                                            .connectionAcquisitionTimeout(Duration.ofSeconds(5))
+                                            .socketTimeout(Duration.ofSeconds(30)))
                             .serviceConfiguration(
                                     S3Configuration.builder().pathStyleAccessEnabled(true).build())
                             .overrideConfiguration(
@@ -60,6 +70,9 @@ public final class S3ObjectStorage implements ObjectStorage {
             client.putObject(
                     r -> r.bucket(bucket).key(key).contentType(type), RequestBody.fromFile(file));
         } catch (RuntimeException e) {
+            io.micrometer.core.instrument.Metrics.counter(
+                            "polylink.storage.failures", "operation", "put")
+                    .increment();
             throw AuthFailure.unavailable();
         }
     }
@@ -70,6 +83,9 @@ public final class S3ObjectStorage implements ObjectStorage {
             var response = client.getObject(r -> r.bucket(bucket).key(key));
             return new Download(response, response.response().contentLength());
         } catch (RuntimeException e) {
+            io.micrometer.core.instrument.Metrics.counter(
+                            "polylink.storage.failures", "operation", "get")
+                    .increment();
             throw AuthFailure.unavailable();
         }
     }
@@ -79,6 +95,9 @@ public final class S3ObjectStorage implements ObjectStorage {
         try {
             return client.headObject(r -> r.bucket(bucket).key(key)).contentLength();
         } catch (RuntimeException e) {
+            io.micrometer.core.instrument.Metrics.counter(
+                            "polylink.storage.failures", "operation", "size")
+                    .increment();
             throw AuthFailure.unavailable();
         }
     }
@@ -88,6 +107,9 @@ public final class S3ObjectStorage implements ObjectStorage {
         try {
             client.deleteObject(r -> r.bucket(bucket).key(key));
         } catch (RuntimeException e) {
+            io.micrometer.core.instrument.Metrics.counter(
+                            "polylink.storage.failures", "operation", "delete")
+                    .increment();
             throw AuthFailure.unavailable();
         }
     }
@@ -108,7 +130,19 @@ public final class S3ObjectStorage implements ObjectStorage {
                             .toList(),
                     result.nextContinuationToken());
         } catch (RuntimeException e) {
+            io.micrometer.core.instrument.Metrics.counter(
+                            "polylink.storage.failures", "operation", "list")
+                    .increment();
             throw AuthFailure.unavailable();
+        }
+    }
+
+    public void createBucket() {
+        try {
+            client.headBucket(r -> r.bucket(bucket));
+        } catch (S3Exception e) {
+            if (e.statusCode() != 404) throw am.polylink.auth.AuthFailure.unavailable();
+            client.createBucket(r -> r.bucket(bucket));
         }
     }
 

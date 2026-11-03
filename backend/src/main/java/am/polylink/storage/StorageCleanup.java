@@ -75,11 +75,19 @@ public class StorageCleanup {
                                                     id,
                                                     token);
                                     if (changed == 1) {
-                                        if (table.startsWith("messaging"))
+                                        if (table.startsWith("messaging")
+                                                && db.queryForObject(
+                                                                "SELECT COUNT(*) FROM sys.tables WHERE object_id=OBJECT_ID('messaging.AttachmentBodies')",
+                                                                Integer.class)
+                                                        == 1)
                                             db.update(
                                                     "DELETE messaging.AttachmentBodies WHERE AttachmentId=?",
                                                     id);
-                                        else
+                                        else if (!table.startsWith("messaging")
+                                                && db.queryForObject(
+                                                                "SELECT COUNT(*) FROM sys.columns WHERE object_id=OBJECT_ID('auth.ProfileAvatars') AND name='Content'",
+                                                                Integer.class)
+                                                        == 1)
                                             db.update(
                                                     "UPDATE auth.ProfileAvatars SET Content=NULL WHERE PhotoId=?",
                                                     id);

@@ -317,6 +317,16 @@ public final class SchemaCommand {
                 new org.springframework.jdbc.core.JdbcTemplate(
                         new org.springframework.jdbc.datasource.SingleConnectionDataSource(
                                 connection, true));
+        int binaryParts =
+                db.queryForObject(
+                        "SELECT (SELECT COUNT(*) FROM sys.tables WHERE object_id=OBJECT_ID('messaging.AttachmentBodies'))+(SELECT COUNT(*) FROM sys.columns WHERE object_id=OBJECT_ID('auth.ProfileAvatars') AND name='Content')",
+                        Integer.class);
+        int retired =
+                db.queryForObject(
+                        "SELECT COUNT(*) FROM sys.extended_properties WHERE class=0 AND name='polylink.storage.sql-retired' AND CONVERT(int,value)=1",
+                        Integer.class);
+        if (binaryParts != (retired == 1 ? 0 : 2))
+            throw new IllegalStateException("Unexpected SQL binary retirement state");
         for (var entry :
                 java.util.Map.of(
                                 "messaging.Attachments",

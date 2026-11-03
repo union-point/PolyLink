@@ -187,7 +187,7 @@ public class AccountLifecycle {
                                 "UPDATE auth.ProfileAvatars SET IsCurrent=0,StorageState='DELETE_PENDING',LeaseToken=NULL,LeaseUntil=NULL,RetryAt=NULL WHERE UserId=? AND StorageState<>'DELETED'",
                                 caller);
                         chat.db.update(
-                                "DELETE b FROM messaging.AttachmentBodies b JOIN messaging.Attachments a ON a.AttachmentId=b.AttachmentId WHERE a.OwnerId=?",
+                                "IF OBJECT_ID('messaging.AttachmentBodies') IS NOT NULL DELETE b FROM messaging.AttachmentBodies b JOIN messaging.Attachments a ON a.AttachmentId=b.AttachmentId WHERE a.OwnerId=?",
                                 caller);
                         chat.db.update(
                                 "UPDATE messaging.Attachments SET ExpiresAt=? WHERE OwnerId=? AND Sequence IS NULL",

@@ -869,7 +869,7 @@ class DatabaseMigrationIT {
         }
     }
 
-    private static void inIsolatedDatabase(DatabaseWork work) throws Exception {
+    static void inIsolatedDatabase(DatabaseWork work) throws Exception {
         String password = System.getenv("DB_TEST_ADMIN_PASSWORD");
         assertThat(password)
                 .as(
@@ -908,7 +908,7 @@ class DatabaseMigrationIT {
     }
 
     @FunctionalInterface
-    private interface DatabaseWork {
+    interface DatabaseWork {
         void run(Connection connection) throws Exception;
     }
 }

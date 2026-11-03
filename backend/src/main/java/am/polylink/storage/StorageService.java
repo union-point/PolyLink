@@ -16,6 +16,21 @@ public class StorageService {
     private final ObjectProvider<ObjectStorage> objects;
     private final Path temporary;
 
+    @org.springframework.beans.factory.annotation.Autowired
+    public StorageService(
+            ObjectProvider<ObjectStorage> objects,
+            @Value("${polylink.storage.temp-dir}") String temporary,
+            org.springframework.jdbc.core.JdbcTemplate db) {
+        this(objects, temporary);
+        if (!enabled()
+                && db.queryForObject(
+                                "SELECT COUNT(*) FROM sys.tables WHERE object_id=OBJECT_ID('messaging.AttachmentBodies')",
+                                Integer.class)
+                        == 0)
+            throw new IllegalStateException(
+                    "Object storage must remain enabled after SQL binary retirement; apply V22 before starting this backend");
+    }
+
     public StorageService(
             ObjectProvider<ObjectStorage> objects,
             @Value("${polylink.storage.temp-dir}") String temporary) {

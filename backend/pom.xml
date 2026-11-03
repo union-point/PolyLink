@@ -17,6 +17,11 @@
 		<java.version>25</java.version>
 	</properties>
 	<dependencies>
+        <dependency>
+            <groupId>software.amazon.awssdk</groupId>
+            <artifactId>apache-client</artifactId>
+            <version>2.57.8</version>
+        </dependency>
 		<dependency>
 			<groupId>software.amazon.awssdk</groupId>
 			<artifactId>s3</artifactId>

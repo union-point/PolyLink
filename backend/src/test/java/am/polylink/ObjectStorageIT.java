@@ -20,6 +20,7 @@ class ObjectStorageIT extends MessengerStateIT {
     @TestConfiguration
     static class Objects {
         @Bean
+        @Primary
         MemoryStorage memoryStorage() {
             return new MemoryStorage();
         }
@@ -27,10 +28,12 @@ class ObjectStorageIT extends MessengerStateIT {
 
     static class MemoryStorage implements ObjectStorage {
         final Map<String, byte[]> bytes = new ConcurrentHashMap<>();
+        final java.util.Set<String> touched = java.util.concurrent.ConcurrentHashMap.newKeySet();
         volatile boolean failPut, failDelete;
 
         @Override
         public void put(String k, Path p, String type) {
+            touched.add(k);
             if (failPut) throw AuthFailure.unavailable();
             try {
                 bytes.put(k, Files.readAllBytes(p));
@@ -70,6 +73,14 @@ class ObjectStorageIT extends MessengerStateIT {
 
     @Autowired MemoryStorage objects;
     @Autowired StorageCleanup objectCleanup;
+
+    @org.junit.jupiter.api.AfterEach
+    void removeFakeReferences() {
+        for (String key : objects.touched)
+            db.update("DELETE messaging.Attachments WHERE ObjectKey=?", key);
+        objects.touched.clear();
+        objects.bytes.clear();
+    }
 
     @Test
     void interruptedPutCanRetryButDeletionCannotResurrectIt() throws Exception {
