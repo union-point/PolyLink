@@ -628,6 +628,10 @@ public class EnrollmentService {
                             "DELETE t FROM auth.AccessTokens t JOIN auth.Sessions s ON s.SessionId=t.SessionId WHERE s.UserId=?",
                             user);
                     db.update("DELETE auth.Sessions WHERE UserId=?", user);
+                    db.update(
+                            "UPDATE auth.ProfileAvatars SET IsCurrent=0,StorageState='DELETE_PENDING',LeaseToken=NULL,LeaseUntil=NULL,RetryAt=NULL WHERE UserId=? AND StorageState<>'DELETED'",
+                            user);
+                    db.update("UPDATE dbo.Users SET ProfilePhotoUrl=NULL WHERE UserId=?", user);
                     db.update("DELETE auth.PendingEnrollments WHERE UserId=?", user);
                     db.update("DELETE auth.AccountSecurity WHERE UserId=?", user);
                     db.update("DELETE dbo.UserNotificationSettings WHERE UserId=?", user);

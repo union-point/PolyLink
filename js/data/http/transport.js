@@ -56,7 +56,7 @@ export function createTransport(axios){
   },async error=>{
     const request=error.config;
     if(request&&request._sessionGeneration!==generation)throw sessionChanged();
-    const renewable=!request?.url.startsWith('/auth/')||['/auth/me','/auth/password-change/prepare'].includes(request?.url);
+    const renewable=!request?.url.startsWith('/auth/')||(['/auth/me','/auth/password-change/prepare'].includes(request?.url)||request?.url.startsWith('/auth/avatars/'));
     if(error.response?.status!==401||!request||request._retried||!request.headers?.Authorization||!renewable)throw error;
     request._retried=true;await refresh();request.headers.Authorization=`Bearer ${accessToken}`;return api(request);
   });

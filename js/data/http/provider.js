@@ -1,3 +1,4 @@
+import { configureAvatars, hydrateAvatars, clearAvatars } from '../../shared/avatar-images.js';
 import { normalizePost, normalizeComment, normalizePostOptions, normalizePostPage } from '../../posts/contracts.js';
 import { normalizeSearchPerson, normalizeSearchPage, normalizeSearchFilters } from '../../search/contracts.js';
 import { normalizeCategory, normalizeForumTopic, normalizeReply, normalizeForumPage } from '../../forum/contracts.js';
@@ -10,11 +11,15 @@ import { unwrap, list, normalizeUser, normalizeEducation, normalizeCertificate }
 
 export function createHttpProvider(transportPromise = loadTransport()) {
   // Prevent an unhandled rejection when a CDN fails before the first operation.
-  const transport = Promise.resolve(transportPromise); transport.catch(() => {});
+  const transport = Promise.resolve(transportPromise).then(api=>{configureAvatars(api);return api;}); transport.catch(() => {});
   let identityPromise,chatPromise,rotationSession;
   const chatClient=()=>chatPromise ||= Promise.all([transport,identityClient()]).then(([api,identity])=>createEncryptedChat(api,identity));
-  const identityClient = () => identityPromise ||= transport.then(api => createIdentityClient(api));
-  return {
+  const identityClient = () => identityPromise ||= transport.then(api => {
+    const client=createIdentityClient(api);
+    client.subscribe(event=>{if(['auth.logout','auth.revoked','auth.login','auth.version'].includes(event.operation))clearAvatars();});
+    return client;
+  });
+  const provider = {
     async call(operation, ...args) {
       if(['settings.changeEmail','settings.verifyEmailChange','settings.resendEmailChange','settings.setEmailFactor'].includes(operation))return (await identityClient())[operation.split('.')[1]](...args);
       if(operation==='settings.export'){const {fullExport}=await import('../../account-export.js');return fullExport(await transport,await identityClient(),await chatClient(),...args);}
@@ -67,4 +72,5 @@ export function createHttpProvider(transportPromise = loadTransport()) {
     },
     async subscribe(listener) { const a=(await identityClient()).subscribe(listener),b=(await chatClient()).subscribe(listener);return()=>{a();b();}; },
   };
+  return {...provider,async call(operation,...args){return hydrateAvatars(await provider.call(operation,...args));}};
 }

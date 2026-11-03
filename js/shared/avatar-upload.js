@@ -1,3 +1,4 @@
+import { avatarId, avatarURL } from './avatar-images.js';
 import { auth } from '../services/index.js';
 import { authMessage } from './auth-messages.js';
 
@@ -8,9 +9,11 @@ export function initializeAvatarUpload() {
   const preview = document.getElementById('avatar-preview');
   const remove = document.getElementById('remove-avatar');
   const status = document.getElementById('avatar-status');
-  let busy = false;
+  let busy = false, currentId=null, renderGeneration=0;
   function render(url) {
-    preview.src = url || './image/logo.png';
+    currentId=avatarId(url);const version=++renderGeneration;
+    preview.src='./image/logo.png';
+    avatarURL(url).then(source=>{if(version===renderGeneration)preview.src=source||'./image/logo.png';});
     remove.hidden = !url || url === 'image/logo.png';
     zone.querySelector('strong').textContent = remove.hidden ? 'Ավելացրեք Ձեր լուսանկարը' : 'Փոխել լուսանկարը';
   }
@@ -36,7 +39,7 @@ export function initializeAvatarUpload() {
       const side = Math.min(bitmap.width, bitmap.height);
       context.drawImage(bitmap, (bitmap.width - side) / 2, (bitmap.height - side) / 2, side, side, 0, 0, 256, 256);
       const content = canvas.toDataURL('image/jpeg', .85).split(',')[1];
-      const result = await auth.uploadEnrollmentAvatar(content);
+      const result = await auth.uploadEnrollmentAvatar(content,currentId);
       render(result.url); status.textContent = 'Լուսանկարը պահպանված է։';
     } catch (error) {
       status.setAttribute('role', 'alert');
@@ -56,7 +59,7 @@ export function initializeAvatarUpload() {
   remove.onclick = async () => {
     if (busy) return;
     lock(true);
-    try { await auth.removeEnrollmentAvatar(); render(''); status.textContent = 'Լուսանկարը հեռացված է։'; }
+    try { await auth.removeEnrollmentAvatar(currentId); render(''); status.textContent = 'Լուսանկարը հեռացված է։'; }
     catch (error) { status.setAttribute('role', 'alert'); status.textContent = authMessage(error.message, error.code); }
     finally { lock(false); }
   };

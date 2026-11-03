@@ -148,19 +148,56 @@ class EnrollmentIT {
         var a = applicant("graduate");
         var source = new ByteArrayOutputStream();
         ImageIO.write(new BufferedImage(320, 160, BufferedImage.TYPE_INT_RGB), "png", source);
-        var photo = Map.of("content", Base64.getEncoder().encodeToString(source.toByteArray()));
+        var photo = new java.util.HashMap<String, Object>();
+        photo.put("content", Base64.getEncoder().encodeToString(source.toByteArray()));
         String previousUrl = null;
         for (int i = 0; i < 2; i++) {
+            photo.put("operationId", java.util.UUID.randomUUID().toString());
+            photo.put(
+                    "expectedPhotoId",
+                    previousUrl == null
+                            ? null
+                            : previousUrl.substring(previousUrl.lastIndexOf('/') + 1));
             var uploaded = a.browser.call("PUT", "/auth/enrollment/avatar", photo);
             assertThat(uploaded.statusCode()).as(uploaded.body()).isEqualTo(200);
             String url = a.browser.json(uploaded).path("url").asText();
+            assertThat(a.browser.call("PUT", "/auth/enrollment/avatar", photo).statusCode())
+                    .isEqualTo(200);
+            assertThat(
+                            HttpClient.newHttpClient()
+                                    .send(
+                                            HttpRequest.newBuilder(
+                                                            URI.create(
+                                                                    "http://localhost:"
+                                                                            + port
+                                                                            + url))
+                                                    .GET()
+                                                    .build(),
+                                            HttpResponse.BodyHandlers.discarding())
+                                    .statusCode())
+                    .isEqualTo(401);
+
             assertThat(url).contains("/auth/avatars/").isNotEqualTo(previousUrl);
             assertThat(a.browser.json(a.browser.get("/auth/enrollment")).path("avatar").asText())
                     .isEqualTo(url);
             var image =
                     HttpClient.newHttpClient()
                             .send(
-                                    HttpRequest.newBuilder(URI.create(url)).GET().build(),
+                                    HttpRequest.newBuilder(
+                                                    URI.create("http://localhost:" + port + url))
+                                            .header(
+                                                    "Cookie",
+                                                    a.browser.cookies.entrySet().stream()
+                                                            .map(
+                                                                    e ->
+                                                                            e.getKey()
+                                                                                    + "="
+                                                                                    + e.getValue())
+                                                            .collect(
+                                                                    java.util.stream.Collectors
+                                                                            .joining("; ")))
+                                            .GET()
+                                            .build(),
                                     HttpResponse.BodyHandlers.ofByteArray());
             assertThat(image.statusCode()).isEqualTo(200);
             assertThat(image.headers().firstValue("Content-Type")).contains("image/jpeg");
@@ -175,7 +212,7 @@ class EnrollmentIT {
         }
         assertThat(
                         db.queryForObject(
-                                "SELECT COUNT(*) FROM auth.ProfileAvatars WHERE UserId=?",
+                                "SELECT COUNT(*) FROM auth.ProfileAvatars WHERE UserId=? AND IsCurrent=1",
                                 Integer.class,
                                 a.id))
                 .isEqualTo(1);
@@ -183,12 +220,20 @@ class EnrollmentIT {
                         db.queryForObject(
                                 "SELECT Attempts FROM auth.RateLimits WHERE Purpose='ENROLL_AVATAR'",
                                 Integer.class))
-                .isEqualTo(2);
+                .isEqualTo(4);
         db.update("UPDATE auth.RateLimits SET Attempts=20 WHERE Purpose='ENROLL_AVATAR'");
         var limited = a.browser.call("PUT", "/auth/enrollment/avatar", photo);
         assertThat(limited.statusCode()).as(limited.body()).isEqualTo(429);
         assertThat(a.browser.json(limited).path("code").asText()).isEqualTo("RATE_LIMITED");
-        assertThat(a.browser.call("DELETE", "/auth/enrollment/avatar", Map.of()).statusCode())
+        assertThat(
+                        a.browser
+                                .call(
+                                        "DELETE",
+                                        "/auth/enrollment/avatar?expectedPhotoId="
+                                                + previousUrl.substring(
+                                                        previousUrl.lastIndexOf('/') + 1),
+                                        Map.of())
+                                .statusCode())
                 .isEqualTo(200);
         assertThat(a.browser.get(URI.create(previousUrl).getPath()).statusCode()).isEqualTo(404);
         assertThat(
