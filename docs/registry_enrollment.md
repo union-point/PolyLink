@@ -41,11 +41,11 @@ Official registry corrections do not revoke admitted-user access or silently ret
 
 ## Enrollment avatars (V15)
 
-V15 stores one normalized avatar per account in `auth.ProfileAvatars`, retained on admission. This is separate from the unimplemented general profile-media editor.
+V15 introduced normalized avatars. V22 retains version/lifecycle rows in `auth.ProfileAvatars` with one current avatar per account, retained on admission. This is separate from the unimplemented general profile-media editor.
 
-- `PUT /auth/enrollment/avatar` accepts JSON `{content: "base64 image bytes"}` under restricted enrollment cookie/CSRF/origin checks and returns `{url}`. Input is JPEG or PNG, at most 256 KiB decoded and 1024×1024 pixels. The backend center-crops and re-encodes to 256×256 JPEG. Uploads are limited to 20 per account per hour.
-- `DELETE /auth/enrollment/avatar` removes the avatar and profile URL under the same enrollment authority.
-- `GET /auth/avatars/{id}` serves JPEG by randomized photo ID for pending/admitted accounts. This URL is publicly retrievable; profile visibility does not protect it. Replacement/removal invalidates the previous stored ID.
+- `PUT /auth/enrollment/avatar` accepts JSON `{content: "base64 image bytes", operationId: "UUID", expectedPhotoId: "UUID or null"}` under restricted enrollment cookie/CSRF/origin checks and returns `{url}`. Input is JPEG or PNG, at most 256 KiB decoded and 1024×1024 pixels. The backend center-crops and re-encodes to 256×256 JPEG. Uploads are limited to 20 per account per hour.
+- `DELETE /auth/enrollment/avatar?expectedPhotoId=UUID` removes the avatar and profile URL under the same enrollment authority.
+- `GET /auth/avatars/{id}` serves JPEG by randomized photo ID for pending/admitted accounts. The backend requires an admitted viewer for admitted avatars or the pending owner’s enrollment session; anonymous reads are denied. Replacement/removal invalidates the previous stored ID. HTTP image consumers fetch through the authenticated backend transport and display blob URLs. See the [storage lifecycle and recovery runbook](../infra/seaweedfs/README.md).
 
 ## Offline maintenance and rollout
 

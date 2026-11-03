@@ -4,6 +4,8 @@ Start with the [project quickstart](../README.md). This index separates current 
 
 ## Current implementation and operations
 
+- [Private SeaweedFS storage](../infra/seaweedfs/README.md): migration, lifecycle, coordinated backups, restore and Linux/macOS transfer.
+
 | Document | Use |
 | --- | --- |
 | [Backend setup](../backend/README.md) | Configuration, feature flags, migration and test commands. |

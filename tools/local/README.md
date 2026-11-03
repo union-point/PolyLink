@@ -95,3 +95,7 @@ It creates/removes only a uniquely named temporary container. Fixture unit tests
 On 27 October 2026 the controlled comparison produced 8/8 SMTP greeting timeouts with reverse DNS enabled and 0/8 failures with it disabled (maximum 39 ms). The fixed 80-message regression completed in 1.3 seconds. This isolates the dependency on Docker DNS rather than compensating with longer application timeouts or retrying failed API requests.
 
 After the fix, the full disposable suite passed all 58 integration tests and 16 backend unit tests. Two further `--mail` runs each passed all 21 enrollment/identity/recovery integration tests on fresh temporary databases. All seven fixture unit tests and twelve local-tooling tests passed as well; temporary containers/databases were removed after every run.
+
+## Private object storage
+
+Setup also prepares pinned SeaweedFS Compose/configuration, private credentials, TLS and bind directories in `$POLYLINK_LOCAL_DIR/storage`. Start it with `docker compose -f "$POLYLINK_STORAGE_COMPOSE" up -d`. Complete the [storage migration and verification gate](../../infra/seaweedfs/README.md) before enabling S3 writes. Use `bash tools/local/test.sh --storage` for disposable real S3, SQL, OpenBao, restore and browser checks. The runbook covers permission repair and Docker Desktop folder access.
