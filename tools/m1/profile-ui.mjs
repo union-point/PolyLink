@@ -98,10 +98,13 @@ try{
   const actions=await form.locator('.modal-footer button').evaluateAll(buttons=>buttons.map(button=>({x:button.getBoundingClientRect().x,y:button.getBoundingClientRect().y})));
   assert.equal(actions.length,3);assert(actions[0].x<actions[1].x&&actions[1].x<actions[2].x);assert(actions.every(action=>action.y===actions[0].y),'Edit actions share one row');
   for(const width of [1280,390]){
-   await page.setViewportSize({width,height:900});await form.locator('[name=startDate]').click();
+   await page.setViewportSize({width,height:900});
+   const before=await form.locator('.profile-modal').evaluate(el=>({height:el.getBoundingClientRect().height,scroll:el.querySelector('.profile-modal-body').scrollHeight}));
+   await form.locator('[name=startDate]').click();
    const panel=form.locator('[name=startDate]').locator('..').locator('.profile-month-panel');
    assert(await panel.isVisible());
-   assert(await panel.evaluate(el=>{const panel=el.getBoundingClientRect(),body=el.closest('.profile-modal-body').getBoundingClientRect();return panel.top>=body.top-1&&panel.bottom<=body.bottom+1;}),'The full picker stays in the visible modal body');
+   assert(await panel.evaluate(el=>{const bounds=el.getBoundingClientRect();return bounds.top>=0&&bounds.bottom<=innerHeight&&el.matches(':popover-open');}),'The picker stays in the viewport and escapes modal clipping');
+   assert.deepEqual(await form.locator('.profile-modal').evaluate(el=>({height:el.getBoundingClientRect().height,scroll:el.querySelector('.profile-modal-body').scrollHeight})),before,'Opening the picker does not resize or extend the modal');
    assert(await panel.locator('.profile-month-choice').evaluateAll(buttons=>buttons.every(button=>button.scrollWidth<=button.clientWidth)),'Month names fit the grid');
    assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),'Picker fits the viewport');
    await page.locator('[data-toast]').evaluateAll(toasts=>toasts.forEach(toast=>toast.remove()));
@@ -126,10 +129,6 @@ try{
   await choosePeriod(form,'issueDate','2025-02');await save(page);
   const updatedCertificates=await service(page,'certificates.list');assert.equal(updatedCertificates.find(row=>row.name==='Profile certificate').issueDate,'2025-02');
   await cert.locator('.edit-icon').dispatchEvent('click');form=modalFor(page);
-  await form.locator('[name=issueDate]').click();await form.getByRole('button',{name:'Մաքրել',exact:true}).click();await save(page);
-  assert.equal((await service(page,'certificates.list')).find(row=>row.name==='Profile certificate').issueDate,null);
-  await cert.locator('.edit-icon').dispatchEvent('click');form=modalFor(page);
-
   await form.locator('[name=name]').fill('Discard this');await form.locator('.modal-footer .secondary-btn').click();await page.locator('#custom-confirm-backdrop:not(.hidden),[data-common-confirm]:not(.hidden)').waitFor();
   await page.locator('#confirm-yes:visible,[data-confirm-yes]:visible').click();await form.waitFor({state:'detached'});assert.equal(await page.getByText('Discard this',{exact:true}).count(),0);
   await cert.locator('.edit-icon').dispatchEvent('click');await modalFor(page).locator('.delete-entry-btn').click();await page.locator('#custom-confirm-backdrop:not(.hidden),[data-common-confirm]:not(.hidden)').waitFor();await page.locator('#confirm-yes:visible,[data-confirm-yes]:visible').click();await modalFor(page).waitFor({state:'detached'});

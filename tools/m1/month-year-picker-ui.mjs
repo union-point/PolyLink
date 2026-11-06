@@ -39,9 +39,8 @@ try {
  await panel.getByRole('button', { name: '2010', exact: true }).click();
  await panel.getByRole('button', { name: 'մարտ 2010', exact: true }).click();
  assert.equal(await page.evaluate(() => picker.get()), '2010-03');
- await input.click();await panel.getByRole('button', { name: 'Մաքրել', exact: true }).click();
- assert.equal(await page.evaluate(() => picker.get()), null);assert.equal(await input.inputValue(), '');
- await input.click();await page.locator('#outside').click();assert(await panel.isHidden());
+ assert.equal(await panel.getByRole('button',{name:/Մաքրել|Այս ամիս/}).count(),0);
+ await input.click();await page.mouse.click(10,10);assert(await panel.isHidden());
  for (const value of ['2020', '2020-09-23', '1899-02-28']) {
   await mount(value);assert.equal(await page.evaluate(() => picker.get()), value, 'Keep unchanged legacy precision');
   await input.click();await page.keyboard.press('Escape');assert.equal(await page.evaluate(() => picker.get()), value);
@@ -51,6 +50,16 @@ try {
   await mount(`${year}-01`);await input.click();
   assert(await panel.getByRole('button', { name: year === '1900' ? 'Նախորդ տարի' : 'Հաջորդ տարի', exact: true }).isDisabled());
  }
+ await mount('2024-06');
+ const dimensions=()=>page.locator('.profile-modal').evaluate(el=>({height:el.getBoundingClientRect().height,scroll:el.scrollHeight}));
+ const before=await dimensions();await input.click();assert.deepEqual(await dimensions(),before);
+ assert.equal(await panel.getAttribute('data-placement'),'below');
+ await page.keyboard.press('Escape');
+ await page.locator('.profile-modal').evaluate(el=>Object.assign(el.style,{position:'fixed',bottom:'8px',margin:'0',height:'180px',maxHeight:'none',overflow:'hidden',transform:'translateZ(0)'}));
+ await input.click();assert.equal(await panel.getAttribute('data-placement'),'above');
+ assert(await panel.evaluate(el=>{const bounds=el.getBoundingClientRect();return bounds.top<el.closest('.profile-modal').getBoundingClientRect().top&&el.contains(document.elementFromPoint(bounds.left+20,bounds.top+20));}),'Popover escapes the transformed overflow-hidden modal');
+ await page.keyboard.press('Escape');
+ await page.locator('.profile-modal').evaluate(el=>{el.style.cssText='margin:40px auto;padding:24px';});
  await mount('2024-06');await page.setViewportSize({ width: 390, height: 844 });await input.click();
  assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
  await page.screenshot({ path: '/tmp/polylink-month-year-mobile.png', fullPage: true });

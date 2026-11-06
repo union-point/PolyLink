@@ -12,6 +12,7 @@ export function createMonthYearPicker({ name, value = '', label, preservePrecisi
   let year = Math.min(lastYear, Math.max(firstYear, Number(selected.slice(0, 4)) || new Date().getFullYear()));
   let yearView = false;
   let pageStart;
+  let openListeners, removalObserver;
   const root = document.createElement('div'); root.className = 'profile-month-picker';
   const input = document.createElement('input');
   input.type = 'text'; input.name = name; input.id = `profile-period-${++sequence}`;
@@ -22,6 +23,7 @@ export function createMonthYearPicker({ name, value = '', label, preservePrecisi
   const icon = document.createElement('span'); icon.className = 'profile-month-icon'; icon.setAttribute('aria-hidden', 'true');
   icon.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M16 3v4M8 3v4M3 11h18M8 15h2m4 0h2"/></svg>';
   const panel = document.createElement('div'); panel.className = 'profile-month-panel'; panel.hidden = true;
+  panel.setAttribute('popover', 'manual');
   panel.id = `${input.id}-panel`; panel.setAttribute('role', 'dialog'); panel.setAttribute('aria-label', `${label}՝ ամիս և տարի`);
   input.setAttribute('aria-controls', panel.id);
   const header = document.createElement('div'); header.className = 'profile-month-header';
@@ -34,15 +36,11 @@ export function createMonthYearPicker({ name, value = '', label, preservePrecisi
   const heading = button('', 'profile-month-year', () => { yearView = !yearView; pageStart = Math.max(firstYear, Math.floor(year / 12) * 12); render(); focusChoice(); });
   const grid = document.createElement('div'); grid.className = 'profile-month-grid';
   grid.setAttribute('role', 'group'); grid.setAttribute('aria-label', 'Ամիս');
-  const footer = document.createElement('div'); footer.className = 'profile-month-footer';
-  const today = button('Այս ամիս', '', () => choose(new Date().getFullYear(), new Date().getMonth()));
-  const clear = button('Մաքրել', '', () => { selected = ''; update(); close(true); });
-  footer.append(today, clear); header.append(previous, heading, next); panel.append(header, grid, footer); root.append(input, icon, panel);
+  header.append(previous, heading, next); panel.append(header, grid); root.append(input, icon, panel);
 
   function update() {
     const [selectedYear, selectedMonth] = selected.split('-');
     input.value = selectedMonth ? `${months[Number(selectedMonth) - 1]} ${selectedYear}` : selectedYear || '';
-    clear.disabled = !selected;
     input.removeAttribute('aria-invalid'); input.classList.remove('error'); input.removeAttribute('title');
     input.dispatchEvent(new Event('input', { bubbles: true }));
     input.dispatchEvent(new Event('change', { bubbles: true }));
@@ -52,11 +50,12 @@ export function createMonthYearPicker({ name, value = '', label, preservePrecisi
     year = selectedYear; update(); close(true);
   }
   function close(focus = false) {
-    panel.hidden = true; input.setAttribute('aria-expanded', 'false');
-    if (focus) input.focus();
+    openListeners?.abort(); removalObserver?.disconnect();
+    panel.hidePopover(); panel.hidden = true; input.setAttribute('aria-expanded', 'false');
+    if (focus) input.focus({ preventScroll: true });
   }
   function focusChoice() {
-    (grid.querySelector('[aria-pressed="true"]') || grid.children[0])?.focus();
+    (grid.querySelector('[aria-pressed="true"]') || grid.children[0])?.focus({ preventScroll: true });
   }
   function render() {
     heading.textContent = yearView ? `${pageStart}–${Math.min(lastYear, pageStart + 11)}` : String(year);
@@ -77,17 +76,47 @@ export function createMonthYearPicker({ name, value = '', label, preservePrecisi
       if (!yearView) choice.setAttribute('aria-label', `${months[index]} ${year}`);
       return choice;
     }));
+    if (!panel.hidden) position();
   }
   function navigate(direction) {
     if (yearView) pageStart = Math.max(firstYear, Math.min(lastYear - 11, pageStart + direction * 12));
     else year = Math.max(firstYear, Math.min(lastYear, year + direction));
     render();
   }
+  function position() {
+    const anchor = input.getBoundingClientRect();
+    const body = input.closest('.profile-modal-body')?.getBoundingClientRect();
+    if (!root.isConnected || (body && (anchor.bottom <= body.top || anchor.top >= body.bottom))) { close(); return; }
+    const viewport = window.visualViewport;
+    const top = viewport?.offsetTop || 0, left = viewport?.offsetLeft || 0;
+    const width = viewport?.width || innerWidth, height = viewport?.height || innerHeight;
+    const gap = 8, edge = 12;
+    panel.style.width = `${Math.min(Math.max(anchor.width, 260), 320, width - edge * 2)}px`;
+    panel.style.maxHeight = '';
+    const naturalHeight = panel.getBoundingClientRect().height;
+    const below = Math.max(0, top + height - edge - anchor.bottom - gap);
+    const above = Math.max(0, anchor.top - top - edge - gap);
+    const placeAbove = below < naturalHeight && above > below;
+    panel.style.maxHeight = `${placeAbove ? above : below}px`;
+    const panelHeight = panel.getBoundingClientRect().height;
+    panel.style.left = `${Math.max(left + edge, Math.min(anchor.left, left + width - panel.getBoundingClientRect().width - edge))}px`;
+    panel.style.top = `${Math.max(top + edge, placeAbove ? anchor.top - gap - panelHeight : anchor.bottom + gap)}px`;
+    panel.dataset.placement = placeAbove ? 'above' : 'below';
+  }
   function open() {
-    if (input.disabled) return;
+    if (input.disabled || !panel.hidden) return;
     year = Math.min(lastYear, Math.max(firstYear, Number(selected.slice(0, 4)) || new Date().getFullYear()));
-    yearView = false; render(); panel.hidden = false; input.setAttribute('aria-expanded', 'true'); focusChoice();
-    panel.scrollIntoView({ block: 'nearest' });
+    yearView = false; render(); panel.hidden = false; panel.showPopover();
+    input.setAttribute('aria-expanded', 'true'); position(); focusChoice();
+    openListeners = new AbortController();
+    const signal = openListeners.signal;
+    window.addEventListener('resize', position, { signal });
+    window.addEventListener('scroll', position, { capture: true, signal });
+    window.visualViewport?.addEventListener('resize', position, { signal });
+    window.visualViewport?.addEventListener('scroll', position, { signal });
+    document.addEventListener('pointerdown', event => { if (!root.contains(event.target)) close(); }, { signal });
+    removalObserver = new MutationObserver(() => { if (!root.isConnected) close(); });
+    removalObserver.observe(document.body, { childList: true, subtree: true });
   }
   input.onclick = () => panel.hidden ? open() : close();
   input.onkeydown = event => {
