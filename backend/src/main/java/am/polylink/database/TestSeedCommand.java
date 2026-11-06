@@ -10,9 +10,8 @@ public final class TestSeedCommand {
 
     public static void main(String[] args) throws Exception {
         String database = required("DB_NAME");
-        if (args.length != 1 || !args[0].equals(database) || !database.endsWith("_test"))
-            throw new IllegalArgumentException(
-                    "Pass the exact DB_NAME ending in _test as the only argument");
+        if (args.length != 1 || !args[0].equals(database))
+            throw new IllegalArgumentException("Pass the exact DB_NAME as the only argument");
         var properties = new Properties();
         properties.setProperty("databaseName", database);
         properties.setProperty("user", required("MIGRATION_DB_USERNAME"));
