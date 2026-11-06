@@ -26,6 +26,7 @@ Start with the [project quickstart](../README.md). This index separates current 
 - [Authorization decisions](authorization_plan.md), [settings decisions](settings_decisions.md) and [forum decisions](forum_decisions.md) preserve approved policy.
 - [Profile decisions](profile_decisions.md) record the agreed profile-page behavior; the [implementation plan](profile_implementation_plan.md) covers delivery and verification.
 - [Posts decisions](posts_decisions.md) define the approved announcement/comment behavior; the [posts implementation plan](posts_implementation_plan.md) covers the pending server, UI, migration and notification work.
+- [Admin panel decisions](admin_panel_decisions.md) define the approved future scope; the [admin implementation plan](admin_panel_implementation_plan.md) covers authentication, protected data management, delivery and verification.
 - [Messenger specification](messenger_spec.md) defines the agreed security and messaging behavior.
 - [PLK1 format](messenger/crypto-format.md), [OpenAPI](messenger/contracts/openapi.yaml) and [payload schemas](messenger/contracts/client-payloads.schema.json) define versioned formats. Later controllers and implementation handoffs cover additions to the original API snapshot.
 
