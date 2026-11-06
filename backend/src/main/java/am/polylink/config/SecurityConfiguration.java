@@ -50,7 +50,10 @@ public class SecurityConfiguration {
         http.authorizeHttpRequests(
                 authorize -> {
                     authorize.requestMatchers("/actuator/health").permitAll();
-                    if (enabled && admin) authorize.requestMatchers("/admin/auth/**").permitAll();
+                    if (enabled && admin)
+                        authorize
+                                .requestMatchers("/admin/auth/**", "/admin/references/**")
+                                .permitAll();
                     if (enabled) {
                         authorize
                                 .requestMatchers(

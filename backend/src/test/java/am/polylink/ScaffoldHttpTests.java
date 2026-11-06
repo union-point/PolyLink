@@ -35,6 +35,7 @@ class ScaffoldHttpTests {
     void deniesOtherEndpointsWhenIdentityIsDisabled() throws Exception {
         assertThat(get("/api/probe").statusCode()).isEqualTo(403);
         assertThat(get("/actuator/env").statusCode()).isEqualTo(403);
+        assertThat(get("/admin/references/universities").statusCode()).isEqualTo(403);
     }
 
     private HttpResponse<String> get(String path) throws Exception {
