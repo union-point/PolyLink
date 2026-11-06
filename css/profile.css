@@ -608,7 +608,25 @@ button {
 .profile-form-loading { padding: 24px 0; color: var(--font-color-secondary); text-align: center; font-size: 14px; }
 .profile-modal-footer .delete-entry-btn { margin-right: auto; padding-inline: 12px; border: 1px solid transparent; color: #b83939; background: transparent; }
 .profile-modal-footer .delete-entry-btn:hover { border-color: currentColor; background: rgb(196 59 59 / 6%); }
-.profile-form-control[type="date"] { appearance: auto; }
+/* Inline expansion keeps the picker inside the dialog scroll area on small screens. */
+.profile-month-picker { position: relative; min-width: 0; }
+.profile-month-value { padding-right: 40px; cursor: pointer; text-overflow: ellipsis; }
+.profile-month-icon { position: absolute; top: 12px; right: 12px; color: var(--font-color-secondary); pointer-events: none; }
+.profile-month-icon svg { width: 20px; height: 20px; }
+.profile-month-panel { margin-top: 8px; padding: 10px; border: 1px solid var(--border-color); border-radius: 12px; background: var(--card-background); box-shadow: 0 4px 16px rgb(15 23 42 / 6%); }
+.profile-month-header { display: flex; align-items: center; gap: 4px; margin-bottom: 10px; }
+.profile-month-panel button { min-height: 36px; border: 0; border-radius: 8px; background: transparent; color: var(--font-color-primary); font: inherit; font-size: 12px; }
+.profile-month-panel button:hover { background: var(--window-background); color: var(--primary-blue); }
+.profile-month-panel button:disabled { opacity: .4; }
+.profile-month-nav { display: grid; place-items: center; flex: none; width: 32px; }
+.profile-month-nav svg { width: 18px; height: 18px; }
+.profile-month-year { flex: 1; font-weight: 600 !important; }
+.profile-month-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; }
+.profile-month-grid .profile-month-choice { min-height: 40px; padding: 4px 2px; }
+.profile-month-grid .profile-month-choice[aria-pressed="true"] { background: var(--primary-blue); color: white; }
+.profile-month-footer { display: flex; justify-content: space-between; gap: 8px; margin-top: 10px; padding-top: 8px; border-top: 1px solid var(--border-color); }
+.profile-month-footer button { padding: 4px 8px; color: var(--primary-blue); }
+.profile-date-fields { align-items: start; }
 .profile-section-picker { display: grid; gap: 12px; }
 .profile-section-choice { padding: 16px; border: 1px solid var(--border-color); border-radius: 12px; background: var(--card-background); color: var(--font-color-primary); font-size: 15px; text-align: left; }
 .profile-section-choice:hover { border-color: var(--primary-blue); background: var(--window-background); }
