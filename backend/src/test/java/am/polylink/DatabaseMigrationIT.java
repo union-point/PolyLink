@@ -14,6 +14,75 @@ import org.springframework.jdbc.datasource.SingleConnectionDataSource;
 
 class DatabaseMigrationIT {
     @Test
+    void v23SeparatesAdminIdentityAndPreservesMembersWithStableSystemReferences() throws Exception {
+        inIsolatedDatabase(
+                connection -> {
+                    var source = new SingleConnectionDataSource(connection, true);
+                    SchemaCommand.migrations(source, "22").migrate();
+                    var db = new org.springframework.jdbc.core.JdbcTemplate(source);
+                    db.execute(
+                            "INSERT dbo.Users(FirstName,LastName,Email,RoleId,LanguageId) SELECT N'Existing',N'Member',N'admin-migration@example.invalid',(SELECT TOP(1) RoleId FROM dbo.Roles),(SELECT TOP(1) Id FROM dbo.Languages)");
+                    var members = db.queryForList("SELECT * FROM dbo.Users ORDER BY UserId");
+                    var universities =
+                            db.queryForList("SELECT * FROM dbo.Universities ORDER BY UniversityId");
+                    SchemaCommand.migrate(connection, "upgrade");
+                    SchemaCommand.migrate(connection, "upgrade");
+                    assertThat(db.queryForList("SELECT * FROM dbo.Users ORDER BY UserId"))
+                            .isEqualTo(members);
+                    assertThat(
+                                    db.queryForList(
+                                            "SELECT * FROM dbo.Universities ORDER BY UniversityId"))
+                            .isEqualTo(universities);
+                    assertThat(
+                                    db.queryForObject(
+                                            "SELECT COUNT(*) FROM admin.Admins", Integer.class))
+                            .isZero();
+                    assertThat(
+                                    db.queryForObject(
+                                            "SELECT COUNT(*) FROM admin.SystemReferences",
+                                            Integer.class))
+                            .isEqualTo(5);
+                    assertThat(
+                                    db.queryForObject(
+                                            "SELECT COUNT(*) FROM admin.SystemReferences p JOIN dbo.Universities u ON u.UniversityId=p.ReferenceId WHERE p.SystemCode='polytechnic' AND p.Resource='universities' AND u.Name=N'Հայաստանի ազգային պոլիտեխնիկական համալսարան'",
+                                            Integer.class))
+                            .isEqualTo(1);
+                    assertThatThrownBy(
+                                    () ->
+                                            db.execute(
+                                                    "INSERT admin.Invitations(InvitationId,TokenHash,Email,CreatedAt,ExpiresAt) VALUES (NEWID(),HASHBYTES('SHA2_256','token'),N'invite@example.invalid','2026-11-07T00:00:00Z','2026-11-09T00:00:00Z')"))
+                            .isInstanceOf(
+                                    org.springframework.dao.DataIntegrityViolationException.class);
+                    db.execute("ALTER TABLE admin.Admins DROP CONSTRAINT CK_Admins_Derivation");
+                    assertThatThrownBy(() -> SchemaCommand.assertCurrentSchema(connection))
+                            .hasMessageContaining("Admin schema inventory differs");
+                });
+    }
+
+    @Test
+    void v23RefusesAmbiguousPolytechnicMappingWithoutPartialAdminSchema() throws Exception {
+        inIsolatedDatabase(
+                connection -> {
+                    var source = new SingleConnectionDataSource(connection, true);
+                    SchemaCommand.migrations(source, "22").migrate();
+                    var db = new org.springframework.jdbc.core.JdbcTemplate(source);
+                    db.execute(
+                            "UPDATE dbo.Universities SET Name=N'Unreviewed historical university'");
+                    assertThatThrownBy(() -> SchemaCommand.migrate(connection, "upgrade"))
+                            .hasMessageContaining("Polytechnic identity");
+                    assertThat(
+                                    db.queryForObject(
+                                            "SELECT OBJECT_ID(N'admin.Admins')", Integer.class))
+                            .isNull();
+                    assertThat(
+                                    db.queryForObject(
+                                            "SELECT MAX(TRY_CONVERT(int,version)) FROM dbo.flyway_schema_history WHERE success=1",
+                                            Integer.class))
+                            .isEqualTo(22);
+                });
+    }
+
+    @Test
     void v22PreservesLegacyDatesAndUnknownEndAndGuardsNewPrecision() throws Exception {
         inIsolatedDatabase(
                 connection -> {

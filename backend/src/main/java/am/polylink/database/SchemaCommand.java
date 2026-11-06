@@ -231,6 +231,7 @@ public final class SchemaCommand {
                         != 2) throw new IllegalStateException("Profile schema guards missing");
             }
             if (version >= 18) assertPostsAuxiliarySchema(connection, version);
+            if (version >= 23) assertAdminSchema(connection);
             if (!expectedForum.equals(mapper.readTree(inventory(connection))))
                 throw new IllegalStateException(
                         "Schema differs from the inspected baseline; reviewed forum inventory required");
@@ -274,6 +275,25 @@ public final class SchemaCommand {
             throw new IllegalStateException(
                     "Legacy schema differs from the inspected baseline; inventory and review required");
         }
+    }
+
+    public static String adminInventory(Connection connection) throws Exception {
+        String query =
+                resource("db/inventory/legacy-schema.sql")
+                        .replace("s.name=N'dbo'", "s.name=N'admin'");
+        try (var statement = connection.createStatement();
+                var result = statement.executeQuery(query)) {
+            var output = new StringBuilder();
+            while (result.next()) output.append(result.getString(1));
+            return output.toString();
+        }
+    }
+
+    private static void assertAdminSchema(Connection connection) throws Exception {
+        var mapper = JsonMapper.builder().build();
+        if (!mapper.readTree(resource("db/inventory/admin-schema-v23.json"))
+                .equals(mapper.readTree(adminInventory(connection))))
+            throw new IllegalStateException("Admin schema inventory differs; review required");
     }
 
     private static void assertPostsAuxiliarySchema(Connection connection, int version)

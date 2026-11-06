@@ -1,0 +1,777 @@
+{
+  "tables": [
+    {
+      "schema": "admin",
+      "name": "Admins",
+      "columns": [
+        {
+          "name": "AdminId",
+          "type": "int",
+          "maxLength": 4,
+          "precision": 10,
+          "scale": 0,
+          "nullable": false,
+          "identitySeed": "1",
+          "identityIncrement": "1"
+        },
+        {
+          "name": "Email",
+          "type": "nvarchar",
+          "maxLength": 510,
+          "precision": 0,
+          "scale": 0,
+          "nullable": false,
+          "collation": "Latin1_General_100_BIN2"
+        },
+        {
+          "name": "FirstName",
+          "type": "nvarchar",
+          "maxLength": 200,
+          "precision": 0,
+          "scale": 0,
+          "nullable": false,
+          "collation": "SQL_Latin1_General_CP1_CI_AS"
+        },
+        {
+          "name": "LastName",
+          "type": "nvarchar",
+          "maxLength": 200,
+          "precision": 0,
+          "scale": 0,
+          "nullable": false,
+          "collation": "SQL_Latin1_General_CP1_CI_AS"
+        },
+        {
+          "name": "ClientSalt",
+          "type": "binary",
+          "maxLength": 16,
+          "precision": 0,
+          "scale": 0,
+          "nullable": false
+        },
+        {
+          "name": "ClientOpsLimit",
+          "type": "int",
+          "maxLength": 4,
+          "precision": 10,
+          "scale": 0,
+          "nullable": false
+        },
+        {
+          "name": "ClientMemoryBytes",
+          "type": "bigint",
+          "maxLength": 8,
+          "precision": 19,
+          "scale": 0,
+          "nullable": false
+        },
+        {
+          "name": "LoginVerifier",
+          "type": "varchar",
+          "maxLength": 512,
+          "precision": 0,
+          "scale": 0,
+          "nullable": false,
+          "collation": "SQL_Latin1_General_CP1_CI_AS"
+        },
+        {
+          "name": "EmailVerifiedAt",
+          "type": "datetimeoffset",
+          "maxLength": 9,
+          "precision": 30,
+          "scale": 3,
+          "nullable": false
+        },
+        {
+          "name": "Enabled",
+          "type": "bit",
+          "maxLength": 1,
+          "precision": 1,
+          "scale": 0,
+          "nullable": false,
+          "defaultName": "DF_Admins_Enabled",
+          "defaultDefinition": "((1))"
+        },
+        {
+          "name": "SessionVersion",
+          "type": "bigint",
+          "maxLength": 8,
+          "precision": 19,
+          "scale": 0,
+          "nullable": false,
+          "defaultName": "DF_Admins_Version",
+          "defaultDefinition": "((1))"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "PK_Admins",
+          "type": "CLUSTERED",
+          "unique": true,
+          "primaryKey": true,
+          "uniqueConstraint": false,
+          "columns": [
+            {
+              "name": "AdminId",
+              "descendingKey": false,
+              "included": false
+            }
+          ]
+        },
+        {
+          "name": "UQ_Admins_Email",
+          "type": "NONCLUSTERED",
+          "unique": true,
+          "primaryKey": false,
+          "uniqueConstraint": true,
+          "columns": [
+            {
+              "name": "Email",
+              "descendingKey": false,
+              "included": false
+            }
+          ]
+        }
+      ],
+      "checks": [
+        {
+          "name": "CK_Admins_Derivation",
+          "definition": "([ClientOpsLimit]>=(2) AND [ClientOpsLimit]<=(4) AND ([ClientMemoryBytes]>=(67108864) AND [ClientMemoryBytes]<=(268435456)))",
+          "disabled": false,
+          "untrusted": false
+        },
+        {
+          "name": "CK_Admins_Version",
+          "definition": "([SessionVersion]>(0))",
+          "disabled": false,
+          "untrusted": false
+        }
+      ]
+    },
+    {
+      "schema": "admin",
+      "name": "Challenges",
+      "columns": [
+        {
+          "name": "ChallengeId",
+          "type": "uniqueidentifier",
+          "maxLength": 16,
+          "precision": 0,
+          "scale": 0,
+          "nullable": false
+        },
+        {
+          "name": "Purpose",
+          "type": "varchar",
+          "maxLength": 8,
+          "precision": 0,
+          "scale": 0,
+          "nullable": false,
+          "collation": "SQL_Latin1_General_CP1_CI_AS"
+        },
+        {
+          "name": "InvitationId",
+          "type": "uniqueidentifier",
+          "maxLength": 16,
+          "precision": 0,
+          "scale": 0,
+          "nullable": true
+        },
+        {
+          "name": "AdminId",
+          "type": "int",
+          "maxLength": 4,
+          "precision": 10,
+          "scale": 0,
+          "nullable": true
+        },
+        {
+          "name": "SessionVersion",
+          "type": "bigint",
+          "maxLength": 8,
+          "precision": 19,
+          "scale": 0,
+          "nullable": true
+        },
+        {
+          "name": "BrowserHash",
+          "type": "binary",
+          "maxLength": 32,
+          "precision": 0,
+          "scale": 0,
+          "nullable": false
+        },
+        {
+          "name": "CsrfHash",
+          "type": "binary",
+          "maxLength": 32,
+          "precision": 0,
+          "scale": 0,
+          "nullable": false
+        },
+        {
+          "name": "CodeMac",
+          "type": "binary",
+          "maxLength": 32,
+          "precision": 0,
+          "scale": 0,
+          "nullable": false
+        },
+        {
+          "name": "FailedAttempts",
+          "type": "int",
+          "maxLength": 4,
+          "precision": 10,
+          "scale": 0,
+          "nullable": false,
+          "defaultName": "DF_AdminChallenge_Attempts",
+          "defaultDefinition": "((0))"
+        },
+        {
+          "name": "ExpiresAt",
+          "type": "datetimeoffset",
+          "maxLength": 9,
+          "precision": 30,
+          "scale": 3,
+          "nullable": false
+        },
+        {
+          "name": "ResendAfter",
+          "type": "datetimeoffset",
+          "maxLength": 9,
+          "precision": 30,
+          "scale": 3,
+          "nullable": false
+        },
+        {
+          "name": "ConsumedAt",
+          "type": "datetimeoffset",
+          "maxLength": 9,
+          "precision": 30,
+          "scale": 3,
+          "nullable": true
+        },
+        {
+          "name": "CompletedAdminId",
+          "type": "int",
+          "maxLength": 4,
+          "precision": 10,
+          "scale": 0,
+          "nullable": true
+        },
+        {
+          "name": "FirstName",
+          "type": "nvarchar",
+          "maxLength": 200,
+          "precision": 0,
+          "scale": 0,
+          "nullable": true,
+          "collation": "SQL_Latin1_General_CP1_CI_AS"
+        },
+        {
+          "name": "LastName",
+          "type": "nvarchar",
+          "maxLength": 200,
+          "precision": 0,
+          "scale": 0,
+          "nullable": true,
+          "collation": "SQL_Latin1_General_CP1_CI_AS"
+        },
+        {
+          "name": "ClientSalt",
+          "type": "binary",
+          "maxLength": 16,
+          "precision": 0,
+          "scale": 0,
+          "nullable": true
+        },
+        {
+          "name": "ClientOpsLimit",
+          "type": "int",
+          "maxLength": 4,
+          "precision": 10,
+          "scale": 0,
+          "nullable": true
+        },
+        {
+          "name": "ClientMemoryBytes",
+          "type": "bigint",
+          "maxLength": 8,
+          "precision": 19,
+          "scale": 0,
+          "nullable": true
+        },
+        {
+          "name": "LoginVerifier",
+          "type": "varchar",
+          "maxLength": 512,
+          "precision": 0,
+          "scale": 0,
+          "nullable": true,
+          "collation": "SQL_Latin1_General_CP1_CI_AS"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "IX_AdminChallenges_Admin",
+          "type": "NONCLUSTERED",
+          "unique": false,
+          "primaryKey": false,
+          "uniqueConstraint": false,
+          "columns": [
+            {
+              "name": "AdminId",
+              "descendingKey": false,
+              "included": false
+            }
+          ]
+        },
+        {
+          "name": "IX_AdminChallenges_Expiry",
+          "type": "NONCLUSTERED",
+          "unique": false,
+          "primaryKey": false,
+          "uniqueConstraint": false,
+          "columns": [
+            {
+              "name": "ExpiresAt",
+              "descendingKey": false,
+              "included": false
+            }
+          ]
+        },
+        {
+          "name": "IX_AdminChallenges_Invitation",
+          "type": "NONCLUSTERED",
+          "unique": false,
+          "primaryKey": false,
+          "uniqueConstraint": false,
+          "columns": [
+            {
+              "name": "InvitationId",
+              "descendingKey": false,
+              "included": false
+            }
+          ]
+        },
+        {
+          "name": "PK_AdminChallenges",
+          "type": "CLUSTERED",
+          "unique": true,
+          "primaryKey": true,
+          "uniqueConstraint": false,
+          "columns": [
+            {
+              "name": "ChallengeId",
+              "descendingKey": false,
+              "included": false
+            }
+          ]
+        }
+      ],
+      "foreignKeys": [
+        {
+          "name": "FK_AdminChallenges_Admin",
+          "targetSchema": "admin",
+          "targetTable": "Admins",
+          "onDelete": "NO_ACTION",
+          "onUpdate": "NO_ACTION",
+          "disabled": false,
+          "untrusted": false,
+          "columns": [
+            {
+              "source": "AdminId",
+              "target": "AdminId"
+            }
+          ]
+        },
+        {
+          "name": "FK_AdminChallenges_CompletedAdmin",
+          "targetSchema": "admin",
+          "targetTable": "Admins",
+          "onDelete": "NO_ACTION",
+          "onUpdate": "NO_ACTION",
+          "disabled": false,
+          "untrusted": false,
+          "columns": [
+            {
+              "source": "CompletedAdminId",
+              "target": "AdminId"
+            }
+          ]
+        },
+        {
+          "name": "FK_AdminChallenges_Invitation",
+          "targetSchema": "admin",
+          "targetTable": "Invitations",
+          "onDelete": "NO_ACTION",
+          "onUpdate": "NO_ACTION",
+          "disabled": false,
+          "untrusted": false,
+          "columns": [
+            {
+              "source": "InvitationId",
+              "target": "InvitationId"
+            }
+          ]
+        }
+      ],
+      "checks": [
+        {
+          "name": "CK_AdminChallenge_Attempts",
+          "definition": "([FailedAttempts]>=(0) AND [FailedAttempts]<=(5))",
+          "disabled": false,
+          "untrusted": false
+        },
+        {
+          "name": "CK_AdminChallenge_Derivation",
+          "definition": "([ClientOpsLimit]>=(2) AND [ClientOpsLimit]<=(4) AND ([ClientMemoryBytes]>=(67108864) AND [ClientMemoryBytes]<=(268435456)))",
+          "disabled": false,
+          "untrusted": false
+        },
+        {
+          "name": "CK_AdminChallenge_Purpose",
+          "definition": "([Purpose]='LOGIN' AND [AdminId] IS NOT NULL AND [SessionVersion] IS NOT NULL AND [InvitationId] IS NULL OR [Purpose]='REGISTER' AND [InvitationId] IS NOT NULL AND [AdminId] IS NULL AND [SessionVersion] IS NULL AND [FirstName] IS NOT NULL AND [LastName] IS NOT NULL AND [ClientSalt] IS NOT NULL AND [ClientOpsLimit] IS NOT NULL AND [ClientMemoryBytes] IS NOT NULL AND [LoginVerifier] IS NOT NULL)",
+          "disabled": false,
+          "untrusted": false
+        }
+      ]
+    },
+    {
+      "schema": "admin",
+      "name": "Invitations",
+      "columns": [
+        {
+          "name": "InvitationId",
+          "type": "uniqueidentifier",
+          "maxLength": 16,
+          "precision": 0,
+          "scale": 0,
+          "nullable": false
+        },
+        {
+          "name": "TokenHash",
+          "type": "binary",
+          "maxLength": 32,
+          "precision": 0,
+          "scale": 0,
+          "nullable": false
+        },
+        {
+          "name": "Email",
+          "type": "nvarchar",
+          "maxLength": 510,
+          "precision": 0,
+          "scale": 0,
+          "nullable": false,
+          "collation": "Latin1_General_100_BIN2"
+        },
+        {
+          "name": "CreatedAt",
+          "type": "datetimeoffset",
+          "maxLength": 9,
+          "precision": 30,
+          "scale": 3,
+          "nullable": false
+        },
+        {
+          "name": "ExpiresAt",
+          "type": "datetimeoffset",
+          "maxLength": 9,
+          "precision": 30,
+          "scale": 3,
+          "nullable": false
+        },
+        {
+          "name": "ConsumedAdminId",
+          "type": "int",
+          "maxLength": 4,
+          "precision": 10,
+          "scale": 0,
+          "nullable": true
+        },
+        {
+          "name": "ConsumedAt",
+          "type": "datetimeoffset",
+          "maxLength": 9,
+          "precision": 30,
+          "scale": 3,
+          "nullable": true
+        }
+      ],
+      "indexes": [
+        {
+          "name": "IX_AdminInvitations_Expiry",
+          "type": "NONCLUSTERED",
+          "unique": false,
+          "primaryKey": false,
+          "uniqueConstraint": false,
+          "columns": [
+            {
+              "name": "ExpiresAt",
+              "descendingKey": false,
+              "included": false
+            }
+          ]
+        },
+        {
+          "name": "PK_AdminInvitations",
+          "type": "CLUSTERED",
+          "unique": true,
+          "primaryKey": true,
+          "uniqueConstraint": false,
+          "columns": [
+            {
+              "name": "InvitationId",
+              "descendingKey": false,
+              "included": false
+            }
+          ]
+        },
+        {
+          "name": "UQ_AdminInvitations_Token",
+          "type": "NONCLUSTERED",
+          "unique": true,
+          "primaryKey": false,
+          "uniqueConstraint": true,
+          "columns": [
+            {
+              "name": "TokenHash",
+              "descendingKey": false,
+              "included": false
+            }
+          ]
+        }
+      ],
+      "foreignKeys": [
+        {
+          "name": "FK_AdminInvitations_Admin",
+          "targetSchema": "admin",
+          "targetTable": "Admins",
+          "onDelete": "NO_ACTION",
+          "onUpdate": "NO_ACTION",
+          "disabled": false,
+          "untrusted": false,
+          "columns": [
+            {
+              "source": "ConsumedAdminId",
+              "target": "AdminId"
+            }
+          ]
+        }
+      ],
+      "checks": [
+        {
+          "name": "CK_AdminInvitation_Consumed",
+          "definition": "([ConsumedAt] IS NULL AND [ConsumedAdminId] IS NULL OR [ConsumedAt] IS NOT NULL AND [ConsumedAdminId] IS NOT NULL)",
+          "disabled": false,
+          "untrusted": false
+        },
+        {
+          "name": "CK_AdminInvitation_Expiry",
+          "definition": "([ExpiresAt]=dateadd(hour,(24),[CreatedAt]))",
+          "disabled": false,
+          "untrusted": false
+        }
+      ]
+    },
+    {
+      "schema": "admin",
+      "name": "Sessions",
+      "columns": [
+        {
+          "name": "TokenHash",
+          "type": "binary",
+          "maxLength": 32,
+          "precision": 0,
+          "scale": 0,
+          "nullable": false
+        },
+        {
+          "name": "AdminId",
+          "type": "int",
+          "maxLength": 4,
+          "precision": 10,
+          "scale": 0,
+          "nullable": false
+        },
+        {
+          "name": "SessionVersion",
+          "type": "bigint",
+          "maxLength": 8,
+          "precision": 19,
+          "scale": 0,
+          "nullable": false
+        },
+        {
+          "name": "CsrfHash",
+          "type": "binary",
+          "maxLength": 32,
+          "precision": 0,
+          "scale": 0,
+          "nullable": false
+        },
+        {
+          "name": "IdleExpiresAt",
+          "type": "datetimeoffset",
+          "maxLength": 9,
+          "precision": 30,
+          "scale": 3,
+          "nullable": false
+        },
+        {
+          "name": "AbsoluteExpiresAt",
+          "type": "datetimeoffset",
+          "maxLength": 9,
+          "precision": 30,
+          "scale": 3,
+          "nullable": false
+        },
+        {
+          "name": "RevokedAt",
+          "type": "datetimeoffset",
+          "maxLength": 9,
+          "precision": 30,
+          "scale": 3,
+          "nullable": true
+        }
+      ],
+      "indexes": [
+        {
+          "name": "IX_AdminSessions_Admin",
+          "type": "NONCLUSTERED",
+          "unique": false,
+          "primaryKey": false,
+          "uniqueConstraint": false,
+          "columns": [
+            {
+              "name": "AdminId",
+              "descendingKey": false,
+              "included": false
+            }
+          ]
+        },
+        {
+          "name": "IX_AdminSessions_Expiry",
+          "type": "NONCLUSTERED",
+          "unique": false,
+          "primaryKey": false,
+          "uniqueConstraint": false,
+          "columns": [
+            {
+              "name": "AbsoluteExpiresAt",
+              "descendingKey": false,
+              "included": false
+            }
+          ]
+        },
+        {
+          "name": "PK_AdminSessions",
+          "type": "CLUSTERED",
+          "unique": true,
+          "primaryKey": true,
+          "uniqueConstraint": false,
+          "columns": [
+            {
+              "name": "TokenHash",
+              "descendingKey": false,
+              "included": false
+            }
+          ]
+        }
+      ],
+      "foreignKeys": [
+        {
+          "name": "FK_AdminSessions_Admin",
+          "targetSchema": "admin",
+          "targetTable": "Admins",
+          "onDelete": "NO_ACTION",
+          "onUpdate": "NO_ACTION",
+          "disabled": false,
+          "untrusted": false,
+          "columns": [
+            {
+              "source": "AdminId",
+              "target": "AdminId"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "schema": "admin",
+      "name": "SystemReferences",
+      "columns": [
+        {
+          "name": "Resource",
+          "type": "varchar",
+          "maxLength": 32,
+          "precision": 0,
+          "scale": 0,
+          "nullable": false,
+          "collation": "SQL_Latin1_General_CP1_CI_AS"
+        },
+        {
+          "name": "ReferenceId",
+          "type": "int",
+          "maxLength": 4,
+          "precision": 10,
+          "scale": 0,
+          "nullable": false
+        },
+        {
+          "name": "SystemCode",
+          "type": "varchar",
+          "maxLength": 64,
+          "precision": 0,
+          "scale": 0,
+          "nullable": false,
+          "collation": "SQL_Latin1_General_CP1_CI_AS"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "PK_AdminSystemReferences",
+          "type": "CLUSTERED",
+          "unique": true,
+          "primaryKey": true,
+          "uniqueConstraint": false,
+          "columns": [
+            {
+              "name": "Resource",
+              "descendingKey": false,
+              "included": false
+            },
+            {
+              "name": "ReferenceId",
+              "descendingKey": false,
+              "included": false
+            }
+          ]
+        },
+        {
+          "name": "UQ_AdminSystemReference_Code",
+          "type": "NONCLUSTERED",
+          "unique": true,
+          "primaryKey": false,
+          "uniqueConstraint": true,
+          "columns": [
+            {
+              "name": "SystemCode",
+              "descendingKey": false,
+              "included": false
+            }
+          ]
+        }
+      ],
+      "checks": [
+        {
+          "name": "CK_AdminSystemReference_Resource",
+          "definition": "([Resource]='post-spheres' OR [Resource]='post-types' OR [Resource]='universities')",
+          "disabled": false,
+          "untrusted": false
+        }
+      ]
+    }
+  ]
+}
