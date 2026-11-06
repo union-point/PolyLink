@@ -1,5 +1,6 @@
 import { openPostForm } from '../posts/form.js';
 import { Modal } from './profile-modal.js';
+import { createMonthYearPicker } from './month-year-picker.js';
 import { profiles } from '../services/index.js';
 import { educationEntry, certificateEntry, announcementEntry } from './profile-render.js';
 import { profileImage } from './images.js';
@@ -36,17 +37,11 @@ function select(form, label, name, rows, value) {
   }
   return el;
 }
-// Native calendar controls work on browsers that render type="month" as plain text.
-// Profile dates use month precision; retain an unchanged legacy year/day verbatim.
-function dateField(form, label, name, value) {
-  const initial = value ? `${value.slice(0, 4)}-${value.slice(5, 7) || '01'}-${value.slice(8, 10) || '01'}` : '';
-  const el = input(form, label, name, initial, 'date');
-  el.min = '1900-01-01'; el.max = '2200-12-31';
-  const hint = document.createElement('p'); hint.className = 'profile-field-hint';
-  hint.id = `${el.id}-hint`;
-  hint.textContent = 'Ընտրեք ամսաթիվը․ պահպանվում են ամիսը և տարին։';
-  el.setAttribute('aria-describedby', hint.id); el.field.append(hint);
-  return { el, get: () => el.value === initial ? (value || null) : (el.value.slice(0, 7) || null) };
+function dateField(form, label, name, value, preservePrecision = true) {
+  const picker = createMonthYearPicker({ name, value, label, preservePrecision });
+  field(form, label, picker.el);
+  picker.el.before(picker.root); picker.root.prepend(picker.el);
+  return picker;
 }
 
 function formNote(form) {
@@ -92,7 +87,7 @@ function educationModal(entry,record={}) {
       const ongoingLabel=document.createElement('label');ongoingLabel.className='profile-ongoing';
       ongoing=document.createElement('input');ongoing.type='checkbox';ongoing.name='isOngoing';ongoing.checked=!!record.isOngoing;
       const ongoingText=document.createElement('span');ongoingText.textContent='Ուսումը շարունակվում է';ongoingLabel.append(ongoing,ongoingText);period.append(ongoingLabel);
-      const sync=()=>{end.el.disabled=ongoing.checked;end.el.field.classList.toggle('profile-field-disabled',ongoing.checked);};ongoing.onchange=sync;sync();
+      const sync=()=>{end.setDisabled(ongoing.checked);end.el.field.classList.toggle('profile-field-disabled',ongoing.checked);};ongoing.onchange=sync;sync();
       formNote(form);const remove=addDelete(form,entry,record,profiles.education);if(remove)modal.modal.querySelector('.profile-modal-footer').prepend(remove);ready=true;modal.setReady(options.universities.length>0);
       form.querySelector('select')?.focus();
     }catch(error){
@@ -107,7 +102,7 @@ function certificateModal(entry,record={}) {
   const form=document.createElement('div');form.className='profile-form';
   const name=input(form,'Հավաստագրի անվանում *','name',record.name);name.required=true;name.maxLength=255;
   const org=input(form,'Կազմակերպություն *','organization',record.organization);org.required=true;org.maxLength=255;
-  const date=dateField(form,'Տրման ամսաթիվ','issueDate',record.issueDate);
+  const date=dateField(form,'Տրման ամիս և տարի','issueDate',record.issueDate,false);
   const url=input(form,'Հավաստագրի հղում','credentialUrl',record.credentialUrl,'url');url.maxLength=2048;url.placeholder='https://…';
   const hint=document.createElement('p');hint.className='profile-field-hint';hint.textContent='Հղումը և տրման ամիսը պարտադիր չեն։';url.field.append(hint);
   formNote(form);const remove=addDelete(form,entry,record,profiles.certificates);

@@ -6,7 +6,7 @@ const errors = [];
 try {
  const page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
  page.on('pageerror', error => errors.push(error.message));
- await page.route(origin + '/picker-fixture', route => route.fulfill({ contentType: 'text/html', body: '<html lang="hy"><link rel="stylesheet" href="/css/style.css"><link rel="stylesheet" href="/css/profile.css"><div class="profile-modal" style="margin:40px auto;padding:24px"><label for="fixture-input">Ժամանակահատված</label><div id="fixture"></div><button id="outside">Ավարտել</button></div></html>' }));
+ await page.route(origin + '/picker-fixture', route => route.fulfill({ contentType: 'text/html', body: '<html lang="hy"><meta charset="utf-8"><link rel="stylesheet" href="/css/style.css"><link rel="stylesheet" href="/css/profile.css"><div class="profile-modal" style="margin:40px auto;padding:24px"><label for="fixture-input">Ժամանակահատված</label><div id="fixture"></div><button id="outside">Ավարտել</button></div></html>' }));
  await page.goto(origin + '/picker-fixture');
  const mount = async (value = '', preservePrecision = true) => page.evaluate(async ({ value, preservePrecision }) => {
   const { createMonthYearPicker } = await import('/js/profile/month-year-picker.js');
@@ -22,7 +22,7 @@ try {
  assert(await input.evaluate(el => el.readOnly));
  await input.press('Enter');assert(await panel.isVisible());
  assert.equal(await panel.locator('.profile-month-choice').count(), 12);
- assert.equal(await panel.locator('[aria-pressed=true]').textContent(), 'սեպտեմբեր');
+ assert.equal(await panel.locator('[aria-pressed=true]').textContent(), 'սեպտ.');
  await page.keyboard.press('ArrowRight');await page.keyboard.press('Enter');
  assert.equal(await page.evaluate(() => picker.get()), '2020-10');assert(await panel.isHidden());
  assert(await input.evaluate(el => document.activeElement === el));
@@ -34,6 +34,11 @@ try {
  await panel.getByRole('button', { name: '2024', exact: true }).click();
  await panel.getByRole('button', { name: 'հունիս 2024', exact: true }).click();
  assert.equal(await page.evaluate(() => picker.get()), '2024-06');
+ await input.click();await panel.locator('.profile-month-year').click();
+ await panel.getByRole('button', { name: 'Նախորդ տարիները', exact: true }).click();
+ await panel.getByRole('button', { name: '2010', exact: true }).click();
+ await panel.getByRole('button', { name: 'մարտ 2010', exact: true }).click();
+ assert.equal(await page.evaluate(() => picker.get()), '2010-03');
  await input.click();await panel.getByRole('button', { name: 'Մաքրել', exact: true }).click();
  assert.equal(await page.evaluate(() => picker.get()), null);assert.equal(await input.inputValue(), '');
  await input.click();await page.locator('#outside').click();assert(await panel.isHidden());

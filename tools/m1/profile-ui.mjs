@@ -31,6 +31,20 @@ async function mockMember(){
  const page=await context.newPage();page.on('pageerror',error=>errors.push(error.message));return {page,context};
 }
 const service=(page,operation,...args)=>page.evaluate(async({operation,args})=>{const {profiles}=await import('/js/services/index.js');const [group,method]=operation.split('.');return method?profiles[group][method](...args):profiles[group](...args);},{operation,args});
+async function choosePeriod(form,name,value) {
+ const input=form.locator(`[name="${name}"]`);await input.click();
+ const picker=input.locator('..');const panel=picker.locator('.profile-month-panel');
+ assert.equal(await form.locator('input[type=date],input[type=month]').count(),0);
+ await panel.locator('.profile-month-year').click();
+ const [year,month]=value.split('-').map(Number);
+ while(!await panel.getByRole('button',{name:String(year),exact:true}).count()) {
+  const start=Number((await panel.locator('.profile-month-year').textContent()).split('–')[0]);
+  await panel.getByRole('button',{name:year<start?'Նախորդ տարիները':'Հաջորդ տարիները',exact:true}).click();
+ }
+ await panel.getByRole('button',{name:String(year),exact:true}).click();
+ await panel.locator('.profile-month-choice').nth(month-1).click();
+ assert(await panel.isHidden());
+}
 let firstMember;
 const modalFor=page=>page.locator('.modal-overlay');
 async function save(page){await modalFor(page).locator('.modal-footer .primary-btn').click();await modalFor(page).waitFor({state:'detached'});}
@@ -71,23 +85,35 @@ try{
   assert.notEqual(await page.evaluate(()=>document.body.style.overflow),'hidden','Closing restores page scrolling');
   await page.locator('.education-section .fa-plus').press('Enter');form=modalFor(page);await form.locator('[name=universityId] option').nth(1).waitFor({state:'attached'});
 
-  await form.locator('[name=universityId]').selectOption({index:1});await form.locator('[name=startDate]').fill('2020-09-15');await form.locator('[name=isOngoing]').check();
+  await form.locator('[name=universityId]').selectOption({index:1});await choosePeriod(form,'startDate','2020-09');await form.locator('[name=isOngoing]').check();
   assert(await form.locator('[name=endDate]').isDisabled());
   await save(page);assert.equal(await page.locator('.education-section .item-entry').count(),before+1);assert.match(await page.locator('.education-section .item-entry').last().textContent(),/2020.*Շարունակվում է/s);
   const addedEducation=page.locator('.education-section .item-entry').last();
   await addedEducation.locator('.edit-icon').dispatchEvent('click');form=modalFor(page);
-  assert.equal(await form.locator('[name=startDate]').inputValue(),'2020-09-01');
+  assert.equal(await form.locator('[name=startDate]').inputValue(),'սեպտեմբեր 2020');
   assert.equal(await form.locator('.profile-date-precision').count(),0);
-  await form.locator('[name=isOngoing]').uncheck();await form.locator('[name=endDate]').fill('2019-06-01');
+  await form.locator('[name=isOngoing]').uncheck();await choosePeriod(form,'endDate','2019-06');
   await form.locator('.modal-footer .primary-btn').click();await form.locator('[role=alert]').waitFor();
-  await form.locator('[name=endDate]').fill('2024-06-01');
+  await choosePeriod(form,'endDate','2024-06');
   const actions=await form.locator('.modal-footer button').evaluateAll(buttons=>buttons.map(button=>({x:button.getBoundingClientRect().x,y:button.getBoundingClientRect().y})));
   assert.equal(actions.length,3);assert(actions[0].x<actions[1].x&&actions[1].x<actions[2].x);assert(actions.every(action=>action.y===actions[0].y),'Edit actions share one row');
+  for(const width of [1280,390]){
+   await page.setViewportSize({width,height:900});await form.locator('[name=startDate]').click();
+   const panel=form.locator('[name=startDate]').locator('..').locator('.profile-month-panel');
+   assert(await panel.isVisible());
+   assert(await panel.evaluate(el=>{const panel=el.getBoundingClientRect(),body=el.closest('.profile-modal-body').getBoundingClientRect();return panel.top>=body.top-1&&panel.bottom<=body.bottom+1;}),'The full picker stays in the visible modal body');
+   assert(await panel.locator('.profile-month-choice').evaluateAll(buttons=>buttons.every(button=>button.scrollWidth<=button.clientWidth)),'Month names fit the grid');
+   assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),'Picker fits the viewport');
+   await page.locator('[data-toast]').evaluateAll(toasts=>toasts.forEach(toast=>toast.remove()));
+   await page.screenshot({path:`/tmp/polylink-education-picker-${width}-${role}.png`,fullPage:true});
+   await page.keyboard.press('Escape');assert(await panel.isHidden());assert(await form.isVisible(),'Escape closes only the picker');
+  }
+  await page.setViewportSize({width:1280,height:900});
   await page.screenshot({path:`/tmp/polylink-education-${role}.png`,fullPage:true});
   await save(page);
   console.log(`Profile ${role}: education verified`);
   await page.locator('.licenses-section .fa-plus').dispatchEvent('click');form=modalFor(page);
-  await form.locator('[name=name]').fill('Profile certificate');await form.locator('[name=organization]').fill('Profile issuer');await form.locator('[name=credentialUrl]').fill('https://example.invalid/proof');await form.locator('[name=issueDate]').fill('2024-06-17');
+  await form.locator('[name=name]').fill('Profile certificate');await form.locator('[name=organization]').fill('Profile issuer');await form.locator('[name=credentialUrl]').fill('https://example.invalid/proof');await choosePeriod(form,'issueDate','2024-06');
   if(mock)await page.evaluate(async()=>{const {mockControls}=await import('/js/data/client.js');await(await mockControls()).failNext('profiles.certificates.create','NETWORK','Retry certificate');});
   else {let failed=false;await context.route(api+'/users/me/licenses',async route=>{if(route.request().method()==='POST'&&!failed){failed=true;await route.abort('failed');}else await route.continue();});}
   await form.locator('.modal-footer .primary-btn').click();await form.locator('[role=alert]').waitFor();assert.equal(await form.locator('[name=name]').inputValue(),'Profile certificate');await save(page);
@@ -96,6 +122,14 @@ try{
   await context.route('https://example.invalid/**',route=>route.fulfill({body:'Fixture credential',contentType:'text/plain'}));
   const popup=page.waitForEvent('popup');await page.locator('.licenses-section .show-cred-btn').last().click();const credential=await popup;await credential.waitForLoadState();assert.equal(credential.url(),'https://example.invalid/proof');await credential.close();
   const cert=page.locator('.licenses-section .item-entry').filter({hasText:'Profile certificate'});await cert.locator('.edit-icon').dispatchEvent('click');form=modalFor(page);
+  assert.equal(await form.locator('[name=issueDate]').inputValue(),'հունիս 2024');
+  await choosePeriod(form,'issueDate','2025-02');await save(page);
+  const updatedCertificates=await service(page,'certificates.list');assert.equal(updatedCertificates.find(row=>row.name==='Profile certificate').issueDate,'2025-02');
+  await cert.locator('.edit-icon').dispatchEvent('click');form=modalFor(page);
+  await form.locator('[name=issueDate]').click();await form.getByRole('button',{name:'Մաքրել',exact:true}).click();await save(page);
+  assert.equal((await service(page,'certificates.list')).find(row=>row.name==='Profile certificate').issueDate,null);
+  await cert.locator('.edit-icon').dispatchEvent('click');form=modalFor(page);
+
   await form.locator('[name=name]').fill('Discard this');await form.locator('.modal-footer .secondary-btn').click();await page.locator('#custom-confirm-backdrop:not(.hidden),[data-common-confirm]:not(.hidden)').waitFor();
   await page.locator('#confirm-yes:visible,[data-confirm-yes]:visible').click();await form.waitFor({state:'detached'});assert.equal(await page.getByText('Discard this',{exact:true}).count(),0);
   await cert.locator('.edit-icon').dispatchEvent('click');await modalFor(page).locator('.delete-entry-btn').click();await page.locator('#custom-confirm-backdrop:not(.hidden),[data-common-confirm]:not(.hidden)').waitFor();await page.locator('#confirm-yes:visible,[data-confirm-yes]:visible').click();await modalFor(page).waitFor({state:'detached'});
@@ -135,6 +169,18 @@ try{
  if(mock){
   const {page,context}=await mockMember();await page.goto(origin+'/profile.html');
   await page.waitForFunction(()=>typeof document.querySelector('.intro-card .primary-btn')?.onclick==='function');
+  await page.evaluate(async()=>{const {transaction}=await import('/js/data/mock/store.js');await transaction(state=>{
+   const education=state.education.find(row=>row.userId===state.sessionUserId);education.startDate='2018';education.endDate='2024-06-17';education.isOngoing=false;
+  },{write:true});});
+  await page.reload();await page.waitForFunction(()=>typeof document.querySelector('.intro-card .primary-btn')?.onclick==='function');
+  await page.locator('.education-section .item-entry .edit-icon').first().dispatchEvent('click');
+  await page.waitForFunction(()=>!document.querySelector('.profile-modal-footer .primary-btn').disabled);
+  assert.equal(await modalFor(page).locator('[name=startDate]').inputValue(),'2018');assert.equal(await modalFor(page).locator('[name=endDate]').inputValue(),'հունիս 2024');
+  await save(page);let legacy=(await service(page,'education.list'))[0];assert.equal(legacy.startDate,'2018');assert.equal(legacy.endDate,'2024-06-17');
+  await page.locator('.education-section .item-entry .edit-icon').first().dispatchEvent('click');
+  await page.waitForFunction(()=>!document.querySelector('.profile-modal-footer .primary-btn').disabled);
+  await choosePeriod(modalFor(page),'endDate','2024-06');await save(page);
+  legacy=(await service(page,'education.list'))[0];assert.equal(legacy.endDate,'2024-06');assert.equal(legacy.startDate,'2018');
   await page.evaluate(async()=>{const {transaction}=await import('/js/data/mock/store.js');await transaction(state=>{
    state.education=state.education.filter(row=>row.userId!==state.sessionUserId);state.certificates=state.certificates.filter(row=>row.userId!==state.sessionUserId);state.users.find(row=>row.id===state.sessionUserId).cover='';
   },{write:true});});

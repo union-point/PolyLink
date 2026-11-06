@@ -1,6 +1,7 @@
 const firstYear = 1900;
 const lastYear = 2200;
 const months = ['հունվար', 'փետրվար', 'մարտ', 'ապրիլ', 'մայիս', 'հունիս', 'հուլիս', 'օգոստոս', 'սեպտեմբեր', 'հոկտեմբեր', 'նոյեմբեր', 'դեկտեմբեր'];
+const shortMonths = ['հունվ.', 'փետր.', 'մարտ', 'ապր.', 'մայիս', 'հունիս', 'հուլիս', 'օգս.', 'սեպտ.', 'հոկտ.', 'նոյ.', 'դեկտ.'];
 const chevron = direction => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="${direction === 'previous' ? 'm14 6-6 6 6 6' : 'm10 6 6 6-6 6'}"/></svg>`;
 let sequence = 0;
 
@@ -65,7 +66,7 @@ export function createMonthYearPicker({ name, value = '', label, preservePrecisi
     previous.disabled = yearView ? pageStart <= firstYear : year <= firstYear;
     next.disabled = yearView ? pageStart + 11 >= lastYear : year >= lastYear;
     grid.setAttribute('aria-label', yearView ? 'Տարի' : 'Ամիս');
-    const choices = yearView ? Array.from({ length: Math.min(12, lastYear - pageStart + 1) }, (_, i) => pageStart + i) : months;
+    const choices = yearView ? Array.from({ length: Math.min(12, lastYear - pageStart + 1) }, (_, i) => pageStart + i) : shortMonths;
     grid.replaceChildren(...choices.map((text, index) => {
       const choice = button(String(text), 'profile-month-choice', () => {
         if (yearView) { year = text; yearView = false; render(); focusChoice(); }
@@ -73,7 +74,7 @@ export function createMonthYearPicker({ name, value = '', label, preservePrecisi
       });
       choice.dataset.index = index;
       choice.setAttribute('aria-pressed', String(yearView ? Number(selected.slice(0, 4)) === text : selected.slice(0, 7) === `${year}-${String(index + 1).padStart(2, '0')}`));
-      if (!yearView) choice.setAttribute('aria-label', `${text} ${year}`);
+      if (!yearView) choice.setAttribute('aria-label', `${months[index]} ${year}`);
       return choice;
     }));
   }
@@ -86,6 +87,7 @@ export function createMonthYearPicker({ name, value = '', label, preservePrecisi
     if (input.disabled) return;
     year = Math.min(lastYear, Math.max(firstYear, Number(selected.slice(0, 4)) || new Date().getFullYear()));
     yearView = false; render(); panel.hidden = false; input.setAttribute('aria-expanded', 'true'); focusChoice();
+    panel.scrollIntoView({ block: 'nearest' });
   }
   input.onclick = () => panel.hidden ? open() : close();
   input.onkeydown = event => {
