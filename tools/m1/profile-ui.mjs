@@ -47,12 +47,30 @@ try{
   await page.locator('.intro-card .primary-btn').click();await page.waitForFunction(()=>!document.querySelector('.job-title[contenteditable=true]'));
   assert.equal(await page.locator('.name-title-section h1').textContent(),name);assert.equal(await page.locator('.desc p b').count(),0);
   console.log(`Profile ${role}: editor verified`);
+  await page.locator('.intro-card .primary-btn').click();const chooser=modalFor(page);
+  assert.equal(await chooser.locator('.profile-section-choice').count(),3);assert(await chooser.locator('.modal-footer .primary-btn').isHidden());
+  await page.keyboard.press('ControlOrMeta+s');assert(await chooser.isVisible(),'Section chooser has no save action');
+  await page.keyboard.press('Shift+Tab');await page.keyboard.press('Shift+Tab');
+  assert(await chooser.locator('.modal-footer .secondary-btn').evaluate(el=>document.activeElement===el),'Focus stays inside the dialog');
+  await page.keyboard.press('Escape');await chooser.waitFor({state:'detached'});
+
   const before=await page.locator('.education-section .item-entry').count();
   if(mock)await page.evaluate(async()=>{const {mockControls}=await import('/js/data/client.js');await(await mockControls()).failNext('profiles.education.options','NETWORK','Options retry');});
   else {let failed=false;await context.route(api+'/users/me/education/options',async route=>{if(!failed){failed=true;await route.abort('failed');}else await route.continue();});}
-  await page.locator('.education-section .fa-plus').dispatchEvent('click');let form=modalFor(page);
+  await page.locator('.education-section .fa-plus').focus();await page.locator('.education-section .fa-plus').press('Enter');let form=modalFor(page);
+  assert(await form.locator('.modal-footer .primary-btn').isDisabled(),'Save stays disabled until reference data loads');
   await form.getByText('Կրկին փորձել',{exact:true}).click();
   await form.locator('[name=universityId] option').nth(1).waitFor({state:'attached'});assert.equal(await form.locator('select[name$=Id]').count(),4);
+  assert(await form.locator('.modal-footer .primary-btn').isEnabled());
+  const university=form.locator('[name=universityId]'),searchField=university.locator('..').locator('[data-profile-search]');
+  await university.locator('..').locator('.profile-search-toggle').click();await searchField.fill('no-reference-matches-123');
+  assert.equal(await university.locator('option').count(),1,'Search filters existing references');
+  await searchField.press('Escape');assert(await searchField.isHidden());assert(await form.isVisible(),'Escape closes search before closing the dialog');
+  await form.locator('.profile-modal-close').click();await form.waitFor({state:'detached'});
+  assert(await page.locator('.education-section .fa-plus').evaluate(el=>document.activeElement===el),'Close restores the trigger focus');
+  assert.notEqual(await page.evaluate(()=>document.body.style.overflow),'hidden','Closing restores page scrolling');
+  await page.locator('.education-section .fa-plus').press('Enter');form=modalFor(page);await form.locator('[name=universityId] option').nth(1).waitFor({state:'attached'});
+
   await form.locator('[name=universityId]').selectOption({index:1});await form.locator('[aria-label="Սկիզբ՝ ճշգրտություն"]').selectOption('YEAR');await form.locator('[name=startDate]').fill('2020');await form.locator('[name=isOngoing]').check();
   await save(page);assert.equal(await page.locator('.education-section .item-entry').count(),before+1);assert.match(await page.locator('.education-section .item-entry').last().textContent(),/2020.*Շարունակվում է/s);
   console.log(`Profile ${role}: education verified`);

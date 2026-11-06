@@ -654,3 +654,5 @@ button {
 .profile-modal .profile-form-control:focus-visible { outline: none; }
 .theme-dark .profile-modal { color-scheme: dark; }
 .theme-dark .profile-delete-area .delete-entry-btn { color: #f08888; }
+.theme-dark .profile-modal-footer .primary-btn { background: #096ac9; }
+.theme-dark .profile-modal-footer .primary-btn:hover { background: #075bae; }
