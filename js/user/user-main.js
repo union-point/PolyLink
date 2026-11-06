@@ -26,9 +26,12 @@ start(async () => {
   }
   const avatar = document.createElement('img'); avatar.className = 'profile-photo'; avatar.src = safeUrl(user.avatar || 'image/logo.png', { image: true }); avatar.alt = user.name;
   document.querySelector('.profile-photo-area > .profile-photo').replaceChildren(avatar);
-  document.querySelector('.banner-photo').style.backgroundImage = `url("${safeUrl(user.cover, { image: true })}")`;
+  const cover = safeUrl(user.cover, { image: true });
+  document.querySelector('.banner-photo').style.backgroundImage = cover ? `url("${cover}")` : '';
   main.querySelector('.education-list').replaceChildren(...user.education.map(record => educationEntry(record)));
   main.querySelector('.licenses-list').replaceChildren(...user.licenses.map(record => certificateEntry(record)));
+  main.querySelector('.education-list').closest('.profile-section').hidden = !user.education.length;
+  main.querySelector('.licenses-list').closest('.profile-section').hidden = !user.licenses.length;
   const list = main.querySelector('.announcements-list');
   const postFeed=createPostFeed(list,{filters:()=>({userId:id})});
   const contact = main.querySelector('.primary-btn');

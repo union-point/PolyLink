@@ -15,10 +15,12 @@ start(async () => {
   document.querySelector('.job-title').textContent = user.jobTitle;
   document.querySelector('.desc p').textContent = user.description;
   document.querySelector('.profile-photo img').src = safeUrl(user.avatar || 'image/logo.png', { image: true });
-  document.querySelector('.banner-photo').style.backgroundImage = `url("${safeUrl(user.cover, { image: true })}")`;
+  const cover = safeUrl(user.cover, { image: true });
+  document.querySelector('.banner-photo').style.backgroundImage = cover ? `url("${cover}")` : '';
   const educationSection = document.querySelector('.education-section');
   educationSection.querySelectorAll('.item-entry').forEach(entry => entry.remove());
   user.education.forEach(addEducationEntry);
+  educationSection.hidden = !user.education.length;
   educationSection.querySelector('.fa-plus').onclick = showAddEducationModal;
   const editor = new InlineEditor(); editor.onAdd = () => {
     const picker = document.createElement('div');picker.className='profile-section-picker';
@@ -29,6 +31,7 @@ start(async () => {
   const licenses = document.querySelector('.licenses-section');
   licenses.querySelectorAll('.item-entry').forEach(entry => entry.remove());
   user.licenses.forEach(addLicenseEntry);
+  licenses.hidden = !user.licenses.length;
   licenses.querySelector('.fa-plus').onclick = showAddLicenseModal;
   const announcements = document.querySelector('.announcements-section');
   announcements.querySelector('.fa-plus').onclick = showAddAnnouncementModal;

@@ -122,5 +122,28 @@ try{
   }
   await context.close();
  }
+ if(mock){
+  const {page,context}=await mockMember();await page.goto(origin+'/profile.html');
+  await page.waitForFunction(()=>typeof document.querySelector('.intro-card .primary-btn')?.onclick==='function');
+  await page.evaluate(async()=>{const {transaction}=await import('/js/data/mock/store.js');await transaction(state=>{
+   state.education=state.education.filter(row=>row.userId!==state.sessionUserId);state.certificates=state.certificates.filter(row=>row.userId!==state.sessionUserId);state.users.find(row=>row.id===state.sessionUserId).cover='';
+  },{write:true});});
+  await page.reload();await page.waitForFunction(()=>typeof document.querySelector('.intro-card .primary-btn')?.onclick==='function');
+  assert(await page.locator('.education-section').isHidden());assert(await page.locator('.licenses-section').isHidden());
+  assert.match(await page.locator('.banner-photo').evaluate(el=>getComputedStyle(el).backgroundImage),/gradient/);
+  await page.setViewportSize({width:390,height:844});
+  for(const [choice,section] of [['Կրթություն','.education-section'],['Հավաստագիր','.licenses-section']]){
+   await page.locator('.intro-card .primary-btn').click();await modalFor(page).getByText(choice,{exact:true}).click();
+   const form=modalFor(page);await form.locator('.primary-btn').waitFor();
+   if(choice==='Կրթություն')await page.waitForFunction(()=>!document.querySelector('.profile-modal-footer .primary-btn').disabled);
+   else{await form.locator('[name=name]').fill('Only certificate');await form.locator('[name=organization]').fill('Issuer');}
+   await save(page);assert(await page.locator(section).isVisible());assert.equal(await page.locator(section+' .item-logo svg').count(),1);
+   await page.locator(section+' .edit-icon').last().dispatchEvent('click');await modalFor(page).locator('.delete-entry-btn').waitFor();
+   const rows=await modalFor(page).locator('.modal-footer button').evaluateAll(buttons=>buttons.map(el=>el.getBoundingClientRect().y));assert(rows.every(y=>y===rows[0]),'Footer stays on one row on mobile');
+   await modalFor(page).locator('.delete-entry-btn').click();await page.locator('#confirm-yes:visible,[data-confirm-yes]:visible').click();await modalFor(page).waitFor({state:'detached'});assert(await page.locator(section).isHidden());
+  }
+  await page.screenshot({path:'/tmp/polylink-profile-empty-mobile.png',fullPage:true});
+  await context.close();
+ }
  assert.deepEqual(errors,[]);console.log(`Profile ${mock?'mock':'HTTP'} browser acceptance passed`);
 }finally{await browser.close();}
