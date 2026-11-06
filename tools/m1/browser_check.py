@@ -2,9 +2,9 @@ import os,pathlib,socket,subprocess,time,urllib.request
 
 def free_port():
     with socket.socket() as sock:sock.bind(('127.0.0.1',0));return sock.getsockname()[1]
-def run(root,env,admin_sql,bao_request,root_token,messenger=False,continuity=False,recovery=False,messenger_ui=False,messenger_ui_only=False,groups=False,groups_only=False,forum=False,enrollment=False,posts=False):
+def run(root,env,admin_sql,bao_request,root_token,messenger=False,continuity=False,recovery=False,messenger_ui=False,messenger_ui_only=False,groups=False,groups_only=False,forum=False,enrollment=False,posts=False,profile=False):
     api_port=free_port();frontend_port=free_port();child=env.copy()
-    child.update(MESSENGER_ENABLED='true' if messenger else 'false',IDENTITY_ENABLED='true',DB_USERNAME=env['MIGRATION_DB_USERNAME'],DB_PASSWORD=env['MIGRATION_DB_PASSWORD'],SERVER_PORT=str(api_port),FRONTEND_ORIGINS=f'http://localhost:{frontend_port}',M1_API=f'http://localhost:{api_port}',M1_FRONTEND=f'http://localhost:{frontend_port}',M1_ARTIFACT_DIR=str(pathlib.Path(env['OPENBAO_TOKEN_FILE']).parent))
+    child.update(MESSENGER_ENABLED='true' if messenger or profile else 'false',IDENTITY_ENABLED='true',DB_USERNAME=env['MIGRATION_DB_USERNAME'],DB_PASSWORD=env['MIGRATION_DB_PASSWORD'],SERVER_PORT=str(api_port),FRONTEND_ORIGINS=f'http://localhost:{frontend_port}',M1_API=f'http://localhost:{api_port}',M1_FRONTEND=f'http://localhost:{frontend_port}',M1_ARTIFACT_DIR=str(pathlib.Path(env['OPENBAO_TOKEN_FILE']).parent))
     email='browser-'+env['M1_DB_NAME'].removeprefix('polylink_m1_')+'@polytechnic.am';child['M1_BROWSER_EMAIL']=email
     maven=[str(root/'backend/mvnw'),'-B','-q','-f',str(root/'backend/pom.xml')]
     # Synthetic eligibility records exist only inside this disposable acceptance database.
@@ -15,6 +15,7 @@ def run(root,env,admin_sql,bao_request,root_token,messenger=False,continuity=Fal
     records += [(email.replace('browser-',f'm6-{i}-'),'M6',f'User{i}','graduate') for i in range(1,5)]
     records += [(email.replace('browser-',f'forum-{i}-'),'Forum',role,role) for i,role in [(1,'graduate'),(2,'lecturer')]]
     records += [(email.replace('browser-',f'posts-{i}-'),'Posts',role,role) for i,role in [(1,'graduate'),(2,'lecturer')]]
+    records += [(email.replace('browser-',f'profile-{i}-'),'Profile',role,role) for i,role in [(1,'graduate'),(2,'lecturer')]]
     sql=f"USE [{env['M1_DB_NAME']}]; "
     sql+="IF NOT EXISTS(SELECT 1 FROM dbo.Institutes) INSERT dbo.Institutes(Name) VALUES (N'Browser fixture'); IF NOT EXISTS(SELECT 1 FROM dbo.Specializations) INSERT dbo.Specializations(Name) VALUES (N'Browser fixture'); IF NOT EXISTS(SELECT 1 FROM dbo.Departments) INSERT dbo.Departments(Name) VALUES (N'Browser fixture'); IF NOT EXISTS(SELECT 1 FROM dbo.Professions) INSERT dbo.Professions(Name) VALUES (N'Browser fixture'); "
     for address,first,last,role in records:
@@ -43,6 +44,10 @@ def run(root,env,admin_sql,bao_request,root_token,messenger=False,continuity=Fal
                     if backend.poll() is not None:raise RuntimeError('M1 browser backend failed: '+logpath.read_text()[-4000:])
                     if i==149:raise RuntimeError('M1 browser backend readiness timeout')
                     time.sleep(.1)
+            if profile:
+                subprocess.run(['node',str(root/'tools/m1/profile-ui.mjs')],cwd=root,env=child,check=True)
+                subprocess.run(['node',str(root/'tools/m1/profile-ui.mjs'),'--mock'],cwd=root,env=child,check=True)
+                return
             if posts:
                 subprocess.run(['node',str(root/'tools/m1/posts-live.mjs')],cwd=root,env=child,check=True)
                 subprocess.run(['node',str(root/'tools/m1/posts-ui.mjs')],cwd=root,env=child,check=True)
