@@ -37,7 +37,10 @@ bash tools/local/provision-openbao.sh
 The provisioning script initializes **only a fresh local development instance**, unseals it using its saved local operator state, configures Transit, and creates/renews the narrow backend token. Existing Transit keys and data are preserved. Its operator credentials are stored separately in `$HOME/.config/polylink-operator`, never in the application environment.
 
 An existing instance without saved local operator state may require its three unseal shares. Follow the script's instructions or the [operator runbook](infra/openbao/README.md), which also covers deployment custody.
-
+```sh
+bash tools/local/provision-openbao.sh \
+  --operator-dir /home/sevak/.local/share/polylink-admin
+```
 Mail is captured at [http://localhost:8025](http://localhost:8025), not sent to external inboxes.
 
 ### 3. Apply migrations explicitly

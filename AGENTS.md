@@ -33,3 +33,18 @@ Rules for message body:
 - Cover all steps needed to set up and run the project except database setup. Keep the common workflow simple; include OS-specific steps only where necessary and avoid duplicate instructions or unnecessary clutter.
 - Treat `db/` as local to the specific machine. Do not include its setup in the shared README or commit machine-specific database contents/configuration as shared project infrastructure.
 
+
+## Frontend Development Rules
+
+This project uses Vanilla HTML, CSS, .
+
+- Do not introduce React, Vue, Angular, Tailwind, Bootstrap, or other frontend frameworks.
+- Maintain the existing architecture and design conventions.
+- Treat visual quality, usability, and accessibility as mandatory acceptance criteria.
+- Avoid unstyled browser-native controls when their appearance conflicts with the application's design.
+- Prefer reusable CSS classes and lightweight Vanilla JavaScript components.
+- Use the available frontend design and UI consistency skills when appropriate.
+- Use browser automation to visually inspect every significant UI change.
+- Test desktop and mobile layouts, scrolling, popover positioning, focus states, and keyboard interactions.
+- Iterate until the rendered result meets the application's existing design standards.
+- Do not consider a frontend task complete solely because the code compiles or the functionality works.
