@@ -24,6 +24,7 @@ public class SecurityConfiguration {
             @Value("${polylink.messenger.enabled:false}") boolean messenger,
             @Value("${polylink.forum.enabled:false}") boolean forum,
             @Value("${polylink.posts.enabled:false}") boolean posts,
+            @Value("${polylink.admin.enabled:false}") boolean admin,
             @Value("${polylink.frontend-origins:http://localhost:8001}") String allowedOrigins)
             throws Exception {
         var origins = Set.copyOf(Arrays.asList(allowedOrigins.split(",")));
@@ -49,6 +50,7 @@ public class SecurityConfiguration {
         http.authorizeHttpRequests(
                 authorize -> {
                     authorize.requestMatchers("/actuator/health").permitAll();
+                    if (enabled && admin) authorize.requestMatchers("/admin/auth/**").permitAll();
                     if (enabled) {
                         authorize
                                 .requestMatchers(

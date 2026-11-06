@@ -519,7 +519,7 @@ class DatabaseMigrationIT {
                             .isNull();
                     assertThat(
                                     db.queryForObject(
-                                            "SELECT COUNT(*) FROM sys.tables WHERE is_ms_shipped=0 AND name<>'flyway_schema_history'",
+                                            "SELECT COUNT(*) FROM sys.tables WHERE is_ms_shipped=0 AND name<>'flyway_schema_history' AND SCHEMA_NAME(schema_id)<>'admin'",
                                             Integer.class))
                             .isEqualTo(59);
                     assertThat(

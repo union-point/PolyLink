@@ -709,9 +709,14 @@ class IdentityIT {
                                                                 "__Host-plk-enrollment", "")
                                                         .isEmpty()
                                 ? "__Host-plk-enrollment-csrf"
-                                : path.startsWith("/auth/recovery/")
-                                        ? "__Host-plk-recovery-csrf"
-                                        : "__Host-plk-refresh-csrf";
+                                : path.startsWith("/admin/auth/registration/")
+                                                || path.startsWith("/admin/auth/login/")
+                                        ? "__Host-plk-admin-challenge-csrf"
+                                        : path.startsWith("/admin/")
+                                                ? "__Host-plk-admin-csrf"
+                                                : path.startsWith("/auth/recovery/")
+                                                        ? "__Host-plk-recovery-csrf"
+                                                        : "__Host-plk-refresh-csrf";
                 if (cookies.containsKey(csrfName))
                     request.header("X-CSRF-Token", cookies.get(csrfName));
             }
