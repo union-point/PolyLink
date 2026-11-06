@@ -459,3 +459,23 @@ button {
     color: var(--primary-blue);
     background: var(--window-background);
 }
+/* Profile text can contain long links, titles and reference labels. */
+.intro-card .desc,
+.intro-card .job-title,
+.intro-card h1,
+.item-details {
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+.intro-card .desc p { white-space: pre-wrap; }
+.profile-photo img { width: 140px; height: 140px; border-radius: 50%; object-fit: cover; }
+
+@media (max-width: 600px) {
+    body:has(.profile-container) .header { position: static; }
+    body:has(.profile-container) .header .header-container { padding: 0 12px; box-sizing: border-box; }
+    body:has(.profile-container) .header nav { flex-wrap: wrap; min-width: 0; }
+    body:has(.profile-container) .header .menu { flex-wrap: wrap; }
+    .profile-container { margin: 16px 12px; }
+    .profile-section { padding: 16px; }
+    .modal-container { box-sizing: border-box; }
+}

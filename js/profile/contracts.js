@@ -39,7 +39,8 @@ export function profileDate(value) {
   if(!value)return 'Նշված չէ';
   if(/^\d{4}$/.test(value))return value;
   const [year,month]=value.split('-').map(Number);
-  return new Date(Date.UTC(year,month-1,1)).toLocaleDateString('hy-AM',{year:'numeric',month:'long',timeZone:'UTC'});
+  const months=['հունվ.','փետր.','մարտ.','ապր.','մայ.','հունիս','հուլ.','օգ.','սեպտ.','հոկտ.','նոյ.','դեկ.'];
+  return `${months[month-1]} ${year} թ.`;
 }
 export function educationRange(record) { return `${profileDate(record.startDate)} – ${record.isOngoing?'Շարունակվում է':profileDate(record.endDate)}`; }
 export function normalizeEducationOptions(value) {

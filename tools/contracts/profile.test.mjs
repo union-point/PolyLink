@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { profileUpdate, period, educationInput, educationRange } from '../../js/profile/contracts.js';
+import { profileUpdate, period, educationInput, educationRange, profileDate } from '../../js/profile/contracts.js';
 import { profileOptions, saveEducation } from '../../js/data/mock/profile-state.js';
 import { createHttpProvider } from '../../js/data/http/provider.js';
 import { normalizeEducation } from '../../js/data/http/normalize.js';
@@ -8,6 +8,7 @@ import { validateCertificate } from '../../js/data/validation.js';
 import { fullExport } from '../../js/account-export.js';
 const options=profileOptions(),input={universityId:options.universities[0].id,startDate:'2020',endDate:'2020-01',isOngoing:false};
 test('education validates references and compares partial dates while preserving legacy days',()=>{
+ assert.equal(profileDate('2020'),'2020');assert.equal(profileDate('2020-01'),'հունվ. 2020 թ.');
  assert.equal(educationInput(input,options).startDate,'2020');
  assert.throws(()=>educationInput({...input,universityId:'missing'},options));
  assert.throws(()=>educationInput({...input,startDate:'2020-02',endDate:'2020-01'},options));
