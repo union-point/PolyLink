@@ -4,14 +4,9 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
-import java.awt.image.BufferedImage;
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
 import java.util.Base64;
 import java.util.Map;
 import java.util.UUID;
-import javax.imageio.ImageIO;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -97,44 +92,10 @@ public class EnrollmentAvatarController {
 
     static byte[] normalize(String content) {
         try {
-            byte[] bytes = Base64.getDecoder().decode(content);
-            if (bytes.length == 0 || bytes.length > 262144) throw AuthFailure.invalid();
-            try (var stream = ImageIO.createImageInputStream(new ByteArrayInputStream(bytes))) {
-                var readers = ImageIO.getImageReaders(stream);
-                if (!readers.hasNext()) throw AuthFailure.invalid();
-                var reader = readers.next();
-                try {
-                    reader.setInput(stream);
-                    if (!java.util.Set.of("JPEG", "PNG")
-                                    .contains(
-                                            reader.getFormatName()
-                                                    .toUpperCase(java.util.Locale.ROOT))
-                            || reader.getWidth(0) > 1024
-                            || reader.getHeight(0) > 1024) throw AuthFailure.invalid();
-                    var image = reader.read(0);
-                    var square = new BufferedImage(256, 256, BufferedImage.TYPE_INT_RGB);
-                    var graphics = square.createGraphics();
-                    try {
-                        graphics.setColor(java.awt.Color.WHITE);
-                        graphics.fillRect(0, 0, 256, 256);
-                        int side = Math.min(image.getWidth(), image.getHeight());
-                        int x = (image.getWidth() - side) / 2, y = (image.getHeight() - side) / 2;
-                        graphics.setRenderingHint(
-                                java.awt.RenderingHints.KEY_INTERPOLATION,
-                                java.awt.RenderingHints.VALUE_INTERPOLATION_BICUBIC);
-                        graphics.drawImage(image, 0, 0, 256, 256, x, y, x + side, y + side, null);
-                    } finally {
-                        graphics.dispose();
-                    }
-                    var output = new ByteArrayOutputStream();
-                    ImageIO.write(square, "jpeg", output);
-                    return output.toByteArray();
-                } finally {
-                    reader.dispose();
-                }
-            }
-        } catch (IOException | IllegalArgumentException exception) {
-            throw new AuthFailure(400, "VALIDATION", "Ընտրեք վավեր JPG կամ PNG պատկեր։");
+            return am.polylink.profile.ProfileImages.normalize(
+                    Base64.getDecoder().decode(content), true, true);
+        } catch (IllegalArgumentException exception) {
+            throw AuthFailure.invalid();
         }
     }
 }

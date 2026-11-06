@@ -115,6 +115,8 @@ public class SecurityConfiguration {
                         authorize
                                 .requestMatchers(
                                         HttpMethod.POST,
+                                        "/users/me/photo",
+                                        "/users/me/banner",
                                         "/users/me/education",
                                         "/users/me/licenses")
                                 .permitAll();
@@ -183,7 +185,9 @@ public class SecurityConfiguration {
                                         "/notifications/history",
                                         "/account/export/data",
                                         "/account/export/messages",
-                                        "/account/export/files/*")
+                                        "/account/export/files/*",
+                                        "/account/export/profile-media",
+                                        "/account/export/profile-media/*")
                                 .permitAll();
                         authorize.requestMatchers(HttpMethod.PATCH, "/settings").permitAll();
                         authorize

@@ -36,8 +36,9 @@ public final class IdentityBoundary extends OncePerRequestFilter {
         long limit =
                 "POST".equals(request.getMethod())
                                 && request.getRequestURI()
-                                        .matches("/chat/rooms/[0-9a-f-]{36}/attachments")
-                        ? 5_242_896
+                                        .matches(
+                                                "/chat/rooms/[0-9a-f-]{36}/attachments|/users/me/(photo|banner)")
+                        ? 5_259_264
                         : 2_100_000;
         if (request.getContentLengthLong() > limit) {
             response.setStatus(413);

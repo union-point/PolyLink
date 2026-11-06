@@ -15,11 +15,11 @@ test('ZIP rejects exports larger than the documented cap',()=>{
  assert.throws(()=>zip([['huge',new Uint8Array(100*1024*1024+1)]]),error=>error.code==='EXPORT_TOO_LARGE');
 });
 test('full export uses a header grant, walks pages and reports unavailable legacy assets',async()=>{
- const requests=[];const api={request:async request=>{requests.push(request);return {items:request.params.category==='profile'?[{FirstName:'Test',ProfilePhotoUrl:'https://example.invalid/private'}]:[],complete:true};}};
+ const requests=[];const api={request:async request=>{requests.push(request);if(request.url==='/account/export/profile-media')return [];return {items:request.params.category==='profile'?[{FirstName:'Test',ProfilePhotoUrl:'https://example.invalid/private'}]:[],complete:true};}};
  const identity={accountProof:async(url,data)=>{assert.equal(url,'/account/export/authorize');assert.equal(data.password,'secret');return {grant:'test-grant'};}};
  const chat={exportOwn:async options=>{assert.equal(options.headers['X-Export-Grant'],'test-grant');return {messages:[],unavailable:[{messageId:'bad',reason:'DATA_INTEGRITY'}]};}};
  const result=await fullExport(api,identity,chat,{password:'secret'});
- assert.equal(result.type,'application/zip');assert.equal(requests.length,9);
+ assert.equal(result.type,'application/zip');assert.equal(requests.length,10);
  for(const request of requests){assert.equal(request.headers['X-Export-Grant'],'test-grant');assert(!request.url.includes('test-grant'));}
 });
 test('browser permission denial does not enable notifications and opt-in is device-local',async()=>{

@@ -26,13 +26,21 @@ export async function fullExport(api,identity,chat,{password}){
     data[category]=[];let offset=0;
     for(;;){const page=await api.request({method:'get',url:'/account/export/data',params:{category,offset},headers});account(encoder.encode(JSON.stringify(page.items)).length);data[category].push(...page.items);if(page.complete)break;if(page.nextOffset<=offset)throw new DataError('CONTRACT','Export cursor did not advance.');offset=page.nextOffset;}
   }
+  const media=await api.request({method:'get',url:'/account/export/profile-media',headers});
+  const managedUrls=new Set();data.profileMedia=[];
+  for(const item of media){
+    const raw=await api.request({method:'get',url:`/account/export/profile-media/${encodeURIComponent(item.id)}`,headers,responseType:'arraybuffer'});
+    const bytes=raw instanceof Blob?new Uint8Array(await raw.arrayBuffer()):new Uint8Array(raw);
+    account(bytes.length);const path=`files/profile-${item.kind}-${item.id}.jpg`;files.push([path,bytes]);
+    data.profileMedia.push({...item,path});managedUrls.add(item.url);
+  }
   const messages=await chat.exportOwn({headers,exportUrl:'/account/export/messages',onSize:account});data.messages=messages.messages;unavailable.push(...(messages.unavailable||[]));
   for(const message of data.messages){
     if(message.attachment?.data){const binary=atob(message.attachment.data),bytes=Uint8Array.from(binary,c=>c.charCodeAt(0));const path=`files/message-${files.length+1}`;files.push([path,bytes]);delete message.attachment.data;message.attachment.path=path;}
   }
   // Legacy URLs have no authenticated object-store mapping; never fetch arbitrary remote URLs.
   for(const [category,rows] of Object.entries(data))for(const row of rows){
-    for(const [key,value] of Object.entries(row))if(typeof value==='string'&&/url$/i.test(key)&&value){
+    for(const [key,value] of Object.entries(row))if(typeof value==='string'&&/url$/i.test(key)&&value&&!managedUrls.has(value)){
       if(value.startsWith('data:')){
         const match=/^data:([^;,]+);base64,([A-Za-z0-9+/=]+)$/.exec(value);
         if(match){const bytes=Uint8Array.from(atob(match[2]),c=>c.charCodeAt(0)),path=`files/asset-${files.length+1}`;account(bytes.length);files.push([path,bytes]);row[key]={path,type:match[1]};continue;}

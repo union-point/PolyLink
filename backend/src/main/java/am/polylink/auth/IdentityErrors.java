@@ -25,6 +25,18 @@ public class IdentityErrors {
         return auth(AuthFailure.invalid());
     }
 
+    @ExceptionHandler(org.springframework.web.multipart.MaxUploadSizeExceededException.class)
+    public ResponseEntity<?> tooLarge(Exception ignored) {
+        return auth(
+                new AuthFailure(413, "PAYLOAD_TOO_LARGE", "Choose an image no larger than 5 MiB."));
+    }
+
+    @ExceptionHandler(
+            org.springframework.web.multipart.support.MissingServletRequestPartException.class)
+    public ResponseEntity<?> missingPart(Exception ignored) {
+        return auth(AuthFailure.invalid());
+    }
+
     @ExceptionHandler(org.springframework.dao.DataAccessException.class)
     public ResponseEntity<?> database(Exception ignored) {
         return auth(AuthFailure.unavailable());

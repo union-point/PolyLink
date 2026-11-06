@@ -162,6 +162,33 @@ public class ExportController {
                 "items", rows, "complete", rows.size() < 100, "nextOffset", offset + rows.size());
     }
 
+    @GetMapping("/account/export/profile-media")
+    public Object profileMedia(HttpServletRequest request) {
+        int user = authorized(request).account().id();
+        return Rows.query(
+                db,
+                "SELECT CONVERT(varchar(36),p.PhotoId) AS id,'avatar' AS kind,u.ProfilePhotoUrl AS url FROM auth.ProfileAvatars p JOIN dbo.Users u ON u.UserId=p.UserId WHERE p.UserId=? UNION ALL SELECT CONVERT(varchar(36),p.PhotoId),'cover',u.CoverPhotoUrl FROM auth.ProfileCovers p JOIN dbo.Users u ON u.UserId=p.UserId WHERE p.UserId=?",
+                user,
+                user);
+    }
+
+    @GetMapping("/account/export/profile-media/{id}")
+    public org.springframework.http.ResponseEntity<byte[]> profileMediaFile(
+            @PathVariable UUID id, HttpServletRequest request) {
+        int user = authorized(request).account().id();
+        var rows =
+                db.queryForList(
+                        "SELECT Content FROM auth.ProfileAvatars WHERE PhotoId=? AND UserId=? UNION ALL SELECT Content FROM auth.ProfileCovers WHERE PhotoId=? AND UserId=?",
+                        id,
+                        user,
+                        id,
+                        user);
+        if (rows.isEmpty()) throw new AuthFailure(404, "NOT_FOUND", "File unavailable.");
+        return org.springframework.http.ResponseEntity.ok()
+                .contentType(org.springframework.http.MediaType.IMAGE_JPEG)
+                .body((byte[]) rows.getFirst().get("Content"));
+    }
+
     @GetMapping("/account/export/files/{id}")
     public org.springframework.http.ResponseEntity<byte[]> file(
             @PathVariable UUID id, HttpServletRequest request) {
