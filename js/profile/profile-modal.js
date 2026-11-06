@@ -57,6 +57,9 @@ class Modal {
     const cancel = this.createButton('Չեղարկել', 'secondary-btn', () => this.close());
     const save = this.createButton('Պահպանել', 'primary-btn', async () => {
       if (this.saving || !this.ready || !onSave) return;
+      for (const control of body.querySelectorAll('input,select,textarea')) {
+        if (!control.reportValidity()) return;
+      }
       const data = this.getFormData(body);
       this.saving = true; save.setAttribute('aria-busy', 'true'); save.textContent = 'Պահպանվում է…';
       const controls = [...dialog.querySelectorAll('button,input,select,textarea,[contenteditable="true"]')];

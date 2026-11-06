@@ -62,23 +62,36 @@ try{
   await form.getByText('Կրկին փորձել',{exact:true}).click();
   await form.locator('[name=universityId] option').nth(1).waitFor({state:'attached'});assert.equal(await form.locator('select[name$=Id]').count(),4);
   assert(await form.locator('.modal-footer .primary-btn').isEnabled());
-  const university=form.locator('[name=universityId]'),searchField=university.locator('..').locator('[data-profile-search]');
-  await university.locator('..').locator('.profile-search-toggle').click();await searchField.fill('no-reference-matches-123');
-  assert.equal(await university.locator('option').count(),1,'Search filters existing references');
-  await searchField.press('Escape');assert(await searchField.isHidden());assert(await form.isVisible(),'Escape closes search before closing the dialog');
+  assert.equal(await form.locator('.profile-search-toggle,[data-profile-search],.profile-date-precision').count(),0);
+  for(const select of await form.locator('select[name$=Id]').all()){
+   assert.equal(await select.inputValue(),await select.locator('option').first().getAttribute('value'),'First reference is selected by default');
+  }
   await form.locator('.profile-modal-close').click();await form.waitFor({state:'detached'});
   assert(await page.locator('.education-section .fa-plus').evaluate(el=>document.activeElement===el),'Close restores the trigger focus');
   assert.notEqual(await page.evaluate(()=>document.body.style.overflow),'hidden','Closing restores page scrolling');
   await page.locator('.education-section .fa-plus').press('Enter');form=modalFor(page);await form.locator('[name=universityId] option').nth(1).waitFor({state:'attached'});
 
-  await form.locator('[name=universityId]').selectOption({index:1});await form.locator('[aria-label="Սկիզբ՝ ճշգրտություն"]').selectOption('YEAR');await form.locator('[name=startDate]').fill('2020');await form.locator('[name=isOngoing]').check();
+  await form.locator('[name=universityId]').selectOption({index:1});await form.locator('[name=startDate]').fill('2020-09-15');await form.locator('[name=isOngoing]').check();
+  assert(await form.locator('[name=endDate]').isDisabled());
   await save(page);assert.equal(await page.locator('.education-section .item-entry').count(),before+1);assert.match(await page.locator('.education-section .item-entry').last().textContent(),/2020.*Շարունակվում է/s);
+  const addedEducation=page.locator('.education-section .item-entry').last();
+  await addedEducation.locator('.edit-icon').dispatchEvent('click');form=modalFor(page);
+  assert.equal(await form.locator('[name=startDate]').inputValue(),'2020-09-01');
+  assert.equal(await form.locator('.profile-date-precision').count(),0);
+  await form.locator('[name=isOngoing]').uncheck();await form.locator('[name=endDate]').fill('2019-06-01');
+  await form.locator('.modal-footer .primary-btn').click();await form.locator('[role=alert]').waitFor();
+  await form.locator('[name=endDate]').fill('2024-06-01');
+  const actions=await form.locator('.modal-footer button').evaluateAll(buttons=>buttons.map(button=>({x:button.getBoundingClientRect().x,y:button.getBoundingClientRect().y})));
+  assert.equal(actions.length,3);assert(actions[0].x<actions[1].x&&actions[1].x<actions[2].x);assert(actions.every(action=>action.y===actions[0].y),'Edit actions share one row');
+  await page.screenshot({path:`/tmp/polylink-education-${role}.png`,fullPage:true});
+  await save(page);
   console.log(`Profile ${role}: education verified`);
   await page.locator('.licenses-section .fa-plus').dispatchEvent('click');form=modalFor(page);
-  await form.locator('[name=name]').fill('Profile certificate');await form.locator('[name=organization]').fill('Profile issuer');await form.locator('[name=credentialUrl]').fill('https://example.invalid/proof');
+  await form.locator('[name=name]').fill('Profile certificate');await form.locator('[name=organization]').fill('Profile issuer');await form.locator('[name=credentialUrl]').fill('https://example.invalid/proof');await form.locator('[name=issueDate]').fill('2024-06-17');
   if(mock)await page.evaluate(async()=>{const {mockControls}=await import('/js/data/client.js');await(await mockControls()).failNext('profiles.certificates.create','NETWORK','Retry certificate');});
   else {let failed=false;await context.route(api+'/users/me/licenses',async route=>{if(route.request().method()==='POST'&&!failed){failed=true;await route.abort('failed');}else await route.continue();});}
   await form.locator('.modal-footer .primary-btn').click();await form.locator('[role=alert]').waitFor();assert.equal(await form.locator('[name=name]').inputValue(),'Profile certificate');await save(page);
+  const certificates=await service(page,'get',await page.evaluate(async()=>{const {auth}=await import('/js/services/index.js');return (await auth.me()).id;}));assert.equal(certificates.licenses.find(row=>row.name==='Profile certificate').issueDate,'2024-06');
   await page.reload();await page.getByText('Profile certificate',{exact:true}).waitFor();assert.equal(await page.locator('.job-title').textContent(),'Profile engineer');
   await context.route('https://example.invalid/**',route=>route.fulfill({body:'Fixture credential',contentType:'text/plain'}));
   const popup=page.waitForEvent('popup');await page.locator('.licenses-section .show-cred-btn').last().click();const credential=await popup;await credential.waitForLoadState();assert.equal(credential.url(),'https://example.invalid/proof');await credential.close();
