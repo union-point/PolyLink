@@ -111,7 +111,7 @@
 .post-card .announcement-content p { margin: 8px 0; font: inherit; color: inherit; }
 .post-card .announcement-content :is(b, strong) { display: inline; margin: 0; font-size: inherit; color: inherit; }
 .post-card .announcement-content a { color: var(--primary-blue, #0a66c2); text-underline-offset: 3px; }
-.post-card .comments-section { margin: 0; padding: 0; border: 0; }
+.post-card .comments-section { display: block; min-width: 0; margin: 0; padding: 0; border: 0; }
 .post-card :is(button, select, textarea) { font: inherit; }
 .post-card button, .post-more { min-height: 36px; padding: 8px 12px; border: 1px solid transparent; border-radius: 20px; background: transparent; color: var(--font-color-secondary, #666); font-size: 13px; font-weight: 500; cursor: pointer; transition: background-color 160ms ease, color 160ms ease, border-color 160ms ease, transform 120ms ease; }
 .post-card button:hover, .post-more:hover { background: var(--window-background, #f4f7fb); color: var(--primary-blue, #0a66c2); }

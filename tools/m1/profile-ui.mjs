@@ -106,6 +106,16 @@ try{
   await page.locator('.announcements-section .fa-plus').dispatchEvent('click');const postForm=page.locator('.posts-modal');
   await postForm.locator('[name=sphereCode] option[value=other]').waitFor({state:'attached'});await postForm.locator('[name=title]').fill('Profile announcement');await postForm.locator('[name=category]').selectOption('job');await postForm.locator('[name=sphereCode]').selectOption('other');await postForm.locator('[contenteditable]').fill('Profile announcement body');await postForm.locator('[type=submit]').click();await postForm.waitFor({state:'detached'});
   const card=page.locator('.post-card').filter({hasText:'Profile announcement'});await card.waitFor();await card.locator('.comments-toggle').click();await card.locator('.comment-input').fill('Profile comment');await card.locator('.comment-btn').click();await card.getByText('Profile comment',{exact:true}).waitFor();
+  for(const width of [1280,390]){
+   await page.setViewportSize({width,height:900});
+   const layout=await card.evaluate(card=>{const actions=card.querySelector('.post-actions').getBoundingClientRect(),comments=card.querySelector('[data-comments]').getBoundingClientRect();return {actions:{bottom:actions.bottom,left:actions.left,width:actions.width},comments:{top:comments.top,left:comments.left,width:comments.width},overflow:document.documentElement.scrollWidth>innerWidth};});
+   assert(layout.comments.top>=layout.actions.bottom+12,'Comments expand below the action row');
+   assert(Math.abs(layout.comments.left-layout.actions.left)<=1&&Math.abs(layout.comments.width-layout.actions.width)<=1,'Comments use the full card width');assert(!layout.overflow,'Expanded comments fit the viewport');
+   await card.locator('.comments-toggle').click();assert(await card.locator('[data-comments]').isHidden());await card.locator('.comments-toggle').click();await card.getByText('Profile comment',{exact:true}).waitFor();
+   await card.locator('.emoji-toggle').click();await card.locator('[data-emoji="😊"]').click();assert.equal(await card.locator('.comment-input').inputValue(),'😊');await card.locator('.comment-input').fill('');
+   await page.screenshot({path:`/tmp/polylink-profile-comments-${width}-${role}.png`,fullPage:true});
+  }
+  await page.setViewportSize({width:1280,height:900});
   await card.locator('[data-post-edit]').click();await postForm.locator('[name=title]').fill('Edited profile announcement');await postForm.locator('[type=submit]').click();await postForm.waitFor({state:'detached'});await page.getByText('Edited profile announcement',{exact:true}).waitFor();
   await page.screenshot({path:`/tmp/polylink-profile-${mock?'mock':'http'}-${role}.png`,fullPage:true});
   const own=await page.evaluate(async()=>{const {auth}=await import('/js/services/index.js');return (await auth.me()).id;});
