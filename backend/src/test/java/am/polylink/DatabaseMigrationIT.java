@@ -14,6 +14,59 @@ import org.springframework.jdbc.datasource.SingleConnectionDataSource;
 
 class DatabaseMigrationIT {
     @Test
+    void adminCommandsStoreOnlyInvitationHashAndDisableWithoutChangingMembers() throws Exception {
+        inIsolatedDatabase(
+                connection -> {
+                    SchemaCommand.migrate(connection, "fresh");
+                    var db =
+                            new org.springframework.jdbc.core.JdbcTemplate(
+                                    new SingleConnectionDataSource(connection, true));
+                    var clock =
+                            java.time.Clock.fixed(
+                                    java.time.Instant.parse("2026-11-07T12:00:00.123456Z"),
+                                    java.time.ZoneOffset.UTC);
+                    connection.setAutoCommit(false);
+                    var invite =
+                            am.polylink.admin.AdminCommand.invite(
+                                    connection, " Owner@Example.org ", clock);
+                    connection.commit();
+                    var row = db.queryForMap("SELECT * FROM admin.Invitations");
+                    assertThat(row.get("Email")).isEqualTo("owner@example.org");
+                    assertThat((byte[]) row.get("TokenHash"))
+                            .isEqualTo(am.polylink.auth.Secrets.hash(invite.token()));
+                    assertThat(invite.expiresAt().toInstant())
+                            .isEqualTo(java.time.Instant.parse("2026-11-08T12:00:00.123Z"));
+                    assertThat(invite.toString()).doesNotContain(invite.token());
+                    db.execute(
+                            "INSERT admin.Admins(Email,FirstName,LastName,ClientSalt,ClientOpsLimit,ClientMemoryBytes,LoginVerifier,EmailVerifiedAt) VALUES (N'owner@example.org',N'Owner',N'Fixture',0x00000000000000000000000000000000,2,67108864,'fixture',SYSDATETIMEOFFSET())");
+                    int id = db.queryForObject("SELECT AdminId FROM admin.Admins", Integer.class);
+                    db.update(
+                            "INSERT admin.Sessions(TokenHash,AdminId,SessionVersion,CsrfHash,IdleExpiresAt,AbsoluteExpiresAt) VALUES (HASHBYTES('SHA2_256','session'),?,1,HASHBYTES('SHA2_256','csrf'),DATEADD(hour,1,SYSDATETIMEOFFSET()),DATEADD(day,1,SYSDATETIMEOFFSET()))",
+                            id);
+                    am.polylink.admin.AdminCommand.disable(connection, id, clock);
+                    am.polylink.admin.AdminCommand.disable(connection, id, clock);
+                    connection.commit();
+                    assertThat(db.queryForObject("SELECT Enabled FROM admin.Admins", Boolean.class))
+                            .isFalse();
+                    assertThat(
+                                    db.queryForObject(
+                                            "SELECT SessionVersion FROM admin.Admins", Long.class))
+                            .isEqualTo(2);
+                    assertThat(
+                                    db.queryForObject(
+                                            "SELECT RevokedAt FROM admin.Sessions", Object.class))
+                            .isNotNull();
+                    assertThatThrownBy(
+                                    () ->
+                                            am.polylink.admin.AdminCommand.invite(
+                                                    connection, "owner@example.org", clock))
+                            .hasMessageContaining("already exists");
+                    connection.rollback();
+                    connection.setAutoCommit(true);
+                });
+    }
+
+    @Test
     void v23SeparatesAdminIdentityAndPreservesMembersWithStableSystemReferences() throws Exception {
         inIsolatedDatabase(
                 connection -> {
