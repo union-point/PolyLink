@@ -101,7 +101,7 @@ Run `python3 tools/m1/verify.py --groups` for the full disposable M1–M6 accept
 
 ## Career forum
 
-After explicit V13 migration, start the backend with `FORUM_ENABLED=true`; no messenger flag is required. For historical discussions, complete the [V12 category/timezone review](docs/forum_implementation.md#existing-database-upgrade) first. New users require V14 registry enrollment; existing admitted accounts retain their access.
+After explicit V13 migration, start the backend; forum and messenger are enabled by default. For historical discussions, complete the [V12 category/timezone review](docs/forum_implementation.md#existing-database-upgrade) first. New users require V14 registry enrollment; existing admitted accounts retain their access.
 
 1. With two admitted users in separate browser profiles, open Forum. Confirm six backend-loaded categories and server-side filtering. Create a formatted topic, then open its returned URL.
 2. Reply as the second user, like/unlike the reply (including your own), and manually refresh the first user's topic. Sort newest/oldest/popular and load additional pages; the displayed total counts all replies.
@@ -115,7 +115,7 @@ After explicit V13 migration, start the backend with `FORUM_ENABLED=true`; no me
 
 ## Announcements and comments
 
-Use the [posts migration review/runbook](docs/posts_implementation.md) before explicitly enabling `POSTS_ENABLED=true`. This flag is independent of the forum flag.
+Use the [posts migration review/runbook](docs/posts_implementation.md) before starting the backend with posts enabled by default. This flag is independent of the forum flag.
 
 1. As a graduate, open Events and publish with an explicit title, rich body, type and database direction (including Other). Change the feed filters first and verify the form still requires its own direction.
 2. Open the announcement permalink in a separate lecturer profile. Expand comments and add plain text. Confirm only each comment author can edit/delete their own comment; owning the post does not grant moderation rights.

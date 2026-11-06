@@ -9,7 +9,6 @@ From the repository root:
 ```sh
 bash tools/local/setup.sh
 source tools/local/env.sh
-export FORUM_ENABLED=true
 (cd backend && ./mvnw spring-boot:run)
 ```
 
@@ -21,9 +20,9 @@ Setup preserves private configuration outside Git. Fill in existing SQL credenti
 | `DB_USERNAME`, `DB_PASSWORD` | Runtime SQL credentials; password has no usable default. |
 | `DB_TRUST_SERVER_CERTIFICATE` | `false`; use `true` only for a local self-signed SQL certificate. |
 | `IDENTITY_ENABLED` | `true` in application properties; requires HMAC/replay keys, mail, Transit and migrated schema. |
-| `MESSENGER_ENABLED` | `false` in application properties; local setup enables it. Requires identity. |
-| `FORUM_ENABLED` | `false`; enable explicitly after the historical backfill and schema prerequisites. Independent of messenger. |
-| `POSTS_ENABLED` | `false`; enable after V21 and reviewed historical timestamps. Independent of forum/messenger. |
+| `MESSENGER_ENABLED` | `true`; requires identity. Set to `false` to disable. |
+| `FORUM_ENABLED` | `true`; requires the migrated schema and historical backfill. Independent of messenger. |
+| `POSTS_ENABLED` | `true`; requires V21 and reviewed historical timestamps. Independent of forum/messenger. |
 | `FRONTEND_ORIGINS` | `http://localhost:8001`; mutation origin boundary. |
 | `SERVER_ADDRESS`, `SERVER_PORT` | `127.0.0.1`, `3004`. |
 

@@ -2,7 +2,7 @@
 
 A university networking application for graduates and lecturers, built with Java 25, Spring Boot and vanilla JavaScript. It supports registry-based enrollment, encrypted direct/group messaging, a career forum, announcements with comments, account settings and email-based recovery. Encryption-key setup is automatic.
 
-General profile editing APIs remain unavailable in HTTP mode. Announcement and comment APIs are implemented behind `POSTS_ENABLED`; see the [posts implementation and rollout procedure](docs/posts_implementation.md). See the [documentation index](docs/README.md) for current capabilities and limitations.
+General profile editing APIs remain unavailable in HTTP mode. Messenger, forum, announcement and comment APIs are enabled by default; see the [posts implementation and rollout procedure](docs/posts_implementation.md). See the [documentation index](docs/README.md) for current capabilities and limitations.
 
 ## Requirements — Linux and macOS
 
@@ -62,8 +62,6 @@ In each new terminal, open this checkout's root. For the **backend**, load the e
 
 ```sh
 source tools/local/env.sh
-export FORUM_ENABLED=true
-export POSTS_ENABLED=true # only after the V21 migration/review above
 (cd backend && ./mvnw spring-boot:run)
 ```
 

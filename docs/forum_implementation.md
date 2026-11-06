@@ -4,7 +4,7 @@ The career forum follows `forum_decisions.md`. Access requires authoritative adm
 
 ## API
 
-Enable `FORUM_ENABLED=true` after explicitly applying the matching schema through V21 and completing the V13 historical review where needed. Forum access does not depend on the messenger flag. Every route requires the existing bearer session and admission; mutation origins follow the shared identity boundary.
+Forum is enabled by default. Start the backend after explicitly applying the matching schema through V21 and completing the V13 historical review where needed. Forum access does not depend on the messenger flag. Every route requires the existing bearer session and admission; mutation origins follow the shared identity boundary.
 
 | Method | Route | Input |
 | --- | --- | --- |
@@ -59,4 +59,4 @@ An authorized database operator can run `ForumMaintenanceCommand takedown-topic 
 
 `bash tools/local/test.sh --full` passed on Linux with JDK 25, disposable SQL Server/OpenBao/Mailpit services and headless Chromium: 12 local-tool tests, 48 client/contract tests, 11 backend unit tests and 48 SQL integration tests, followed by the existing M1–M6 browser phases and both forum browser suites. Focused forum acceptance also passed with messenger endpoints disabled. The live browser suite verifies both roles, manual refresh, forum event delivery to the browser API, notification navigation, real stale-edit/validation responses and a committed create whose response is deliberately lost before retry. Mock browser coverage includes formatting, cursor pagination/counts, conflict comparison, drafts, deletion confirmation and mobile/themes. Browser notification presentation is substituted in automation; these results do not establish native OS notification appearance or macOS execution.
 
-The working application database was not migrated by these checks. Production enablement still requires the explicit V12/V13 workflow where applicable, `FORUM_ENABLED=true`, and the reporting/operator prerequisites above.
+The working application database was not migrated by these checks. Production enablement still requires the explicit V12/V13 workflow where applicable, and the reporting/operator prerequisites above.

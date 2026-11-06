@@ -4,7 +4,7 @@ Implemented 29 October 2026 against [approved decisions](posts_decisions.md) and
 
 ## Availability and behavior
 
-Apply the matching schema through V21 and complete historical timestamp review before setting `POSTS_ENABLED=true`. The default is false. Posts require identity, independently of `FORUM_ENABLED` and `MESSENGER_ENABLED`. Startup never applies migrations. This work does not migrate the working database or deploy the application.
+Apply the matching schema through V21 and complete historical timestamp review before starting the backend. Posts are enabled by default; set `POSTS_ENABLED=false` to disable them. Posts require identity, independently of `FORUM_ENABLED` and `MESSENGER_ENABLED`. Startup never applies migrations. This work does not migrate the working database or deploy the application.
 
 Admitted members read the shared feed regardless of author profile privacy; graduates and lecturers publish and comment. Capabilities and author-only mutations come from the server. Announcement ownership grants no rights over another author's comment. Deletion removes activity, comments and the announcement in one transaction. Account locks are acquired in numeric order before parent/child locks; admission, ownership and target existence are rechecked under those locks.
 
@@ -74,7 +74,7 @@ source tools/local/env.sh
 ./backend/mvnw -f backend/pom.xml compile exec:java -Dexec.mainClass=am.polylink.database.SchemaCommand -Dexec.args=fresh
 ```
 
-An empty installation proceeds through V21 without inventing historical data. After V20, legacy inspect/dry-run/apply commands reject further timestamp review; they remain available for staged upgrades at V12/V18. It does not seed admitted users. Only after the complete schema and application checks succeed, explicitly enable `POSTS_ENABLED=true` for the matching backend.
+An empty installation proceeds through V21 without inventing historical data. After V20, legacy inspect/dry-run/apply commands reject further timestamp review; they remain available for staged upgrades at V12/V18. It does not seed admitted users. Start the matching backend only after the complete schema and application checks succeed; posts are enabled by default.
 
 ### Existing database upgrade and historical review
 
