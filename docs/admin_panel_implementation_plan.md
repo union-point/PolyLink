@@ -1,6 +1,6 @@
 # Admin panel implementation plan
 
-Date: 7 November 2026. Status: delivery in progress. This document records the target plan; see [admin access implementation](admin_implementation.md) for access/operations and [reference services](admin_references.md) for V24, implemented reference CRUD and the dependency-lock protocol. Registry normalization/CRUD, post-type adaptation, mock management and the three management pages remain planned. Post-type mutations are explicitly gated until compatibility is delivered.
+Date: 7 November 2026. Status: delivery in progress. This document records the target plan; see [admin access implementation](admin_implementation.md) for access/operations and [reference services](admin_references.md) for V24, implemented reference CRUD and the dependency-lock protocol. V25 normalization and registry CRUD are implemented; see [registry services](admin_registry.md) for contracts, locking and verification. Post-type adaptation, mock management and the three management pages remain planned. Post-type mutations are explicitly gated until compatibility is delivered.
 
 The product authority is [admin panel decisions](admin_panel_decisions.md). The architecture, endpoint names and delivery sequence below are proposed implementation choices. Preserve the approved scope: one admin role, three management pages, local invitation/access commands, mandatory two-factor authentication, manual registry maintenance and no separate admin action audit log. Excel import is future work.
 

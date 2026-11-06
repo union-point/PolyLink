@@ -15,7 +15,8 @@ Start with the [project quickstart](../README.md). This index separates current 
 | [Profile API](profile_implementation.md) | Editing, education/certificates, public images, export and lifecycle. |
 | [Profile modules](../js/profile/README.md) | Profile controller responsibilities. |
 | [Admin access](admin_implementation.md) | Invitations, registration, mandatory 2FA, local access commands and delivery status. |
-| [Admin reference services](admin_references.md) | Protected reference CRUD, version checks and dependency locking; management screens and registry CRUD remain planned. |
+| [Admin reference services](admin_references.md) | Protected reference CRUD, version checks and dependency locking; management screens remain planned. |
+| [Admin registry services](admin_registry.md) | Lecturer/alumni CRUD, normalized identity keys, versions and linked-record protection. |
 | [Registry enrollment](registry_enrollment.md) | Admission, academic verification, avatars and maintenance. |
 | [Settings API](settings_backend.md) | Preferences, notification delivery and full export. |
 | [People search](search_implementation.md) | Search API, education matching, privacy, pagination and verification. |

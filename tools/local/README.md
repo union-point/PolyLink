@@ -10,6 +10,7 @@ Start with the [root quickstart](../../README.md). Scripts locate their own chec
 | `bash tools/local/test.sh` | Install pinned test dependencies; run setup, client/crypto, OpenAPI and backend checks. |
 | `bash tools/local/test.sh --full` | Include combined isolated SQL/SMTP/TLS/browser acceptance through the groups runner, including forum regressions. |
 | `bash tools/local/test.sh --forum` | Run focused forum SQL/mail/browser acceptance. |
+| `bash tools/local/test.sh --admin` | Run admin access, reference/registry CRUD, migration/enrollment and access-screen browser acceptance. |
 
 Simple starts remain explicit in the README: Maven for the backend, Python for the frontend, and Docker Compose for mail/OpenBao. Migrations remain explicit commands; new accounts use [registry enrollment](../../docs/registry_enrollment.md). Invitations are retired.
 

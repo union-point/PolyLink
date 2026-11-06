@@ -1,6 +1,6 @@
 # Admin access implementation and operations
 
-Status: access and reference-service slices, 7 November 2026. Product authority: [admin decisions](admin_panel_decisions.md). Reference contracts and locking: [reference services](admin_references.md). Remaining delivery: [implementation plan](admin_panel_implementation_plan.md).
+Status: access, reference-service and registry-service slices, 7 November 2026. Product authority: [admin decisions](admin_panel_decisions.md). Contracts and locking: [reference services](admin_references.md), [registry services](admin_registry.md). Remaining delivery: [implementation plan](admin_panel_implementation_plan.md).
 
 ## Implemented boundary
 
@@ -16,13 +16,13 @@ Admin sessions use independent Secure, HttpOnly, SameSite=Lax cookies and a sess
 
 ## Deliberately unfinished
 
-The three management pages and registry CRUD APIs are not implemented yet. Reference CRUD now enforces V23's system identities, all incoming dependency paths, stale-write versions and disable/write serialization; V24 supplies database-maintained versions. Enrollment uses the protected stable Polytechnic identity. All post-type mutations remain explicitly unavailable pending dynamic post-type consumers. Registry normalized-key migration, linked-registry concurrency guards and mock management parity remain subsequent work. No admin password-recovery or re-enable operation is currently exposed. Mandatory 2FA cannot be disabled. No invitation cancellation, Excel import or separate admin action audit log is implemented.
+The three management pages and mock management providers are not implemented yet. Lecturer/alumni search, detail and CRUD APIs now enforce normalized uniqueness, current versions and linked-record immutability. Reference CRUD now enforces V23's system identities, all incoming dependency paths, stale-write versions and disable/write serialization; V24 supplies database-maintained versions. Enrollment uses the protected stable Polytechnic identity. All post-type mutations remain explicitly unavailable pending dynamic post-type consumers. V25 adds Java-normalized binary identity keys, source binding and registry versions; enrollment and local claim correction share the registry/claim lock order. Mock management parity remains subsequent work. No admin password-recovery or re-enable operation is currently exposed. Mandatory 2FA cannot be disabled. No invitation cancellation, Excel import or separate admin action audit log is implemented.
 
 After successful login the current access page shows the authenticated admin identity and logout control. It does not advertise unfinished management actions. Keep this feature disabled for normal use until the remaining management and integration gates pass.
 
 ## Explicit rollout and local commands
 
-Admin HTTP routes default to disabled (`ADMIN_ENABLED=false`). Apply migrations through V24 explicitly using the existing [schema workflow](messenger/schema-and-migrations.md) before testing with `ADMIN_ENABLED=true`; startup does not migrate. Use a reviewed backup and a restored rehearsal database for rollout. These changes do not apply migrations to the working database automatically.
+Admin HTTP routes default to disabled (`ADMIN_ENABLED=false`). Apply migrations through V25 explicitly using the existing [schema workflow](messenger/schema-and-migrations.md) before testing with `ADMIN_ENABLED=true`; startup does not migrate. Use a reviewed backup and a restored rehearsal database for rollout. These changes do not apply migrations to the working database automatically.
 
 From the repository root, privately load the intended database's migration credentials as described in the backend runbook. Set the registration URL to the deployed frontend page, using HTTPS except for loopback development. Then issue an invitation:
 
@@ -71,4 +71,4 @@ Run `npm test --prefix tools/contracts` for provider/credential/CSRF contracts a
 bash tools/local/test.sh --admin
 ```
 
-The focused runner provisions uniquely named disposable SQL/OpenBao/mail resources, runs admin HTTP/SQL and migration integration checks, then exercises the registration/login screens in Chromium. Browser checks invoke the real invite/disable commands only against the disposable database. They cover invitation URL removal, password clearing, verification reload, password-only denial, mandatory 2FA, session reload, disabling and mobile overflow. Migration tests cover fresh/upgraded layouts, repeat validation, member preservation, exact invitation duration, schema-drift rejection and rollback on an unresolved Polytechnic identity. SQL/HTTP tests cover concurrent redemption/retries, wrong/replayed/foreign-browser/cross-purpose codes, CSRF, invitation expiry, resend budgets, session rotation/expiry, cleanup and disabled-session/challenge rejection.
+The focused runner provisions uniquely named disposable SQL/OpenBao/mail resources, runs admin access/reference/registry HTTP/SQL, enrollment and migration integration checks, then exercises the registration/login screens in Chromium. Browser checks invoke the real invite/disable commands only against the disposable database. They cover invitation URL removal, password clearing, verification reload, password-only denial, mandatory 2FA, session reload, disabling and mobile overflow. Migration tests cover fresh/upgraded layouts, repeat validation, member preservation, exact invitation duration, schema-drift rejection and rollback on an unresolved Polytechnic identity. SQL/HTTP tests cover concurrent redemption/retries, wrong/replayed/foreign-browser/cross-purpose codes, CSRF, invitation expiry, resend budgets, session rotation/expiry, cleanup and disabled-session/challenge rejection.
