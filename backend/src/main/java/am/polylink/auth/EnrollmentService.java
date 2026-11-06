@@ -514,7 +514,7 @@ public class EnrollmentService {
                                     account.id());
                             int university =
                                     db.queryForObject(
-                                            "SELECT UniversityId FROM dbo.Universities WHERE Name=N'Հայաստանի ազգային պոլիտեխնիկական համալսարան'",
+                                            "SELECT u.UniversityId FROM admin.SystemReferences p JOIN dbo.Universities u ON u.UniversityId=p.ReferenceId WHERE p.Resource='universities' AND p.SystemCode='polytechnic'",
                                             Integer.class);
                             if (graduate)
                                 db.update(

@@ -14,6 +14,56 @@ import org.springframework.jdbc.datasource.SingleConnectionDataSource;
 
 class DatabaseMigrationIT {
     @Test
+    void v24PreservesReferenceDataAndVersionsOfflineUpdates() throws Exception {
+        inIsolatedDatabase(
+                connection -> {
+                    var source = new SingleConnectionDataSource(connection, true);
+                    SchemaCommand.migrations(source, "23").migrate();
+                    var db = new org.springframework.jdbc.core.JdbcTemplate(source);
+                    var names =
+                            java.util.List.of(
+                                    "Universities",
+                                    "Institutes",
+                                    "Departments",
+                                    "Specializations",
+                                    "Professions",
+                                    "Degrees",
+                                    "PostTypes",
+                                    "Spheres",
+                                    "ForumCategories");
+                    var before =
+                            new java.util.HashMap<
+                                    String, java.util.List<java.util.Map<String, Object>>>();
+                    for (String table : names)
+                        before.put(
+                                table,
+                                db.queryForList("SELECT * FROM dbo." + table + " ORDER BY Name"));
+                    SchemaCommand.migrate(connection, "upgrade");
+                    SchemaCommand.migrate(connection, "upgrade");
+                    for (String table : names) {
+                        var after =
+                                db.queryForList("SELECT * FROM dbo." + table + " ORDER BY Name");
+                        for (var row : after) {
+                            assertThat((byte[]) row.remove("AdminVersion")).hasSize(8);
+                        }
+                        assertThat(after).isEqualTo(before.get(table));
+                    }
+                    byte[] version =
+                            db.queryForObject(
+                                    "SELECT AdminVersion FROM dbo.Universities", byte[].class);
+                    db.update("UPDATE dbo.Universities SET LogoUrl=N'offline-logo'");
+                    assertThat(
+                                    db.queryForObject(
+                                            "SELECT AdminVersion FROM dbo.Universities",
+                                            byte[].class))
+                            .isNotEqualTo(version);
+                    db.execute("ALTER TABLE dbo.Degrees DROP COLUMN AdminVersion");
+                    assertThatThrownBy(() -> SchemaCommand.assertCurrentSchema(connection))
+                            .hasMessageContaining("Schema differs");
+                });
+    }
+
+    @Test
     void adminCommandsStoreOnlyInvitationHashAndDisableWithoutChangingMembers() throws Exception {
         inIsolatedDatabase(
                 connection -> {
@@ -77,14 +127,15 @@ class DatabaseMigrationIT {
                             "INSERT dbo.Users(FirstName,LastName,Email,RoleId,LanguageId) SELECT N'Existing',N'Member',N'admin-migration@example.invalid',(SELECT TOP(1) RoleId FROM dbo.Roles),(SELECT TOP(1) Id FROM dbo.Languages)");
                     var members = db.queryForList("SELECT * FROM dbo.Users ORDER BY UserId");
                     var universities =
-                            db.queryForList("SELECT * FROM dbo.Universities ORDER BY UniversityId");
+                            db.queryForList(
+                                    "SELECT UniversityId,Name,IsVerified,LogoUrl FROM dbo.Universities ORDER BY UniversityId");
                     SchemaCommand.migrate(connection, "upgrade");
                     SchemaCommand.migrate(connection, "upgrade");
                     assertThat(db.queryForList("SELECT * FROM dbo.Users ORDER BY UserId"))
                             .isEqualTo(members);
                     assertThat(
                                     db.queryForList(
-                                            "SELECT * FROM dbo.Universities ORDER BY UniversityId"))
+                                            "SELECT UniversityId,Name,IsVerified,LogoUrl FROM dbo.Universities ORDER BY UniversityId"))
                             .isEqualTo(universities);
                     assertThat(
                                     db.queryForObject(

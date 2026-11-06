@@ -65,6 +65,45 @@ class EnrollmentIT {
             int id,
             Map<String, Object> profile) {}
 
+    @Test
+    void admissionUsesStablePolytechnicIdentityRatherThanUniversityLabel() throws Exception {
+        int university =
+                db.queryForObject(
+                        "SELECT ReferenceId FROM admin.SystemReferences WHERE SystemCode='polytechnic'",
+                        Integer.class);
+        String original =
+                db.queryForObject(
+                        "SELECT Name FROM dbo.Universities WHERE UniversityId=?",
+                        String.class,
+                        university);
+        int additional =
+                db.queryForObject(
+                        "INSERT dbo.Universities(Name,IsVerified) OUTPUT inserted.UniversityId VALUES (?,1)",
+                        Integer.class,
+                        "Additional " + UUID.randomUUID());
+        try {
+            db.update(
+                    "UPDATE dbo.Universities SET Name=? WHERE UniversityId=?",
+                    "Changed offline " + UUID.randomUUID(),
+                    university);
+            var a = applicant("graduate");
+            admit(a);
+            assertThat(
+                            db.queryForObject(
+                                    "SELECT UniversityId FROM dbo.Education WHERE UserId=?",
+                                    Integer.class,
+                                    a.id))
+                    .isEqualTo(university)
+                    .isNotEqualTo(additional);
+        } finally {
+            db.update(
+                    "UPDATE dbo.Universities SET Name=? WHERE UniversityId=?",
+                    original,
+                    university);
+            db.update("DELETE dbo.Universities WHERE UniversityId=?", additional);
+        }
+    }
+
     int ref(String table, String id) {
         return db.queryForObject(
                 "SELECT TOP(1) " + id + " FROM dbo." + table + " ORDER BY " + id, Integer.class);

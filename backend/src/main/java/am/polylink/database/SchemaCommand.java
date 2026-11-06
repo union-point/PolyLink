@@ -230,6 +230,25 @@ public final class SchemaCommand {
                                 Integer.class)
                         != 2) throw new IllegalStateException("Profile schema guards missing");
             }
+            if (version >= 24) {
+                for (var table : expectedForum.path("tables")) {
+                    if (!java.util.Set.of(
+                                    "Universities",
+                                    "Institutes",
+                                    "Departments",
+                                    "Specializations",
+                                    "Professions",
+                                    "Degrees",
+                                    "PostTypes",
+                                    "Spheres",
+                                    "ForumCategories")
+                            .contains(table.path("name").asText())) continue;
+                    ((tools.jackson.databind.node.ArrayNode) table.path("columns"))
+                            .add(
+                                    mapper.readTree(
+                                            "{\"name\":\"AdminVersion\",\"type\":\"timestamp\",\"maxLength\":8,\"precision\":0,\"scale\":0,\"nullable\":false}"));
+                }
+            }
             if (version >= 18) assertPostsAuxiliarySchema(connection, version);
             if (version >= 23) assertAdminSchema(connection);
             if (!expectedForum.equals(mapper.readTree(inventory(connection))))
