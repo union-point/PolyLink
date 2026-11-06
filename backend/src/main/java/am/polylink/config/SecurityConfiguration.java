@@ -85,7 +85,11 @@ public class SecurityConfiguration {
                                         "/auth/enrollment/options",
                                         "/auth/avatars/*",
                                         "/keys/me",
-                                        "/users/*")
+                                        "/users/*",
+                                        "/users/me/education",
+                                        "/users/me/education/options",
+                                        "/users/me/licenses",
+                                        "/users/media/covers/*")
                                 .permitAll();
                     }
                     if (enabled)
@@ -100,6 +104,27 @@ public class SecurityConfiguration {
                         authorize
                                 .requestMatchers(HttpMethod.DELETE, "/auth/enrollment/avatar")
                                 .permitAll();
+                    if (enabled) {
+                        authorize
+                                .requestMatchers(
+                                        HttpMethod.PUT,
+                                        "/users/me",
+                                        "/users/me/education/*",
+                                        "/users/me/licenses/*")
+                                .permitAll();
+                        authorize
+                                .requestMatchers(
+                                        HttpMethod.POST,
+                                        "/users/me/education",
+                                        "/users/me/licenses")
+                                .permitAll();
+                        authorize
+                                .requestMatchers(
+                                        HttpMethod.DELETE,
+                                        "/users/me/education/*",
+                                        "/users/me/licenses/*")
+                                .permitAll();
+                    }
                     if (enabled && messenger) {
                         authorize
                                 .requestMatchers(

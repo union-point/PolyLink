@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 @IdentityEnabled
 public class IdentityController {
+    private final am.polylink.profile.ProfileService profiles;
     private final PasswordChanges passwords;
     private final EnrollmentService enrollment;
     private final EnrollmentSessions enrollmentSessions;
@@ -20,6 +21,7 @@ public class IdentityController {
     private final org.springframework.jdbc.core.JdbcTemplate db;
 
     public IdentityController(
+            am.polylink.profile.ProfileService profiles,
             PasswordChanges passwords,
             EnrollmentService enrollment,
             EnrollmentSessions enrollmentSessions,
@@ -29,6 +31,7 @@ public class IdentityController {
             Secrets secrets,
             RateLimiter limits,
             org.springframework.jdbc.core.JdbcTemplate db) {
+        this.profiles = profiles;
         this.passwords = passwords;
         this.enrollment = enrollment;
         this.enrollmentSessions = enrollmentSessions;
@@ -230,42 +233,6 @@ public class IdentityController {
 
     @GetMapping("/users/{userId}")
     public Map<String, Object> ownProfile(@PathVariable int userId, HttpServletRequest request) {
-        var account = sessions.require(request).account();
-        boolean owner = account.id() == userId;
-        var visible =
-                Rows.query(
-                        db,
-                        "SELECT u.FirstName,u.LastName,u.Email,u.ShowEmail,u.IsProfilePublic,r.Name AS RoleName FROM dbo.Users u JOIN dbo.Roles r ON r.RoleId=u.RoleId JOIN auth.AccountSecurity a ON a.UserId=u.UserId WHERE u.UserId=? AND a.AdmissionStatus='ADMITTED' AND a.EmailVerifiedAt IS NOT NULL",
-                        userId);
-        if (visible.isEmpty()
-                || (!owner && !Boolean.TRUE.equals(visible.getFirst().get("IsProfilePublic"))))
-            throw new AuthFailure(404, "NOT_FOUND", "The profile is unavailable.");
-        var result = new LinkedHashMap<String, Object>();
-        if (owner) result.putAll(account.user());
-        else {
-            var profile = visible.getFirst();
-            result.put("id", Integer.toString(userId));
-            result.put("firstName", profile.get("FirstName"));
-            result.put("lastName", profile.get("LastName"));
-            result.put(
-                    "role", profile.get("RoleName").toString().toLowerCase(java.util.Locale.ROOT));
-            result.put("onboardingComplete", true);
-            if (Boolean.TRUE.equals(profile.get("ShowEmail")))
-                result.put("email", profile.get("Email"));
-        }
-        result.put("canOpenProfile", true);
-        var row =
-                Rows.query(
-                                db,
-                                "SELECT Specialization,About,ProfilePhotoUrl,CoverPhotoUrl FROM dbo.Users WHERE UserId=?",
-                                userId)
-                        .getFirst();
-        result.put("jobTitle", Objects.toString(row.get("Specialization"), ""));
-        result.put("description", Objects.toString(row.get("About"), ""));
-        result.put("avatar", Objects.toString(row.get("ProfilePhotoUrl"), ""));
-        result.put("cover", owner ? Objects.toString(row.get("CoverPhotoUrl"), "") : "");
-        result.put("education", List.of());
-        result.put("licenses", List.of());
-        return result;
+        return profiles.get(sessions.require(request).account().id(), userId);
     }
 }
