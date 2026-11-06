@@ -92,6 +92,16 @@ class ProfileIT {
         String path = "/users/me/education/" + ed.path("id").asText();
         assertThat(ed.path("startDate").asText()).isEqualTo("2020");
         assertThat(ed.path("endDate").asText()).isEqualTo("2020-01");
+        var people =
+                call(a, "GET", "/search/people?q=Synthetic&year=2020", null, 200).path("items");
+        boolean found = false;
+        for (var person : people)
+            if (person.path("id").asText().equals("" + a.id())) {
+                assertThat(person.path("matchedEducation").get(0).path("startDate").asText())
+                        .isEqualTo("2020");
+                found = true;
+            }
+        assertThat(found).isTrue();
         call(b, "PUT", path, education(), 404);
         call(b, "DELETE", path, null, 404);
         var invalid = education();

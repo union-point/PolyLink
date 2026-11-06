@@ -179,7 +179,7 @@ public class SearchService {
             var educations =
                     Rows.query(
                             db,
-                            "SELECT e.UserId,e.EducationId,un.Name AS Institution,d.Name AS Degree,i.Name AS Institute,s.Name AS Specialization,e.StartDate,e.EndDate FROM dbo.Education e LEFT JOIN dbo.Universities un ON un.UniversityId=e.UniversityId LEFT JOIN dbo.Degrees d ON d.DegreeId=e.DegreeId LEFT JOIN dbo.Institutes i ON i.InstituteId=e.InstituteId LEFT JOIN dbo.Specializations s ON s.SpecializationId=e.SpecializationId WHERE e.UserId IN ("
+                            "SELECT e.UserId,e.EducationId,un.Name AS Institution,d.Name AS Degree,i.Name AS Institute,s.Name AS Specialization,e.StartDate,e.EndDate,e.StartPrecision,e.EndPrecision,e.IsOngoing FROM dbo.Education e LEFT JOIN dbo.Universities un ON un.UniversityId=e.UniversityId LEFT JOIN dbo.Degrees d ON d.DegreeId=e.DegreeId LEFT JOIN dbo.Institutes i ON i.InstituteId=e.InstituteId LEFT JOIN dbo.Specializations s ON s.SpecializationId=e.SpecializationId WHERE e.UserId IN ("
                                     + ids
                                     + ")"
                                     + conditions
@@ -199,6 +199,16 @@ public class SearchService {
                     entry.put(
                             Character.toLowerCase(key.charAt(0)) + key.substring(1),
                             row.get(key) == null ? null : row.get(key).toString());
+                for (String endpoint : List.of("Start", "End")) {
+                    var date = (java.sql.Date) row.get(endpoint + "Date");
+                    entry.put(
+                            endpoint.toLowerCase() + "Date",
+                            new am.polylink.profile.ProfileValues.Period(
+                                            date == null ? null : date.toLocalDate(),
+                                            (String) row.get(endpoint + "Precision"))
+                                    .value());
+                }
+                entry.put("isOngoing", row.get("IsOngoing"));
                 @SuppressWarnings("unchecked")
                 var records =
                         (List<Map<String, Object>>)

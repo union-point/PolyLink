@@ -14,6 +14,7 @@ test('education validates references and compares partial dates while preserving
  assert.throws(()=>educationInput({...input,startDate:'2020-02',endDate:'2020-01'},options));
  assert.throws(()=>educationInput({...input,isOngoing:true},options));
  assert.throws(()=>period('2020-13','startDate'));assert.throws(()=>period('1899','startDate'));
+ assert.equal(educationInput({...input,startDate:'1899-02-28'},options,{startDate:'1899-02-28'}).startDate,'1899-02-28');
  const saved=saveEducation({}, {...input,startDate:'2019-09-23'}, {startDate:'2019-09-23'});assert.equal(saved.startPrecision,'DAY');assert.equal(saved.institution,options.universities[0].name);
  assert.equal(normalizeEducation({id:'unknown',startDate:null,endDate:null}).startDate,null);
  const dto=normalizeEducation({id:'1',...saved});assert.equal(dto.startDate,'2019-09-23');assert.equal(dto.universityId,input.universityId);

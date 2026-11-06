@@ -7,7 +7,7 @@ export function normalizeSearchPerson(value) {
   const firstName = text(value.firstName), lastName = text(value.lastName);
   return { id: id(value.id), firstName, lastName, name: `${firstName} ${lastName}`.trim(), role: value.role,
     onboardingComplete: value.onboardingComplete === true, canOpenProfile: value.canOpenProfile, jobTitle: text(value.jobTitle),
-    matchedEducation: value.matchedEducation.map(entry => ({ id: id(entry.id), institution: text(entry.institution), degree: text(entry.degree), institute: text(entry.institute), specialization: text(entry.specialization), startDate: text(entry.startDate), endDate: text(entry.endDate) })) };
+    matchedEducation: value.matchedEducation.map(entry => ({ id: id(entry.id), isOngoing: entry.isOngoing === true, institution: text(entry.institution), degree: text(entry.degree), institute: text(entry.institute), specialization: text(entry.specialization), startDate: text(entry.startDate), endDate: text(entry.endDate) })) };
 }
 export function normalizeSearchPage(value) {
   if (!value || !Array.isArray(value.items) || typeof value.hasMore !== 'boolean' || (value.hasMore ? typeof value.nextCursor !== 'string' || !value.nextCursor : value.nextCursor !== null)) invalid();

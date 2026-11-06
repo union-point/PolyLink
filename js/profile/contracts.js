@@ -11,7 +11,7 @@ export function period(value, field, allowDay=false) {
   if(value==null||value==='')return null;
   if(typeof value!=='string'||!(allowDay?/^\d{4}(?:-\d{2}(?:-\d{2})?)?$/:/^\d{4}(?:-\d{2})?$/).test(value))invalid(field);
   const [year,month,day]=value.split('-').map(Number);
-  if(year<1900||year>2200||(month!=null&&(month<1||month>12))||(day!=null&&(day<1||day>new Date(Date.UTC(year,month,0)).getUTCDate())))invalid(field);
+  if(year<1||((year<1900||year>2200)&&!(allowDay&&value.length===10))||(month!=null&&(month<1||month>12))||(day!=null&&(day<1||day>new Date(Date.UTC(year,month,0)).getUTCDate())))invalid(field);
   return value;
 }
 export function educationInput(data, options, old={}) {

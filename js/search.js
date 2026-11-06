@@ -1,10 +1,11 @@
+import { educationRange } from './profile/contracts.js';
 import { openDirectWithUnblock } from './chat/direct-contact.js';
 import { search, chat } from './services/index.js';
 import { bootstrap, start, stateMessage, pending, confirmAction } from './shared/ui.js';
 import { escapeHtml as e } from './shared/content.js';
 
 export function educationHtml(records) {
-  const record = entry => `<div class="search-education"><p>${e([entry.institution, entry.degree].filter(Boolean).join(' · '))}</p><p>${e([entry.specialization, entry.institute].filter(Boolean).join(' · '))}</p><p>${e([entry.startDate, entry.endDate].filter(Boolean).join(' — '))}</p></div>`;
+  const record = entry => `<div class="search-education"><p>${e([entry.institution, entry.degree].filter(Boolean).join(' · '))}</p><p>${e([entry.specialization, entry.institute].filter(Boolean).join(' · '))}</p><p>${e(educationRange(entry))}</p></div>`;
   if (!records.length) return '<p>Կրթությունը նշված չէ</p>';
   return record(records[0]) + (records.length > 1 ? `<details><summary>Եվս ${records.length - 1}</summary>${records.slice(1).map(record).join('')}</details>` : '');
 }

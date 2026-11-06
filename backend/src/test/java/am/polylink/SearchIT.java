@@ -103,13 +103,14 @@ class SearchIT {
                         new Object[] {s1, i1, "2020-07-01"},
                         new Object[] {null, null, null}))
             db.update(
-                    "INSERT dbo.Education(UserId,UniversityId,DegreeId,SpecializationId,InstituteId,EndDate) VALUES (?,?,?,?,?,?)",
+                    "INSERT dbo.Education(UserId,UniversityId,DegreeId,SpecializationId,InstituteId,EndDate,EndPrecision) VALUES (?,?,?,?,?,?,?)",
                     target,
                     university,
                     degree,
                     values[0],
                     values[1],
-                    values[2]);
+                    values[2],
+                    values[2] == null ? null : "DAY");
         assertThat(items(search.page(0, filters(name, s1, i2, null, 50), null))).isEmpty();
         assertThat(items(search.page(0, filters(name, s1, null, 2024, 50), null))).isEmpty();
         var sqls = new ArrayList<String>();
@@ -200,7 +201,7 @@ class SearchIT {
         } while (cursor != null);
         assertThat(found).doesNotHaveDuplicates().hasSize(211);
         db.update(
-                "INSERT dbo.Education(UserId,UniversityId,DegreeId,EndDate) VALUES (?,?,?,'9999-12-31')",
+                "INSERT dbo.Education(UserId,UniversityId,DegreeId,EndDate,EndPrecision) VALUES (?,?,?,'9999-12-31','DAY')",
                 target,
                 university,
                 degree);
