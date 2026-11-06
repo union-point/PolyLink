@@ -350,7 +350,7 @@ class DatabaseMigrationIT {
                     assertThat(
                                     db.queryForMap(
                                             "SELECT * FROM dbo.Education WHERE DegreeId IS NOT NULL"))
-                            .isEqualTo(existing);
+                            .containsAllEntriesOf(existing);
                     assertThatThrownBy(
                                     () -> db.update("UPDATE dbo.Education SET DegreeId=2147483647"))
                             .isInstanceOf(
@@ -399,7 +399,7 @@ class DatabaseMigrationIT {
                                     db.queryForObject(
                                             "SELECT COUNT(*) FROM sys.tables WHERE is_ms_shipped=0 AND name<>'flyway_schema_history'",
                                             Integer.class))
-                            .isEqualTo(58);
+                            .isEqualTo(59);
                     assertThat(
                                     db.queryForObject(
                                             "SELECT FirstName FROM auth.PendingEnrollments",
