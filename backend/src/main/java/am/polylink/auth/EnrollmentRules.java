@@ -1,18 +1,11 @@
 package am.polylink.auth;
 
-import java.text.Normalizer;
-import java.util.Locale;
-
 /** Shared matching contract: NFKC, Unicode whitespace collapse, ROOT lowercase, no fuzzy match. */
 public final class EnrollmentRules {
     private EnrollmentRules() {}
 
     public static String text(String input) {
-        if (input == null) return "";
-        return Normalizer.normalize(input, Normalizer.Form.NFKC)
-                .replaceAll("[\\p{Z}\\s]+", " ")
-                .strip()
-                .toLowerCase(Locale.ROOT);
+        return RegistryKeys.text(input);
     }
 
     public static String universityEmail(String input) {

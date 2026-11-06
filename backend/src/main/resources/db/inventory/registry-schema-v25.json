@@ -1,0 +1,304 @@
+{
+  "AlumniRegistry": {
+    "schema": "dbo",
+    "name": "AlumniRegistry",
+    "columns": [
+      {
+        "name": "AlumniRegistryId",
+        "type": "int",
+        "maxLength": 4,
+        "precision": 10,
+        "scale": 0,
+        "nullable": false,
+        "identitySeed": "1",
+        "identityIncrement": "1"
+      },
+      {
+        "name": "FirstName",
+        "type": "nvarchar",
+        "maxLength": 200,
+        "precision": 0,
+        "scale": 0,
+        "nullable": false,
+        "collation": "SQL_Latin1_General_CP1_CI_AS"
+      },
+      {
+        "name": "LastName",
+        "type": "nvarchar",
+        "maxLength": 200,
+        "precision": 0,
+        "scale": 0,
+        "nullable": false,
+        "collation": "SQL_Latin1_General_CP1_CI_AS"
+      },
+      {
+        "name": "DiplomaNumber",
+        "type": "nvarchar",
+        "maxLength": 200,
+        "precision": 0,
+        "scale": 0,
+        "nullable": false,
+        "collation": "SQL_Latin1_General_CP1_CI_AS"
+      },
+      {
+        "name": "StudyStartDate",
+        "type": "date",
+        "maxLength": 3,
+        "precision": 10,
+        "scale": 0,
+        "nullable": false
+      },
+      {
+        "name": "StudyEndDate",
+        "type": "date",
+        "maxLength": 3,
+        "precision": 10,
+        "scale": 0,
+        "nullable": false
+      },
+      {
+        "name": "SpecializationId",
+        "type": "int",
+        "maxLength": 4,
+        "precision": 10,
+        "scale": 0,
+        "nullable": true
+      },
+      {
+        "name": "ImportedAt",
+        "type": "datetime2",
+        "maxLength": 8,
+        "precision": 27,
+        "scale": 7,
+        "nullable": false,
+        "defaultName": "DF_AlumniRegistry_ImportedAt",
+        "defaultDefinition": "(sysdatetime())"
+      },
+      {
+        "name": "DiplomaKey",
+        "type": "binary",
+        "maxLength": 32,
+        "precision": 0,
+        "scale": 0,
+        "nullable": false
+      },
+      {
+        "name": "KeySourceHash",
+        "type": "binary",
+        "maxLength": 32,
+        "precision": 0,
+        "scale": 0,
+        "nullable": false
+      },
+      {
+        "name": "AdminVersion",
+        "type": "timestamp",
+        "maxLength": 8,
+        "precision": 0,
+        "scale": 0,
+        "nullable": false
+      }
+    ],
+    "indexes": [
+      {
+        "name": "PK__AlumniRe__CB45359FCBE5811A",
+        "type": "CLUSTERED",
+        "unique": true,
+        "primaryKey": true,
+        "uniqueConstraint": false,
+        "columns": [
+          {
+            "name": "AlumniRegistryId",
+            "descendingKey": false,
+            "included": false
+          }
+        ]
+      },
+      {
+        "name": "UX_AlumniRegistry_DiplomaKey",
+        "type": "NONCLUSTERED",
+        "unique": true,
+        "primaryKey": false,
+        "uniqueConstraint": false,
+        "columns": [
+          {
+            "name": "DiplomaKey",
+            "descendingKey": false,
+            "included": false
+          }
+        ]
+      }
+    ],
+    "foreignKeys": [
+      {
+        "name": "FK_AlumniRegistry_Specialization",
+        "targetSchema": "dbo",
+        "targetTable": "Specializations",
+        "onDelete": "NO_ACTION",
+        "onUpdate": "NO_ACTION",
+        "disabled": false,
+        "untrusted": false,
+        "columns": [
+          {
+            "source": "SpecializationId",
+            "target": "SpecializationId"
+          }
+        ]
+      }
+    ],
+    "checks": [
+      {
+        "name": "CK_AlumniRegistry_Dates",
+        "definition": "([StudyStartDate]<=[StudyEndDate])",
+        "disabled": false,
+        "untrusted": false
+      },
+      {
+        "name": "CK_AlumniRegistry_KeySource",
+        "definition": "([KeySourceHash]=CONVERT([binary](32),hashbytes('SHA2_256',CONVERT([varbinary](max),[DiplomaNumber]))))",
+        "disabled": false,
+        "untrusted": false
+      }
+    ]
+  },
+  "LecturerRegistry": {
+    "schema": "dbo",
+    "name": "LecturerRegistry",
+    "columns": [
+      {
+        "name": "LecturerRegistryId",
+        "type": "int",
+        "maxLength": 4,
+        "precision": 10,
+        "scale": 0,
+        "nullable": false,
+        "identitySeed": "1",
+        "identityIncrement": "1"
+      },
+      {
+        "name": "Email",
+        "type": "nvarchar",
+        "maxLength": 510,
+        "precision": 0,
+        "scale": 0,
+        "nullable": false,
+        "collation": "SQL_Latin1_General_CP1_CI_AS"
+      },
+      {
+        "name": "DepartmentId",
+        "type": "int",
+        "maxLength": 4,
+        "precision": 10,
+        "scale": 0,
+        "nullable": true
+      },
+      {
+        "name": "ImportedAt",
+        "type": "datetime2",
+        "maxLength": 8,
+        "precision": 27,
+        "scale": 7,
+        "nullable": false,
+        "defaultName": "DF_LecturerRegistry_ImportedAt",
+        "defaultDefinition": "(sysdatetime())"
+      },
+      {
+        "name": "FirstName",
+        "type": "nvarchar",
+        "maxLength": 200,
+        "precision": 0,
+        "scale": 0,
+        "nullable": true,
+        "collation": "SQL_Latin1_General_CP1_CI_AS"
+      },
+      {
+        "name": "LastName",
+        "type": "nvarchar",
+        "maxLength": 200,
+        "precision": 0,
+        "scale": 0,
+        "nullable": true,
+        "collation": "SQL_Latin1_General_CP1_CI_AS"
+      },
+      {
+        "name": "EmailKey",
+        "type": "binary",
+        "maxLength": 32,
+        "precision": 0,
+        "scale": 0,
+        "nullable": false
+      },
+      {
+        "name": "KeySourceHash",
+        "type": "binary",
+        "maxLength": 32,
+        "precision": 0,
+        "scale": 0,
+        "nullable": false
+      },
+      {
+        "name": "AdminVersion",
+        "type": "timestamp",
+        "maxLength": 8,
+        "precision": 0,
+        "scale": 0,
+        "nullable": false
+      }
+    ],
+    "indexes": [
+      {
+        "name": "PK__Lecturer__E802F7D0CAA35963",
+        "type": "CLUSTERED",
+        "unique": true,
+        "primaryKey": true,
+        "uniqueConstraint": false,
+        "columns": [
+          {
+            "name": "LecturerRegistryId",
+            "descendingKey": false,
+            "included": false
+          }
+        ]
+      },
+      {
+        "name": "UX_LecturerRegistry_EmailKey",
+        "type": "NONCLUSTERED",
+        "unique": true,
+        "primaryKey": false,
+        "uniqueConstraint": false,
+        "columns": [
+          {
+            "name": "EmailKey",
+            "descendingKey": false,
+            "included": false
+          }
+        ]
+      }
+    ],
+    "foreignKeys": [
+      {
+        "name": "FK_LecturerRegistry_Department",
+        "targetSchema": "dbo",
+        "targetTable": "Departments",
+        "onDelete": "NO_ACTION",
+        "onUpdate": "NO_ACTION",
+        "disabled": false,
+        "untrusted": false,
+        "columns": [
+          {
+            "source": "DepartmentId",
+            "target": "DepartmentId"
+          }
+        ]
+      }
+    ],
+    "checks": [
+      {
+        "name": "CK_LecturerRegistry_KeySource",
+        "definition": "([KeySourceHash]=CONVERT([binary](32),hashbytes('SHA2_256',CONVERT([varbinary](max),[Email]))))",
+        "disabled": false,
+        "untrusted": false
+      }
+    ]
+  }
+}

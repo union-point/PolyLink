@@ -249,6 +249,14 @@ public final class SchemaCommand {
                                             "{\"name\":\"AdminVersion\",\"type\":\"timestamp\",\"maxLength\":8,\"precision\":0,\"scale\":0,\"nullable\":false}"));
                 }
             }
+            if (version >= 25) {
+                var registry = mapper.readTree(resource("db/inventory/registry-schema-v25.json"));
+                var tables = (tools.jackson.databind.node.ArrayNode) expectedForum.path("tables");
+                for (int i = 0; i < tables.size(); i++) {
+                    var replacement = registry.get(tables.get(i).path("name").asText());
+                    if (replacement != null) tables.set(i, replacement.deepCopy());
+                }
+            }
             if (version >= 18) assertPostsAuxiliarySchema(connection, version);
             if (version >= 23) assertAdminSchema(connection);
             if (!expectedForum.equals(mapper.readTree(inventory(connection))))

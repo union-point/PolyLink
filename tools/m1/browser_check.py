@@ -20,9 +20,9 @@ def run(root,env,admin_sql,bao_request,root_token,messenger=False,continuity=Fal
     sql+="IF NOT EXISTS(SELECT 1 FROM dbo.Institutes) INSERT dbo.Institutes(Name) VALUES (N'Browser fixture'); IF NOT EXISTS(SELECT 1 FROM dbo.Specializations) INSERT dbo.Specializations(Name) VALUES (N'Browser fixture'); IF NOT EXISTS(SELECT 1 FROM dbo.Departments) INSERT dbo.Departments(Name) VALUES (N'Browser fixture'); IF NOT EXISTS(SELECT 1 FROM dbo.Professions) INSERT dbo.Professions(Name) VALUES (N'Browser fixture'); "
     for address,first,last,role in records:
         if role=='graduate':
-            sql+=f"INSERT dbo.AlumniRegistry(FirstName,LastName,DiplomaNumber,StudyStartDate,StudyEndDate,SpecializationId) SELECT N'{first}',N'{last}',N'{address}','2021-09-01','2025-06-01',(SELECT TOP(1) SpecializationId FROM dbo.Specializations ORDER BY SpecializationId); "
+            sql+=f"INSERT dbo.AlumniRegistry(FirstName,LastName,DiplomaNumber,StudyStartDate,StudyEndDate,SpecializationId,DiplomaKey,KeySourceHash) SELECT N'{first}',N'{last}',N'{address}','2021-09-01','2025-06-01',(SELECT TOP(1) SpecializationId FROM dbo.Specializations ORDER BY SpecializationId),HASHBYTES('SHA2_256',N'{address}'),HASHBYTES('SHA2_256',N'{address}'); "
         else:
-            sql+=f"INSERT dbo.LecturerRegistry(Email,DepartmentId,FirstName,LastName) SELECT N'{address}',(SELECT TOP(1) DepartmentId FROM dbo.Departments ORDER BY DepartmentId),N'{first}',N'{last}'; "
+            sql+=f"INSERT dbo.LecturerRegistry(Email,DepartmentId,FirstName,LastName,EmailKey,KeySourceHash) SELECT N'{address}',(SELECT TOP(1) DepartmentId FROM dbo.Departments ORDER BY DepartmentId),N'{first}',N'{last}',HASHBYTES('SHA2_256',N'{address}'),HASHBYTES('SHA2_256',N'{address}'); "
     admin_sql(sql)
     # The HTTP and browser suites share one disposable DB and loopback IP.
     # Start browser scenarios with an independent rate-limit budget.

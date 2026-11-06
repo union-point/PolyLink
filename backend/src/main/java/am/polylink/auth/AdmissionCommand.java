@@ -71,10 +71,31 @@ public final class AdmissionCommand {
                             || !args[2].equals(a.get("RoleCode"))
                             || Rows.query(
                                             db,
-                                            "SELECT UserId FROM auth.RegistryClaims WITH(UPDLOCK,HOLDLOCK) WHERE UserId=?",
+                                            "SELECT UserId FROM auth.RegistryClaims WHERE UserId=?",
                                             user)
                                     .isEmpty()) throw AuthFailure.denied();
                     int registry = Integer.parseInt(args[3]);
+                    if (registry < 1)
+                        throw new IllegalArgumentException("Supply a positive registry ID");
+                    boolean lecturer = args[2].equals("lecturer");
+                    String column = lecturer ? "LecturerRegistryId" : "AlumniRegistryId";
+                    int old =
+                            db.queryForObject(
+                                    "SELECT " + column + " FROM auth.RegistryClaims WHERE UserId=?",
+                                    Integer.class,
+                                    user);
+                    for (int record : new TreeSet<>(List.of(old, registry))) {
+                        if (RegistryLinks.lock(db, lecturer, record) == null)
+                            throw new IllegalArgumentException("Registry record does not exist");
+                        var claims = RegistryLinks.claims(db, lecturer, record);
+                        if (record == registry
+                                && claims.stream()
+                                        .anyMatch(
+                                                claim ->
+                                                        ((Number) claim.get("UserId")).intValue()
+                                                                != user))
+                            throw new IllegalArgumentException("Registry record is already linked");
+                    }
                     db.update(
                             "INSERT auth.RegistryClaimAudit(UserId,AlumniRegistryId,LecturerRegistryId,Action,Actor) SELECT UserId,AlumniRegistryId,LecturerRegistryId,'CORRECT_OLD',? FROM auth.RegistryClaims WHERE UserId=?",
                             actor,

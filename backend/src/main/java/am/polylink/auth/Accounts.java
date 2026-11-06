@@ -68,7 +68,7 @@ public class Accounts {
     }
 
     public static String email(String value) {
-        return value.strip().toLowerCase(Locale.ROOT);
+        return RegistryKeys.email(value);
     }
 
     public Optional<Account> find(String email) {

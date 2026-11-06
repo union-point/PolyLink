@@ -14,6 +14,89 @@ import org.springframework.jdbc.datasource.SingleConnectionDataSource;
 
 class DatabaseMigrationIT {
     @Test
+    void v25BackfillsJavaNormalizedKeysWithoutChangingRegistryDisplayOrIds() throws Exception {
+        inIsolatedDatabase(
+                connection -> {
+                    var source = new SingleConnectionDataSource(connection, true);
+                    SchemaCommand.migrations(source, "24").migrate();
+                    var db = new org.springframework.jdbc.core.JdbcTemplate(source);
+                    String email = " Owner@Example.org ", diploma = "ＡＢＣ\u00a0 １２３";
+                    db.update("INSERT dbo.LecturerRegistry(Email) VALUES (?)", email);
+                    db.update(
+                            "INSERT dbo.AlumniRegistry(FirstName,LastName,DiplomaNumber,StudyStartDate,StudyEndDate) VALUES (N'Արամ',N'Fixture',?,'2020-09-01','2024-06-01')",
+                            diploma);
+                    db.update(
+                            "INSERT dbo.AlumniRegistry(FirstName,LastName,DiplomaNumber,StudyStartDate,StudyEndDate) VALUES (N'Expanded',N'Unicode',?,'2020-09-01','2024-06-01')",
+                            "ﷺ".repeat(100));
+                    var before =
+                            db.queryForList(
+                                    "SELECT * FROM dbo.AlumniRegistry ORDER BY AlumniRegistryId");
+                    SchemaCommand.migrate(connection, "upgrade");
+                    SchemaCommand.migrate(connection, "upgrade");
+                    var after =
+                            db.queryForList(
+                                    "SELECT * FROM dbo.AlumniRegistry ORDER BY AlumniRegistryId");
+                    for (var row : after) {
+                        String raw = (String) row.get("DiplomaNumber");
+                        assertThat((byte[]) row.remove("DiplomaKey"))
+                                .isEqualTo(am.polylink.auth.RegistryKeys.diploma(raw));
+                        assertThat((byte[]) row.remove("KeySourceHash"))
+                                .isEqualTo(am.polylink.auth.RegistryKeys.source(raw));
+                        assertThat((byte[]) row.remove("AdminVersion")).hasSize(8);
+                    }
+                    assertThat(after).isEqualTo(before);
+                    var lecturer = db.queryForMap("SELECT * FROM dbo.LecturerRegistry");
+                    assertThat(lecturer.get("Email")).isEqualTo(email);
+                    assertThat(lecturer.get("FirstName")).isNull();
+                    assertThat((byte[]) lecturer.get("EmailKey"))
+                            .isEqualTo(am.polylink.auth.RegistryKeys.lecturer(email));
+                    assertThatThrownBy(
+                                    () ->
+                                            db.update(
+                                                    "UPDATE dbo.LecturerRegistry SET Email=N'changed@example.org'"))
+                            .isInstanceOf(
+                                    org.springframework.dao.DataIntegrityViolationException.class);
+                    db.execute(
+                            "ALTER TABLE dbo.LecturerRegistry DROP CONSTRAINT CK_LecturerRegistry_KeySource");
+                    assertThatThrownBy(() -> SchemaCommand.assertCurrentSchema(connection))
+                            .hasMessageContaining("Schema differs");
+                });
+    }
+
+    @Test
+    void v25RefusesNormalizedCollisionsBeforeChangingEitherRegistry() throws Exception {
+        for (boolean lecturer : java.util.List.of(true, false))
+            inIsolatedDatabase(
+                    connection -> {
+                        var source = new SingleConnectionDataSource(connection, true);
+                        SchemaCommand.migrations(source, "24").migrate();
+                        var db = new org.springframework.jdbc.core.JdbcTemplate(source);
+                        if (lecturer) {
+                            db.update(
+                                    "INSERT dbo.LecturerRegistry(Email) VALUES (N' Owner@Example.org'),(N'owner@example.org')");
+                        } else {
+                            for (String diploma : java.util.List.of("AB\tC", "ab c"))
+                                db.update(
+                                        "INSERT dbo.AlumniRegistry(FirstName,LastName,DiplomaNumber,StudyStartDate,StudyEndDate) VALUES (N'Fixture',N'Collision',?,'2020-09-01','2024-06-01')",
+                                        diploma);
+                        }
+                        assertThatThrownBy(() -> SchemaCommand.migrate(connection, "upgrade"))
+                                .hasMessageContaining("normalization collision")
+                                .hasMessageContaining("IDs");
+                        assertThat(
+                                        db.queryForObject(
+                                                "SELECT COUNT(*) FROM sys.columns WHERE object_id IN (OBJECT_ID(N'dbo.LecturerRegistry'),OBJECT_ID(N'dbo.AlumniRegistry')) AND name IN ('EmailKey','DiplomaKey','KeySourceHash','AdminVersion')",
+                                                Integer.class))
+                                .isZero();
+                        assertThat(
+                                        db.queryForObject(
+                                                "SELECT MAX(TRY_CONVERT(int,version)) FROM dbo.flyway_schema_history WHERE success=1",
+                                                Integer.class))
+                                .isEqualTo(24);
+                    });
+    }
+
+    @Test
     void v24PreservesReferenceDataAndVersionsOfflineUpdates() throws Exception {
         inIsolatedDatabase(
                 connection -> {

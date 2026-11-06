@@ -130,9 +130,11 @@ class EnrollmentIT {
             String diploma = UUID.randomUUID().toString();
             int spec = ref("Specializations", "SpecializationId");
             db.update(
-                    "INSERT dbo.AlumniRegistry(FirstName,LastName,DiplomaNumber,StudyStartDate,StudyEndDate,SpecializationId) VALUES (N'Synthetic',N'Fixture',?,'2020-09-01','2024-06-01',?)",
+                    "INSERT dbo.AlumniRegistry(FirstName,LastName,DiplomaNumber,StudyStartDate,StudyEndDate,SpecializationId,DiplomaKey,KeySourceHash) VALUES (N'Synthetic',N'Fixture',?,'2020-09-01','2024-06-01',?,?,?)",
                     diploma,
-                    spec);
+                    spec,
+                    RegistryKeys.diploma(diploma),
+                    RegistryKeys.source(diploma));
             p.put("diplomaNumber", diploma);
             p.put("specializationId", spec);
             p.put("startYear", 2020);
@@ -141,9 +143,11 @@ class EnrollmentIT {
             int dept = ref("Departments", "DepartmentId"),
                     profession = ref("Professions", "ProfessionId");
             db.update(
-                    "INSERT dbo.LecturerRegistry(Email,DepartmentId,FirstName,LastName) VALUES (?,?,N'Synthetic',N'Fixture')",
+                    "INSERT dbo.LecturerRegistry(Email,DepartmentId,FirstName,LastName,EmailKey,KeySourceHash) VALUES (?,?,N'Synthetic',N'Fixture',?,?)",
                     email,
-                    dept);
+                    dept,
+                    RegistryKeys.lecturer(email),
+                    RegistryKeys.source(email));
             p.put("departmentId", dept);
             p.put("professionId", profession);
         }

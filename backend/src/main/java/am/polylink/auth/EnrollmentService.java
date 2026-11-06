@@ -308,9 +308,7 @@ public class EnrollmentService {
                 });
     }
 
-    /**
-     * A bounded registry lookup followed by JVM normalization avoids collation-based near matches.
-     */
+    /** Indexed normalized keys locate candidates; JVM comparison remains the admission proof. */
     private int match(Accounts.Account account, Map<String, Object> profile) {
         if (!Boolean.TRUE.equals(profile.get("ProfileComplete"))) throw mismatch();
         reference("Institutes", "InstituteId", (Integer) profile.get("InstituteId"));
@@ -320,36 +318,22 @@ public class EnrollmentService {
                 graduate
                         ? Rows.query(
                                 db,
-                                "SELECT TOP(1001) * FROM dbo.AlumniRegistry WITH(UPDLOCK,HOLDLOCK) WHERE SpecializationId=? AND YEAR(StudyStartDate)=? AND YEAR(StudyEndDate)=?",
-                                profile.get("SpecializationId"),
-                                profile.get("StartYear"),
-                                profile.get("EndYear"))
+                                "SELECT AlumniRegistryId FROM dbo.AlumniRegistry WHERE DiplomaKey=?",
+                                RegistryKeys.diploma((String) profile.get("DiplomaNumber")))
                         : Rows.query(
                                 db,
-                                "SELECT TOP(2) * FROM dbo.LecturerRegistry WITH(UPDLOCK,HOLDLOCK) WHERE Email=?",
-                                account.email());
-        if (graduate) {
-            if (rows.size() > 1000) throw mismatch();
-            rows =
-                    rows.stream()
-                            .filter(
-                                    r ->
-                                            EnrollmentRules.text((String) r.get("DiplomaNumber"))
-                                                    .equals(
-                                                            EnrollmentRules.text(
-                                                                    (String)
-                                                                            profile.get(
-                                                                                    "DiplomaNumber"))))
-                            .toList();
-        }
+                                "SELECT LecturerRegistryId FROM dbo.LecturerRegistry WHERE EmailKey=?",
+                                RegistryKeys.lecturer(account.email()));
         if (rows.size() != 1) throw mismatch();
-        var row = rows.getFirst();
+        String column = graduate ? "AlumniRegistryId" : "LecturerRegistryId";
+        int registry = ((Number) rows.getFirst().get(column)).intValue();
+        var row = RegistryLinks.lock(db, !graduate, registry);
+        if (row == null) throw mismatch();
         for (String key : List.of("FirstName", "LastName"))
             if (EnrollmentRules.text(row.get(key) == null ? null : row.get(key).toString())
                             .isEmpty()
                     || !EnrollmentRules.text((String) profile.get(key))
                             .equals(EnrollmentRules.text((String) row.get(key)))) throw mismatch();
-        String column = graduate ? "AlumniRegistryId" : "LecturerRegistryId";
         if (graduate) {
             if (!EnrollmentRules.text((String) profile.get("DiplomaNumber"))
                             .equals(EnrollmentRules.text((String) row.get("DiplomaNumber")))
@@ -361,14 +345,7 @@ public class EnrollmentService {
         } else if (!account.email().equals(Accounts.email((String) row.get("Email")))
                 || row.get("DepartmentId") == null
                 || !row.get("DepartmentId").equals(profile.get("DepartmentId"))) throw mismatch();
-        int registry = ((Number) row.get(column)).intValue();
-        if (!Rows.query(
-                        db,
-                        "SELECT UserId FROM auth.RegistryClaims WITH(UPDLOCK,HOLDLOCK) WHERE "
-                                + column
-                                + "=?",
-                        registry)
-                .isEmpty()) throw mismatch();
+        if (!RegistryLinks.claims(db, !graduate, registry).isEmpty()) throw mismatch();
         return registry;
     }
 

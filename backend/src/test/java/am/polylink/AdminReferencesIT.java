@@ -445,17 +445,17 @@ class AdminReferencesIT {
                                             + ",1,N'Pending',N'Fixture','lecturer',"
                                             + id;
                             case "lecturerRegistry" ->
-                                    "INSERT dbo.LecturerRegistry(Email,DepartmentId) VALUES (N'"
+                                    "DECLARE @identity nvarchar(255)=N'"
                                             + UUID.randomUUID()
-                                            + "@example.invalid',"
+                                            + "@example.invalid'; INSERT dbo.LecturerRegistry(Email,DepartmentId,EmailKey,KeySourceHash) VALUES (@identity,"
                                             + id
-                                            + ")";
+                                            + ",HASHBYTES('SHA2_256',@identity),HASHBYTES('SHA2_256',@identity))";
                             case "alumniRegistry" ->
-                                    "INSERT dbo.AlumniRegistry(FirstName,LastName,DiplomaNumber,StudyStartDate,StudyEndDate,SpecializationId) VALUES (N'Fixture',N'Consumer',N'"
+                                    "DECLARE @identity nvarchar(100)=N'"
                                             + UUID.randomUUID()
-                                            + "','2020-09-01','2024-06-01',"
+                                            + "'; INSERT dbo.AlumniRegistry(FirstName,LastName,DiplomaNumber,StudyStartDate,StudyEndDate,SpecializationId,DiplomaKey,KeySourceHash) VALUES (N'Fixture',N'Consumer',@identity,'2020-09-01','2024-06-01',"
                                             + id
-                                            + ")";
+                                            + ",HASHBYTES('SHA2_256',@identity),HASHBYTES('SHA2_256',@identity))";
                             case "lecturer" ->
                                     "INSERT dbo.Lecturers(UserId,DepartmentId,ProfessionId) SELECT "
                                             + member
@@ -722,12 +722,15 @@ class AdminReferencesIT {
     void committedUseReturnsHttpConflictAndPreventsPartialChanges() throws Exception {
         var value = create("departments", "Used " + UUID.randomUUID());
         String id = value.path("id").asText(), path = ROOT + "departments/" + id;
+        String email = UUID.randomUUID() + "@example.invalid";
         int record =
                 db.queryForObject(
-                        "INSERT dbo.LecturerRegistry(Email,DepartmentId) OUTPUT inserted.LecturerRegistryId VALUES (?,?)",
+                        "INSERT dbo.LecturerRegistry(Email,DepartmentId,EmailKey,KeySourceHash) OUTPUT inserted.LecturerRegistryId VALUES (?,?,?,?)",
                         Integer.class,
-                        UUID.randomUUID() + "@example.invalid",
-                        id);
+                        email,
+                        id,
+                        RegistryKeys.lecturer(email),
+                        RegistryKeys.source(email));
         try {
             failure(
                     browser.call(
@@ -756,9 +759,11 @@ class AdminReferencesIT {
             tx.executeWithoutResult(
                     status -> {
                         db.update(
-                                "INSERT dbo.LecturerRegistry(Email,DepartmentId) VALUES (?,?)",
+                                "INSERT dbo.LecturerRegistry(Email,DepartmentId,EmailKey,KeySourceHash) VALUES (?,?,?,?)",
                                 email,
-                                id);
+                                id,
+                                RegistryKeys.lecturer(email),
+                                RegistryKeys.source(email));
                         var waiting =
                                 executor.submit(
                                         () -> {
