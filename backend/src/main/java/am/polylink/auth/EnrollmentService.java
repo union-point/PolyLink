@@ -518,7 +518,7 @@ public class EnrollmentService {
                                             Integer.class);
                             if (graduate)
                                 db.update(
-                                        "INSERT dbo.Education(UserId,UniversityId,InstituteId,StartDate,EndDate,SpecializationId) SELECT ?,?,?,StudyStartDate,StudyEndDate,SpecializationId FROM dbo.AlumniRegistry WHERE AlumniRegistryId=?",
+                                        "INSERT dbo.Education(UserId,UniversityId,InstituteId,StartDate,EndDate,SpecializationId,StartPrecision,EndPrecision) SELECT ?,?,?,StudyStartDate,StudyEndDate,SpecializationId,CASE WHEN StudyStartDate IS NULL THEN NULL ELSE 'DAY' END,CASE WHEN StudyEndDate IS NULL THEN NULL ELSE 'DAY' END FROM dbo.AlumniRegistry WHERE AlumniRegistryId=?",
                                         account.id(),
                                         university,
                                         profile.get("InstituteId"),

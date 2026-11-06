@@ -198,6 +198,38 @@ public final class SchemaCommand {
                                     .remove("filterDefinition");
                 }
             }
+            if (version >= 22) {
+                for (var table : expectedForum.path("tables")) {
+                    if (!table.path("name").asText().equals("Education")) continue;
+                    ((tools.jackson.databind.node.ObjectNode) table)
+                            .set(
+                                    "checks",
+                                    mapper.readTree(
+                                            resource("db/inventory/profile-checks-v22.json")));
+                    var columns = (tools.jackson.databind.node.ArrayNode) table.path("columns");
+                    for (String name : java.util.List.of("StartPrecision", "EndPrecision"))
+                        columns.add(
+                                mapper.readTree(
+                                        "{\"name\":\""
+                                                + name
+                                                + "\",\"type\":\"varchar\",\"maxLength\":5,\"precision\":0,\"scale\":0,\"nullable\":true,\"collation\":\"SQL_Latin1_General_CP1_CI_AS\"}"));
+                    columns.add(
+                            mapper.readTree(
+                                    "{\"name\":\"IsOngoing\",\"type\":\"bit\",\"maxLength\":1,\"precision\":1,\"scale\":0,\"nullable\":false,\"defaultName\":\"DF_Education_IsOngoing\",\"defaultDefinition\":\"((0))\"}"));
+                }
+                var db =
+                        new org.springframework.jdbc.core.JdbcTemplate(
+                                new org.springframework.jdbc.datasource.SingleConnectionDataSource(
+                                        connection, true));
+                if (db.queryForObject(
+                                "SELECT COUNT(*) FROM sys.columns WHERE object_id=OBJECT_ID(N'auth.ProfileCovers') AND ((name='UserId' AND TYPE_NAME(user_type_id)='int' AND is_nullable=0) OR (name='PhotoId' AND TYPE_NAME(user_type_id)='uniqueidentifier' AND is_nullable=0) OR (name='Content' AND TYPE_NAME(user_type_id)='varbinary' AND max_length=-1 AND is_nullable=0))",
+                                Integer.class)
+                        != 3) throw new IllegalStateException("Profile cover inventory differs");
+                if (db.queryForObject(
+                                "SELECT COUNT(*) FROM sys.check_constraints WHERE name IN ('CK_Education_Precision','CK_ProfileCoverSize') AND is_disabled=0 AND is_not_trusted=0",
+                                Integer.class)
+                        != 2) throw new IllegalStateException("Profile schema guards missing");
+            }
             if (version >= 18) assertPostsAuxiliarySchema(connection, version);
             if (!expectedForum.equals(mapper.readTree(inventory(connection))))
                 throw new IllegalStateException(

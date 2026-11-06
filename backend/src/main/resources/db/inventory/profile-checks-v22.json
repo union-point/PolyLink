@@ -1,0 +1,8 @@
+[
+  {
+    "name": "CK_Education_Precision",
+    "definition": "(([StartDate] IS NULL AND [StartPrecision] IS NULL OR [StartDate] IS NOT NULL AND [StartPrecision] IS NOT NULL AND ([StartPrecision]='DAY' OR [StartPrecision]='MONTH' OR [StartPrecision]='YEAR')) AND ([EndDate] IS NULL AND [EndPrecision] IS NULL OR [EndDate] IS NOT NULL AND [EndPrecision] IS NOT NULL AND ([EndPrecision]='DAY' OR [EndPrecision]='MONTH' OR [EndPrecision]='YEAR')) AND ([IsOngoing]=(0) OR [EndDate] IS NULL))",
+    "disabled": false,
+    "untrusted": false
+  }
+]

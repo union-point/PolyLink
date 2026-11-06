@@ -14,6 +14,37 @@ import org.springframework.jdbc.datasource.SingleConnectionDataSource;
 
 class DatabaseMigrationIT {
     @Test
+    void v22PreservesLegacyDatesAndUnknownEndAndGuardsNewPrecision() throws Exception {
+        inIsolatedDatabase(
+                connection -> {
+                    var source = new SingleConnectionDataSource(connection, true);
+                    SchemaCommand.migrations(source, "21").migrate();
+                    var db = new org.springframework.jdbc.core.JdbcTemplate(source);
+                    db.execute(
+                            "INSERT dbo.Users(FirstName,LastName,Email,RoleId,LanguageId) SELECT N'Profile',N'Fixture',N'v22@example.invalid',(SELECT TOP(1) RoleId FROM dbo.Roles),(SELECT TOP(1) Id FROM dbo.Languages)");
+                    db.execute(
+                            "INSERT dbo.Education(UserId,UniversityId,StartDate) SELECT u.UserId,v.UniversityId,'2019-09-23' FROM dbo.Users u CROSS JOIN dbo.Universities v WHERE u.Email=N'v22@example.invalid'");
+                    SchemaCommand.migrate(connection, "upgrade");
+                    SchemaCommand.migrate(connection, "upgrade");
+                    var row = db.queryForMap("SELECT TOP(1) * FROM dbo.Education");
+                    assertThat(row.get("StartDate").toString()).isEqualTo("2019-09-23");
+                    assertThat(row.get("StartPrecision")).isEqualTo("DAY");
+                    assertThat(row.get("EndPrecision")).isNull();
+                    assertThat(row.get("IsOngoing")).isEqualTo(false);
+                    assertThatThrownBy(
+                                    () -> db.update("UPDATE dbo.Education SET StartPrecision=NULL"))
+                            .isInstanceOf(
+                                    org.springframework.dao.DataIntegrityViolationException.class);
+                    assertThatThrownBy(
+                                    () ->
+                                            db.update(
+                                                    "UPDATE dbo.Education SET IsOngoing=1,EndDate='2020-01-01',EndPrecision='YEAR'"))
+                            .isInstanceOf(
+                                    org.springframework.dao.DataIntegrityViolationException.class);
+                });
+    }
+
+    @Test
     void v21RetiresUnsupportedTypesAndRequiresUniqueCodesWithoutLosingContent() throws Exception {
         inIsolatedDatabase(
                 connection -> {
