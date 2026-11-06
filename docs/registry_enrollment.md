@@ -65,3 +65,30 @@ Before enabling real lecturer enrollment, import verified university names and d
 Run `./backend/mvnw -f backend/pom.xml verify`, `npm test --prefix tools/contracts`, and `bash tools/local/test.sh --full`. For focused enrollment SQL and both HTTP/mock browser flows, run `python3 tools/m1/verify.py --enrollment` with the same test environment. The latter uses disposable SQL/OpenBao/mail services and covers identity, recovery, settings, groups, messenger and forum browser regressions. `EnrollmentIT` tests restricted boundaries, both roles, occupied-address protection, revision invalidation, code attempts, atomic duplicate claims, pending recovery, expiry and claim release. The working database is never migrated by these checks.
 
 The v1 graduate policy verifies knowledge of official diploma details plus control of a university mailbox. The alumni registry does not link that mailbox to the diploma holder. Existing claims/access survive later registry corrections; periodic eligibility rechecks remain deferred.
+
+## Manual synthetic test data
+
+For a disposable, freshly migrated V21 database, the following one-shot command loads Armenian selector labels and invented registry records. It is never run by migrations or application startup. It requires the exact `DB_NAME` as an explicit argument, and refuses a database containing users, registry entries, academic selector values or non-migration sphere values. It inserts everything in one transaction; a second run is refused. Database names are unrestricted; verify the selected target before running. Do not run it against real data.
+
+From the repository root, load the local environment, point `DB_NAME` at the already-created and migrated disposable test database, and provide migration-capable credentials privately. For example, after setting the credentials in the shell:
+
+```sh
+source tools/local/env.sh
+export DB_NAME=polylink_demo
+./backend/mvnw -f backend/pom.xml compile exec:java \
+  -Dexec.mainClass=am.polylink.database.TestSeedCommand \
+  -Dexec.args="$DB_NAME"
+```
+
+Start the backend with the same `DB_NAME` and the frontend as in the quickstart. Use one of these fictional profiles (all spelling must match):
+
+| Role | First name | Last name | Matching fields |
+| --- | --- | --- | --- |
+| Graduate | Անի | Հակոբյան | Diploma `TEST-ALUMNI-001`; Ծրագրային ճարտարագիտություն; 2018–2022 |
+| Graduate | Արամ | Սարգսյան | Diploma `TEST-ALUMNI-002`; Համակարգչային գիտություն; 2019–2023 |
+| Lecturer | Մարի | Մկրտչյան | `test-lecturer-001@polytechnic.am`; Ծրագրային համակարգերի ամբիոն |
+| Lecturer | Հայկ | Պետրոսյան | `test-lecturer-002@polytechnic.am`; Համակարգչային տեխնիկայի ամբիոն |
+
+Choose any offered institute and, for lecturers, any profession. Graduate registration accepts an unused address at exactly `polytechnic.am`; lecturer registration requires the listed address. Each registry record can be claimed once. Registration creates the account through the normal interface; the seed creates no accounts or passwords.
+
+For local testing, point SMTP to the local Mailpit capture service and open [localhost:8025](http://localhost:8025) for the verification code. Ensure the backend actually uses that SMTP configuration before registering: the listed lecturer addresses are fictional but use the real required domain, and a real SMTP relay could attempt external delivery. Mailpit captures messages without delivering them externally. See the [local SMTP troubleshooting](../tools/local/README.md#smtp-timeouts-in-disposable-acceptance-tests) if code delivery fails. The seed uses a small illustrative set of selectors rather than importing any machine-local data; migrations supply roles, languages, university, post types and the `other` sphere.
