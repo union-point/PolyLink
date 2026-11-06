@@ -95,3 +95,7 @@ It creates/removes only a uniquely named temporary container. Fixture unit tests
 On 27 October 2026 the controlled comparison produced 8/8 SMTP greeting timeouts with reverse DNS enabled and 0/8 failures with it disabled (maximum 39 ms). The fixed 80-message regression completed in 1.3 seconds. This isolates the dependency on Docker DNS rather than compensating with longer application timeouts or retrying failed API requests.
 
 After the fix, the full disposable suite passed all 58 integration tests and 16 backend unit tests. Two further `--mail` runs each passed all 21 enrollment/identity/recovery integration tests on fresh temporary databases. All seven fixture unit tests and twelve local-tooling tests passed as well; temporary containers/databases were removed after every run.
+
+## Profile acceptance
+
+Run `bash tools/local/test.sh --profile` from the repository root with disposable SQL test-admin credentials. It runs client contracts and unit checks, provisions isolated SQL/OpenBao/SMTP fixtures, and exercises profile editing, education, certificates, images, announcements and messaging navigation with HTTP and mock providers. It removes its disposable services and database afterward. See the [profile API](../../docs/profile_implementation.md).

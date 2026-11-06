@@ -12,6 +12,7 @@ Start with the [project quickstart](../README.md). This index separates current 
 | [Live testing](../LIVE_TESTING.md) | Manual account, messaging and recovery checks. |
 | [Backend architecture](backend_design_context.md) | Implemented capabilities and schema evolution. |
 | [Frontend architecture](frontend_context.md) | Page ownership, provider boundaries and HTTP limitations. |
+| [Profile API](profile_implementation.md) | Editing, education/certificates, public images, export and lifecycle. |
 | [Profile modules](../js/profile/README.md) | Profile controller responsibilities. |
 | [Registry enrollment](registry_enrollment.md) | Admission, academic verification, avatars and maintenance. |
 | [Settings API](settings_backend.md) | Preferences, notification delivery and full export. |

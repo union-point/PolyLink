@@ -1,6 +1,6 @@
 # PolyLink frontend context
 
-Reviewed 29 October 2026 against the current source. PolyLink is an Armenian-language, static multi-page frontend using native ES modules. No frontend framework or build step is required for manual use. A real Java/Spring Boot backend now implements identity, encrypted messaging, account settings, the career forum and announcements/comments; general profile editing remains primarily a mock feature.
+Reviewed 29 October 2026 against the current source. PolyLink is an Armenian-language, static multi-page frontend using native ES modules. No frontend framework or build step is required for manual use. A real Java/Spring Boot backend now implements identity, encrypted messaging, account settings, the career forum and announcements/comments; profile editing, education/certificates and managed images support HTTP and mock providers.
 
 ## Architecture and provider boundary
 
@@ -29,7 +29,7 @@ HTML → page controller → js/services/index.js → js/data/client.js
 | `login.html`, `register.html`, `2fa-verify.html`; `login.js`, `register.js`, `2fa-verify.js` | HTTP registry registration, verified email, optional email login factor and automatic backed-up key setup. Browser password derivation precedes HTTP authentication. Mock accounts and fixed codes are separate. |
 | `forgot.html`, `verify-code.html`, `reset-password.html`; `auth/recovery-client.js` | HTTP account/history recovery with local or platform-assisted vault unlock, resumable recovery authorization, atomic commit and identity rotation. No recovery key is shown to the user. |
 | `profile_info.html`; `profile-info.js` | Restricted graduate/lecturer enrollment form, saved revisions, database reference selections, optional V15 avatar upload, email verification and password re-entry after admission. Uses explicit `/auth/enrollment` operations without application bootstrap or vault access. See [enrollment contract](registry_enrollment.md). |
-| `profile.html`; `profile/profile-main.js`, editor/sections/modal/render modules | Owner profile with HTTP/mock paged announcements through shared posts forms/cards. General profile, education/certificate and media editing remain mock features. |
+| `profile.html`; `profile/profile-main.js`, editor/sections/modal/render modules | Owner profile with HTTP/mock paged announcements through shared posts forms/cards. Read-only verified name, headline/biography editing, reference-based education, certificate CRUD and managed avatar/cover uploads. |
 | `user.html?id=...`; `user/user-main.js` | Profile projection and direct contact. HTTP public-profile read and paged author announcements exist. Closed profiles cannot be opened by another member. |
 | `search.html`; `search.js`, `chat/direct-contact.js` | Server-paginated graduate/lecturer catalog with DB filter options, matching education disclosures and Search → Connect → encrypted direct room. Closed profiles expose only names, education, job title and technical fields; see [search contract](search_implementation.md). |
 | `message.html?room=...`; `chat.js`, `chat/render.js`, `chat/history.js`, `chat/groups.js` | HTTP/mock direct/group histories, text/images, paginated history, local search, drafts, emoji, unread state, mute/block/hide, group creation and owner/member controls. |
@@ -86,11 +86,11 @@ Mock validation includes names ≤100, titles ≤255, rich text ≤20,000 visibl
 
 ## Running and verification
 
-Follow the [root setup](../README.md) and [backend setup](../backend/README.md), apply migrations explicitly through V19 with reviewed historical forum/posts timestamps, and select `http` to use real services. Serve with `python3 server.py --port 8001`; use `localhost` consistently for frontend, cookies and API configuration. Use separate browser profiles for different accounts. Frontend-only mock use needs no API server.
+Follow the [root setup](../README.md) and [backend setup](../backend/README.md), apply migrations explicitly through V22 with reviewed historical forum/posts timestamps, and select `http` to use real services. Serve with `python3 server.py --port 8001`; use `localhost` consistently for frontend, cookies and API configuration. Use separate browser profiles for different accounts. Frontend-only mock use needs no API server.
 
 [Settings acceptance recorded on 24 October](settings_backend.md) reports nine database-free backend tests, 42 integration tests, 41 contract/client tests and M1–M6 browser phases passing. These are recorded results, not checks rerun for this documentation update. Messenger checks cover HTTP/mock controls and mobile layouts; OS notification presentation and native macOS execution are not established by those results.
 
-Remaining work includes server profile/publication editing, reference-data governance for future editing APIs, translation catalogs, background notification delivery, old-mailbox recovery and M7 production restore/retention gates. Keep selectors stable in the existing HTML, retain sanitization around legacy `document.execCommand`, and use milestone documents for detailed crypto/transport contracts.
+Remaining work includes reference-data administration, translation catalogs, background notification delivery, old-mailbox recovery and M7 production restore/retention gates. Keep selectors stable in the existing HTML, retain sanitization around legacy `document.execCommand`, and use milestone documents for detailed crypto/transport contracts.
 
 
 ## Implemented forum

@@ -6,13 +6,10 @@ Use [authorization decisions](authorization_plan.md), [registry enrollment](regi
 
 ## Profile and publication APIs
 
-General profile editing, education/certificate CRUD and profile cover uploads remain unimplemented on the server. Posts/comments are implemented under the newer [approved posts decisions](posts_decisions.md); see [API and rollout](posts_implementation.md). Resolve these contracts before exposing them:
+Profile editing, education/certificate CRUD, precision-aware dates and public avatar/cover storage are implemented under the [profile decisions](profile_decisions.md); see [profile API and operations](profile_implementation.md). Posts/comments are implemented under the [approved posts decisions](posts_decisions.md); see [API and rollout](posts_implementation.md). Remaining work:
 
-- Reference-data ownership: stable IDs/codes, creation/merge authority and verification provenance for universities, degrees, institutes and publication spheres. Enrollment reference options and forum categories already have implemented APIs.
-- Profile dates: preserve year/month precision, nullable ongoing ranges and range validation without inventing official dates or historical timezones.
-- Certificates: reconcile URL length and optionality with the captured schema, allowed schemes, logo source and issue-date precision.
-- Profile edits: define editable fields, limits, patch/replacement semantics, optimistic conflicts and role-change restrictions. Enrollment biography is already optional; do not impose the old proposed mandatory-biography rule.
-- Media: specify authenticated storage, visibility, replacement/deletion and export behavior for future profile media. V15 enrollment avatars are implemented separately and use publicly retrievable randomized URLs; legacy public URLs also remain public.
+- Reference-data governance: operators manage existing university, degree, institute and specialization lists. Public reference creation, merge administration and missing-entry requests remain outside the profile feature.
+- Legacy remote media has no managed export/deletion mapping; URLs remain reported as unmapped. New profile images have managed storage and lifecycle behavior.
 - Publications: required fields, sanitization, paging and last-save-wins are implemented. Production reference mapping and historical timestamp review must be rehearsed before enabling `POSTS_ENABLED`; attachments, closing/expiration and new-announcement notifications remain deferred.
 - Discovery pagination, education matching and filter semantics are implemented in [people search](search_implementation.md). Education population after enrollment and production-scale index evaluation remain separate work; direct-message blocks retain their existing scope.
 - Work experience has stored legacy data but no connected editor/API; confirm future collection scope and preserve lifecycle/export handling of existing data.

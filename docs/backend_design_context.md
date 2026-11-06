@@ -21,7 +21,7 @@ The platform connects graduates and lecturers through discovery, profiles and di
 | --- | --- |
 | Identity | Registry enrollment, email verification, password-derived login proof, optional email login factor, sessions/refresh, logout and versioned key setup. |
 | Security continuity | Atomic password changes, other-device session revocation, protected browser restoration, email-based account/history recovery and identity rotation. |
-| Profiles/discovery | Owner identity, public member-profile projection and search; visibility/disclosure checks. General profile/education/certificate/media mutations remain absent. |
+| Profiles/discovery | Owner identity, public member-profile projection and search; visibility/disclosure checks. Owner profile/education/certificate CRUD and managed avatar/cover uploads; see [profile API](profile_implementation.md). |
 | Messenger | Encrypted direct/group text and images, key epochs/envelopes, idempotent sends, cursor history, read/mute/hide/block state and protected attachment access. |
 | Groups | User-created rooms, owner transfer/rename, add/remove/leave and sequence-bounded membership intervals. |
 | Settings | Privacy, language, notification preferences, staged email changes and password-authorized email factor. |
@@ -118,7 +118,7 @@ The [24 October settings acceptance](settings_backend.md) records nine database-
 
 Run backend `./mvnw verify` for formatting/build/database-free tests. Use `bash tools/local/test.sh --full` or the milestone runner options in `tools/m1/verify.py` for isolated SQL/Transit/mail/browser acceptance. Keep schema/config prerequisites and platform limitations visible; [backend setup](../backend/README.md) and [local runbook](../tools/local/README.md) describe configuration.
 
-Remaining gates: M7 production backup retention/restore/deletion-ledger rehearsal; unavailable-old-mailbox recovery; legacy external-file migration/private media storage; production TLS/origins/secret custody; general registry admission policy; full profile/publication/forum APIs and notification producers; reference-data authority/date precision; translation catalogs. Future domain writes need explicit validation, rich-content sanitization, pagination, concurrency and retention contracts rather than copying mock behavior.
+Remaining gates: M7 production backup retention/restore/deletion-ledger rehearsal; unavailable-old-mailbox recovery; legacy external-file migration; production TLS/origins/secret custody; general registry admission policy; future reference-data administration; translation catalogs. Future domain writes need explicit validation, rich-content sanitization, pagination, concurrency and retention contracts rather than copying mock behavior.
 
 
 ## Posts and comment activity (29 October 2026)

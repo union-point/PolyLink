@@ -27,7 +27,7 @@ Use `http://localhost:8001` consistently. If ports 3004/8001 are already occupie
 7. Send a text message. In Bob's browser, open [Messages](http://localhost:8001/message.html). The text should appear within a few seconds while the page is visible. Reply from Bob and confirm Alice receives it.
 8. For the offline-recipient check, close Bob's browser after his setup has completed. Send another message from Alice, then reopen Bob's browser. Bob should be able to read it without any key exchange or action by Alice.
 
-Encrypted images and personal actions are implemented in [M5](docs/messenger/m5.md), and dynamic groups, export and lifecycle in [M6](docs/messenger/m6.md). Apply migrations through V21 before testing, completing required historical reviews. General profile editing remains unavailable; HTTP mode never substitutes mock data.
+Encrypted images and personal actions are implemented in [M5](docs/messenger/m5.md), and dynamic groups, export and lifecycle in [M6](docs/messenger/m6.md). Apply migrations through V22 before testing, completing required historical reviews. Profile editing, education/certificates and managed images use real HTTP operations; see [profile checks](docs/profile_implementation.md). HTTP mode never substitutes mock data.
 
 ## 2. Test session continuity and password change
 

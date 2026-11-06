@@ -1,5 +1,7 @@
 # Profile page implementation plan
 
+Status: implemented and verified on 6 November 2026; see [API and acceptance evidence](profile_implementation.md).
+
 Product authority: [profile decisions](profile_decisions.md). The implementation covers existing profile actions, with an immutable verified name and last-successful-save-wins updates.
 
 1. Add education date precision and ongoing state, preserve legacy dates, and store managed covers alongside existing avatars. Update explicit schema validation and enrollment writes.
