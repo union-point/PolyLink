@@ -14,6 +14,7 @@ Start with the [project quickstart](../README.md). This index separates current 
 | [Frontend architecture](frontend_context.md) | Page ownership, provider boundaries and HTTP limitations. |
 | [Profile API](profile_implementation.md) | Editing, education/certificates, public images, export and lifecycle. |
 | [Profile modules](../js/profile/README.md) | Profile controller responsibilities. |
+| [Admin access](admin_implementation.md) | Initial invitation, registration, mandatory 2FA and local access-command slice; management CRUD remains planned. |
 | [Registry enrollment](registry_enrollment.md) | Admission, academic verification, avatars and maintenance. |
 | [Settings API](settings_backend.md) | Preferences, notification delivery and full export. |
 | [People search](search_implementation.md) | Search API, education matching, privacy, pagination and verification. |

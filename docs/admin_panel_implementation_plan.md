@@ -1,6 +1,6 @@
 # Admin panel implementation plan
 
-Date: 7 November 2026. Status: planned. This document introduces no application code, executable commands or database changes.
+Date: 7 November 2026. Status: delivery in progress. This document records the target plan; see [admin access implementation](admin_implementation.md) for the implemented initial schema/access slice, exact operational commands and remaining scope. The management CRUD, registry normalization and post-type adaptation phases remain planned.
 
 The product authority is [admin panel decisions](admin_panel_decisions.md). The architecture, endpoint names and delivery sequence below are proposed implementation choices. Preserve the approved scope: one admin role, three management pages, local invitation/access commands, mandatory two-factor authentication, manual registry maintenance and no separate admin action audit log. Excel import is future work.
 
