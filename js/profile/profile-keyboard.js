@@ -13,17 +13,7 @@ export function initializeKeyboardNavigation(editor) {
     const modal = document.querySelector('.modal-overlay');
     const dialog = document.querySelector('#custom-confirm-backdrop:not(.hidden)');
     if (dialog) return;
-    if (modal) {
-      const buttons = [...modal.querySelectorAll('button,input,select,textarea,[contenteditable]')].filter(element => !element.disabled && !element.hidden && element.getAttribute('contenteditable') !== 'false');
-      if (event.key === 'Escape') { event.preventDefault(); modal.click(); }
-      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 's') { event.preventDefault(); modal.querySelector('.modal-footer .primary-btn')?.click(); }
-      if (event.key === 'Tab') {
-        const first = buttons[0], last = buttons.at(-1);
-        if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last?.focus(); }
-        else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus(); }
-      }
-      return;
-    }
+    if (modal) return;
     if ((event.ctrlKey || event.metaKey) && !event.shiftKey) {
       const key = event.key.toLowerCase();
       if (['s','e','n'].includes(key)) event.preventDefault();

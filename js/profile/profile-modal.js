@@ -1,277 +1,141 @@
 import { showError, confirmAction } from '../shared/ui.js';
-// ============================================
-// MODAL CLASS
-// ============================================
 
-/**
- * Modal class for creating and managing modal dialogs
- */
+let modalSequence = 0;
+
+/** Shared profile dialog shell. Only the form body scrolls; actions stay reachable. */
 class Modal {
   constructor() {
     this.modal = null;
     this.saving = false;
-    window.addEventListener('beforeunload',event=>{if(this.modal&&this.dirty){event.preventDefault();event.returnValue='';}});
-  }
-
-  /**
-   * Create a modal dialog
-   * @param {string} title - Modal title
-   * @param {HTMLElement} content - Modal content
-   * @param {Function} onSave - Callback when save is clicked
-   * @param {Object} options - Additional options
-   */
-  create(title, content, onSave, options = {}) {
-    // Remove existing modal if any
-    this.close(true);
-
-    // Create modal overlay
-    const overlay = document.createElement('div');
-    overlay.className = 'modal-overlay';
-    overlay.style.cssText = `
-      position: fixed;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      background: rgba(0, 0, 0, 0.5);
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      z-index: 1000;
-      animation: fadeIn 0.3s ease;
-    `;
-
-    // Create modal container
-    const modal = document.createElement('div');
-    modal.className = 'modal-container';
-    modal.style.cssText = `
-      background: var(--card-background);
-      border-radius: 12px;
-      padding: 24px;
-      max-width: 600px;
-      width: 90%;
-      max-height: 80vh;
-      overflow-y: auto;
-      box-shadow: 0 1px 4px var(--font-color-primary);
-      animation: slideUp 0.3s ease;
-      color: var(--font-color-primary);
-    `;
-
-    // Modal header
-    const header = this.createHeader(title);
-
-    // Modal content
-    const contentEl = document.createElement('div');
-    contentEl.className = 'modal-content';
-    contentEl.style.marginBottom = '20px';
-    contentEl.appendChild(content);
-
-    // Modal footer
-    const footer = this.createFooter(contentEl, onSave, options);
-
-    modal.appendChild(header);
-    modal.appendChild(contentEl);
-    modal.appendChild(footer);
-    overlay.appendChild(modal);
-
-    // Close on overlay click
-    overlay.onclick = (e) => {
-      if (e.target === overlay) {
-        this.close();
-      }
-    };
-
-    this.dirty = false;
-    contentEl.addEventListener('input',()=>{this.dirty=true;});
-    contentEl.addEventListener('change',()=>{this.dirty=true;});
-    document.body.appendChild(overlay);
-    this.modal = overlay;
-    this.previousFocus = document.activeElement;
-    modal.setAttribute('role', 'dialog'); modal.setAttribute('aria-modal', 'true');
-    modal.setAttribute('aria-label', title);
-    (contentEl.querySelector('input,select,textarea,[contenteditable]') || modal.querySelector('button'))?.focus();
-
-    // Add animations
-    this.addAnimations();
-
-    // Setup formatting toolbar if provided
-    if (options.setupFormatting) {
-      options.setupFormatting(modal);
-    }
-  }
-
-  /**
-   * Create modal header
-   * @param {string} title - Modal title
-   * @returns {HTMLElement} Header element
-   */
-  createHeader(title) {
-    const header = document.createElement('div');
-    header.style.cssText = `
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 20px;
-      padding-bottom: 16px;
-      border-bottom: 1px solid var(--border-color);
-    `;
-
-    const titleEl = document.createElement('h2');
-    titleEl.textContent = title;
-    titleEl.style.cssText = `
-      margin: 0;
-      font-size: 24px;
-      color: var(--font-color-primary);
-    `;
-
-    const closeBtn = document.createElement('button');
-    closeBtn.innerHTML = '&times;';
-    closeBtn.style.cssText = `
-      background: none;
-      border: none;
-      font-size: 32px;
-      cursor: pointer;
-      color: var(--font-color-secondary);
-      line-height: 1;
-      padding: 0;
-      width: 32px;
-      height: 32px;
-    `;
-    closeBtn.onclick = () => this.close();
-
-    header.appendChild(titleEl);
-    header.appendChild(closeBtn);
-
-    return header;
-  }
-
-  /**
-   * Create modal footer
-   * @param {HTMLElement} contentEl - Content element
-   * @param {Function} onSave - Save callback
-   * @param {Object} options - Additional options
-   * @returns {HTMLElement} Footer element
-   */
-  createFooter(contentEl, onSave, options) {
-    const footer = document.createElement('div');
-    footer.className = 'modal-footer';
-    footer.style.cssText = `
-      display: flex;
-      justify-content: flex-end;
-      gap: 12px;
-      padding-top: 16px;
-      border-top: 1px solid var(--border-color);
-      align-items: center;
-    `;
-
-    // Add custom footer content if provided (e.g., formatting toolbar)
-    if (options.customFooterLeft) {
-      footer.style.justifyContent = 'space-between';
-      footer.appendChild(options.customFooterLeft);
-    }
-
-    const buttonContainer = document.createElement('div');
-    buttonContainer.style.cssText = 'display: flex; gap: 12px;';
-
-    const saveBtn = this.createButton('Պահպանել', 'primary-btn', async () => {
-      if (this.saving) return;
-      this.saving = true; saveBtn.disabled = true; saveBtn.setAttribute('aria-busy', 'true');
-      try {
-        const result = onSave ? await onSave(this.getFormData(contentEl)) : undefined;
-        if (result !== false) { this.saving = false; this.close(true); }
-      } catch (error) { showError(contentEl, error); }
-      finally { this.saving = false; saveBtn.disabled = false; saveBtn.removeAttribute('aria-busy'); }
+    this.closing = false;
+    window.addEventListener('beforeunload', event => {
+      if (this.modal && this.dirty) { event.preventDefault(); event.returnValue = ''; }
     });
-
-    const cancelBtn = this.createButton('Չեղարկել', 'secondary-btn', () => this.close());
-    if (!onSave) saveBtn.hidden = true;
-
-    buttonContainer.appendChild(cancelBtn);
-    buttonContainer.appendChild(saveBtn);
-    footer.appendChild(buttonContainer);
-
-    return footer;
   }
 
-  /**
-   * Create a button
-   * @param {string} text - Button text
-   * @param {string} className - Button class
-   * @param {Function} onClick - Click handler
-   * @returns {HTMLElement} Button element
-   */
-  createButton(text, className, onClick) {
+  create(title, content, onSave, options = {}) {
+    if (this.saving) return;
+    this.close(true);
+    const overlay = document.createElement('div');
+    overlay.className = 'modal-overlay profile-modal-overlay';
+    const dialog = document.createElement('div');
+    dialog.className = 'modal-container profile-modal';
+    dialog.setAttribute('role', 'dialog');
+    dialog.setAttribute('aria-modal', 'true');
+    dialog.setAttribute('aria-label', title);
+    const headingId = `profile-modal-title-${++modalSequence}`;
+    const header = document.createElement('header');
+    header.className = 'profile-modal-header';
+    if (options.icon) {
+      const badge = document.createElement('span');
+      badge.className = 'profile-modal-badge';
+      badge.setAttribute('aria-hidden', 'true');
+      badge.innerHTML = options.icon === 'education'
+        ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="m3 8 9-4 9 4-9 4-9-4Z"/><path d="M6 10v6c3 3 9 3 12 0v-6M21 8v7"/></svg>'
+        : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="4" y="3" width="16" height="14" rx="2"/><path d="M8 7h8M8 11h5M8 17v4l4-2 4 2v-4"/></svg>';
+      header.append(badge);
+    }
+    const heading = document.createElement('div');
+    heading.className = 'profile-modal-heading';
+    const titleEl = document.createElement('h2');
+    titleEl.id = headingId; titleEl.textContent = title; heading.append(titleEl);
+    dialog.setAttribute('aria-labelledby', headingId);
+    if (options.description) {
+      const description = document.createElement('p');
+      description.id = `${headingId}-description`; description.textContent = options.description;
+      heading.append(description); dialog.setAttribute('aria-describedby', description.id);
+    }
+    const close = document.createElement('button');
+    close.type = 'button'; close.className = 'profile-modal-close';
+    close.setAttribute('aria-label', 'Փակել'); close.title = 'Փակել';
+    close.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg>';
+    close.onclick = () => this.close(); header.append(heading, close);
+    const body = document.createElement('div');
+    body.className = 'modal-content profile-modal-body'; body.append(content);
+    const footer = document.createElement('footer'); footer.className = 'modal-footer profile-modal-footer';
+    if (options.customFooterLeft) footer.append(options.customFooterLeft);
+    const cancel = this.createButton('Չեղարկել', 'secondary-btn', () => this.close());
+    const save = this.createButton('Պահպանել', 'primary-btn', async () => {
+      if (this.saving || !this.ready || !onSave) return;
+      const data = this.getFormData(body);
+      this.saving = true; save.setAttribute('aria-busy', 'true'); save.textContent = 'Պահպանվում է…';
+      const controls = [...dialog.querySelectorAll('button,input,select,textarea,[contenteditable="true"]')];
+      const previous = controls.map(control => ({ control, disabled: control.disabled, editable: control.getAttribute('contenteditable') }));
+      controls.forEach(control => { control.disabled = true; if (control.isContentEditable) control.contentEditable = 'false'; });
+      try {
+        const result = await onSave(data);
+        if (result !== false) { this.saving = false; this.close(true); }
+      } catch (error) {
+        showError(body, error);
+        const invalid = body.querySelector('[aria-invalid="true"]');
+        (invalid || body.querySelector('[role="alert"]'))?.scrollIntoView({ block: 'nearest' });
+      } finally {
+        this.saving = false;
+        previous.forEach(({ control, disabled, editable }) => { control.disabled = disabled; if (editable !== null) control.setAttribute('contenteditable', editable); });
+        save.removeAttribute('aria-busy'); save.textContent = 'Պահպանել';
+        if (this.modal === overlay) (body.querySelector('[aria-invalid="true"]') || save).focus();
+      }
+    });
+    this.saveButton = save; this.ready = !options.loading;
+    save.hidden = !onSave; save.disabled = !!options.loading;
+    footer.append(cancel, save); dialog.append(header, body, footer); overlay.append(dialog);
+    overlay.onclick = event => { if (event.target === overlay) this.close(); };
+    this.dirty = false; this.closing = false;
+    body.addEventListener('input', event => { if (!event.target.matches('[data-profile-search]')) this.dirty = true; });
+    body.addEventListener('change', event => { if (!event.target.matches('[data-profile-search]')) this.dirty = true; });
+    this.previousFocus = document.activeElement;
+    document.body.append(overlay); this.modal = overlay;
+    this.previousOverflow = document.body.style.overflow; document.body.style.overflow = 'hidden';
+    const focusable = () => [...dialog.querySelectorAll('button,input,select,textarea,[contenteditable="true"]')]
+      .filter(element => !element.disabled && !element.hidden && element.getClientRects().length);
+    overlay.addEventListener('keydown', event => {
+      if (this.closing) return;
+      if (event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); this.close(); }
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 's') { event.preventDefault(); event.stopPropagation(); save.click(); }
+      if (event.key === 'Tab') {
+        const elements = focusable(), first = elements[0], last = elements.at(-1);
+        if (!first) { event.preventDefault(); return; }
+        if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
+        else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
+      }
+    });
+    (focusable().find(element => body.contains(element)) || close).focus();
+    options.setupFormatting?.(dialog);
+    return overlay;
+  }
+
+  setReady(ready) {
+    this.ready = ready;
+    if (this.saveButton) this.saveButton.disabled = !ready;
+  }
+
+  createButton(text, className, action) {
     const button = document.createElement('button');
-    button.className = className;
-    button.textContent = text;
-    button.style.cssText = `
-      padding: 10px 24px;
-      border-radius: 20px;
-      font-weight: 600;
-      font-size: 14px;
-    `;
-    button.onclick = onClick;
+    button.type = 'button'; button.className = className; button.textContent = text; button.onclick = action;
     return button;
   }
 
-  /**
-   * Get form data from modal content
-   * @param {HTMLElement} contentEl - Content element
-   * @returns {Object} Form data
-   */
-  getFormData(contentEl) {
-    const formData = {};
-    const inputs = contentEl.querySelectorAll('input, textarea, select');
-    inputs.forEach(input => {
-      if(input.name || input.id) formData[input.name || input.id] = input.type === 'checkbox' ? input.checked : input.value;
+  getFormData(content) {
+    const data = {};
+    content.querySelectorAll('input,textarea,select').forEach(input => {
+      if (input.name || input.id) data[input.name || input.id] = input.type === 'checkbox' ? input.checked : input.value;
     });
-    // Handle contenteditable elements
-    const editables = contentEl.querySelectorAll('[contenteditable="true"]');
-    editables.forEach(editable => {
-      formData[editable.dataset.name || editable.id] = editable.innerHTML;
-    });
-    return formData;
+    content.querySelectorAll('[contenteditable="true"]').forEach(editable => { data[editable.dataset.name || editable.id] = editable.innerHTML; });
+    return data;
   }
 
-  /**
-   * Close the modal
-   */
   async close(force = false) {
-    if (this.saving) return;
-    if (!force && this.dirty && !await confirmAction('Չպահպանված փոփոխությունները չեղարկե՞լ։')) return;
-    this.dirty = false;
-    if (this.modal) {
-      this.modal.remove();
-      this.modal = null;
+    if (this.saving || (this.closing && !force)) return;
+    const overlay = this.modal;
+    if (!overlay) return;
+    this.closing = true;
+    try {
+      if (!force && this.dirty && !await confirmAction('Չպահպանված փոփոխությունները չեղարկե՞լ։')) return;
+      if (this.modal !== overlay) return;
+      this.modal.remove(); this.modal = null; this.dirty = false;
+      document.body.style.overflow = this.previousOverflow;
       this.previousFocus?.focus();
-    }
-  }
-
-  /**
-   * Add modal animations to document
-   */
-  addAnimations() {
-    if (document.querySelector('style[data-modal-animations]')) return;
-
-    const style = document.createElement('style');
-    style.textContent = `
-      @keyframes fadeIn {
-        from { opacity: 0; }
-        to { opacity: 1; }
-      }
-      @keyframes slideUp {
-        from {
-          transform: translateY(50px);
-          opacity: 0;
-        }
-        to {
-          transform: translateY(0);
-          opacity: 1;
-        }
-      }
-    `;
-    style.setAttribute('data-modal-animations', 'true');
-    document.head.appendChild(style);
+    } finally { this.closing = false; }
   }
 }
 

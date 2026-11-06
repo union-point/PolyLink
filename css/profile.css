@@ -479,3 +479,178 @@ button {
     .profile-section { padding: 16px; }
     .modal-container { box-sizing: border-box; }
 }
+
+/* Profile dialogs retain the original calm card layout with a fixed action area. */
+.profile-modal-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    background: rgb(15 23 42 / 48%);
+    box-sizing: border-box;
+    animation: profile-overlay-in 140ms ease-out;
+}
+.profile-modal {
+    display: flex;
+    flex-direction: column;
+    width: min(100%, 600px);
+    max-height: min(88vh, 860px);
+    max-height: min(88dvh, 860px);
+    min-height: 0;
+    overflow: hidden;
+    box-sizing: border-box;
+    border: 1px solid var(--border-color);
+    border-radius: 16px;
+    color: var(--font-color-primary);
+    background: var(--card-background);
+    box-shadow: 0 24px 80px rgb(0 0 0 / 20%);
+    animation: profile-dialog-in 160ms ease-out;
+}
+.profile-modal-header {
+    display: flex;
+    align-items: flex-start;
+    flex: none;
+    gap: 14px;
+    padding: 24px 24px 20px;
+    border-bottom: 1px solid var(--border-color);
+}
+.profile-modal-badge {
+    display: grid;
+    place-items: center;
+    flex: none;
+    width: 42px;
+    height: 42px;
+    border-radius: 12px;
+    background: var(--window-background);
+    color: var(--primary-blue);
+}
+.profile-modal-badge svg { width: 24px; height: 24px; }
+.profile-modal-heading { flex: 1; min-width: 0; }
+.profile-modal-heading h2 { margin: 0; font-size: 20px; line-height: 1.35; font-weight: 650; overflow-wrap: anywhere; }
+.profile-modal-heading p { margin: 6px 0 0; color: var(--font-color-secondary); font-size: 13px; line-height: 1.5; }
+.profile-modal-close {
+    display: grid;
+    place-items: center;
+    flex: none;
+    width: 36px;
+    height: 36px;
+    margin: -4px -6px 0 0;
+    padding: 8px;
+    border: 0;
+    border-radius: 10px;
+    color: var(--font-color-secondary);
+    background: transparent;
+}
+.profile-modal-close svg { width: 20px; height: 20px; }
+.profile-modal-close:hover { background: var(--window-background); color: var(--font-color-primary); }
+.profile-modal-body {
+    min-height: 0;
+    padding: 24px;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-gutter: stable;
+}
+.profile-modal-footer {
+    display: flex;
+    flex: none;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 12px;
+    padding: 18px 24px;
+    border-top: 1px solid var(--border-color);
+    background: var(--card-background);
+}
+.profile-modal-footer button, .profile-retry {
+    min-height: 42px;
+    padding: 10px 22px;
+    font-size: 14px;
+    font-weight: 600;
+    border-radius: 10px;
+}
+.profile-modal-footer .primary-btn { color: white; }
+.profile-modal :is(button,input,select,textarea):focus-visible { outline: 2px solid var(--primary-blue); outline-offset: 3px; }
+.profile-modal :is(button,input,select):disabled { cursor: default; opacity: .55; }
+.profile-modal button { transition: background-color 140ms, border-color 140ms; }
+.profile-modal [hidden] { display: none !important; }
+.profile-form { display: grid; gap: 20px; }
+.profile-reference-fields { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1fr); gap: 18px 16px; }
+.profile-field-wide { grid-column: 1 / -1; }
+.profile-form-field { display: flex; flex-direction: column; min-width: 0; gap: 8px; }
+.profile-field-label { font-size: 14px; font-weight: 600; line-height: 1.4; }
+.profile-field-required { color: var(--font-color-secondary); }
+.profile-field-label-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 24px; }
+.profile-form-control {
+    display: block;
+    width: 100%;
+    min-width: 0;
+    min-height: 44px;
+    margin: 0;
+    padding: 11px 12px;
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    background: var(--card-background);
+    color: var(--font-color-primary);
+    box-sizing: border-box;
+    font: inherit;
+    font-size: 14px;
+    line-height: 1.4;
+    transition: border-color 140ms, box-shadow 140ms;
+}
+.profile-form-control::placeholder { color: var(--font-color-secondary); opacity: .75; }
+.profile-form-control:focus { border-color: var(--primary-blue); box-shadow: 0 0 0 3px rgb(0 115 177 / 10%); }
+.profile-form-control[aria-invalid="true"] { border-color: #c43b3b; }
+.profile-search-toggle {
+    display: grid;
+    place-items: center;
+    flex: none;
+    width: 28px;
+    height: 28px;
+    border: 0;
+    border-radius: 7px;
+    background: transparent;
+    color: var(--font-color-secondary);
+}
+.profile-search-toggle svg { width: 17px; height: 17px; }
+.profile-search-toggle:hover, .profile-search-toggle[aria-expanded="true"] { background: var(--window-background); color: var(--primary-blue); }
+.profile-period { min-width: 0; margin: 0; padding: 16px; border: 1px solid var(--border-color); border-radius: 12px; background: var(--window-background); }
+.profile-period legend { padding: 0 6px; font-size: 14px; font-weight: 600; }
+.profile-date-fields { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1fr); gap: 16px; }
+.profile-date-controls { display: flex; gap: 6px; min-width: 0; }
+.profile-date-precision { flex: 0 0 80px; width: 80px; padding-left: 8px; padding-right: 4px; }
+.profile-date-controls input { padding-left: 8px; padding-right: 6px; }
+.profile-ongoing { display: flex; align-items: center; gap: 10px; margin-top: 16px; font-size: 14px; cursor: pointer; }
+.profile-ongoing input { width: 17px; height: 17px; margin: 0; accent-color: var(--primary-blue); flex: none; }
+.profile-field-disabled .profile-field-label { color: var(--font-color-secondary); }
+.profile-form-note, .profile-field-hint { margin: 0; color: var(--font-color-secondary); font-size: 12px; line-height: 1.5; }
+.profile-form-loading { padding: 24px 0; color: var(--font-color-secondary); text-align: center; font-size: 14px; }
+.profile-delete-area { padding-top: 16px; border-top: 1px solid var(--border-color); }
+.profile-delete-area .delete-entry-btn { min-height: 40px; padding: 9px 12px; border: 1px solid transparent; border-radius: 9px; color: #b83939; background: transparent; font-size: 13px; font-weight: 600; }
+.profile-delete-area .delete-entry-btn:hover { border-color: currentColor; background: rgb(196 59 59 / 6%); }
+.profile-section-picker { display: grid; gap: 12px; }
+.profile-section-choice { padding: 16px; border: 1px solid var(--border-color); border-radius: 12px; background: var(--card-background); color: var(--font-color-primary); font-size: 15px; text-align: left; }
+.profile-section-choice:hover { border-color: var(--primary-blue); background: var(--window-background); }
+@keyframes profile-overlay-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes profile-dialog-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+@media (max-width: 600px) {
+    .profile-modal-overlay { padding: 12px; }
+    .profile-modal { max-height: calc(100vh - 24px); max-height: calc(100dvh - 24px); border-radius: 14px; }
+    .profile-modal-header { padding: 20px 18px 16px; gap: 10px; }
+    .profile-modal-heading h2 { font-size: 18px; }
+    .profile-modal-badge { width: 36px; height: 36px; border-radius: 10px; }
+    .profile-modal-close { width: 40px; height: 40px; }
+    .profile-modal-body { padding: 20px 18px; }
+    .profile-modal-footer { padding: 14px 18px; gap: 10px; }
+    .profile-modal-footer button { flex: 1; padding-left: 10px; padding-right: 10px; }
+    .profile-reference-fields, .profile-date-fields { grid-template-columns: minmax(0,1fr); }
+    .profile-period { padding: 14px 12px; }
+}
+@media (prefers-reduced-motion: reduce) {
+    .profile-modal, .profile-modal-overlay { animation: none; }
+    .profile-modal * { transition: none; scroll-behavior: auto; }
+}
+.profile-modal .profile-form-control:focus-visible { outline: none; }
+.theme-dark .profile-modal { color-scheme: dark; }
+.theme-dark .profile-delete-area .delete-entry-btn { color: #f08888; }

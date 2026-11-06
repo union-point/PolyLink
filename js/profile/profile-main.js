@@ -21,10 +21,10 @@ start(async () => {
   user.education.forEach(addEducationEntry);
   educationSection.querySelector('.fa-plus').onclick = showAddEducationModal;
   const editor = new InlineEditor(); editor.onAdd = () => {
-    const picker = document.createElement('div');
+    const picker = document.createElement('div');picker.className='profile-section-picker';
     const choices = [ ['Կրթություն', showAddEducationModal], ['Հավաստագիր', showAddLicenseModal], ['Հայտարարություն', showAddAnnouncementModal] ];
-    choices.forEach(([name, action]) => { const button = document.createElement('button'); button.className = 'primary-btn'; button.textContent = name; button.style.margin = '8px'; button.onclick = () => { chooser.close(); action(); }; picker.appendChild(button); });
-    chooser.create('Ավելացնել բաժին', picker, null);
+    choices.forEach(([name, action]) => { const button = document.createElement('button'); button.className = 'profile-section-choice'; button.textContent = name; button.onclick = () => { chooser.close(); action(); }; picker.appendChild(button); });
+    chooser.create('Ավելացնել բաժին', picker, null, {description:'Ընտրեք բաժինը, որը ցանկանում եք ավելացնել։'});
   };
   const licenses = document.querySelector('.licenses-section');
   licenses.querySelectorAll('.item-entry').forEach(entry => entry.remove());
