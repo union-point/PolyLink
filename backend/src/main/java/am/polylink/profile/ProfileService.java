@@ -10,10 +10,12 @@ import org.springframework.transaction.support.TransactionTemplate;
 @Service
 @IdentityEnabled
 public class ProfileService {
+    private final Accounts accounts;
     private final JdbcTemplate db;
     private final TransactionTemplate tx;
 
-    public ProfileService(JdbcTemplate db, TransactionTemplate tx) {
+    public ProfileService(Accounts accounts, JdbcTemplate db, TransactionTemplate tx) {
+        this.accounts = accounts;
         this.db = db;
         this.tx = tx;
     }
@@ -58,6 +60,7 @@ public class ProfileService {
                 bio = ProfileValues.text(input.get("description"), 2000, false);
         return tx.execute(
                 s -> {
+                    accounts.lock(user).requireAdmitted();
                     db.update(
                             "UPDATE dbo.Users SET Specialization=?,About=? WHERE UserId=?",
                             title,
@@ -149,6 +152,7 @@ public class ProfileService {
                 "isOngoing");
         return tx.execute(
                 s -> {
+                    accounts.lock(user).requireAdmitted();
                     Map<String, Object> old = null;
                     if (id != null) {
                         var rows =
@@ -238,6 +242,7 @@ public class ProfileService {
         if (date.date() != null && !"MONTH".equals(date.precision())) throw AuthFailure.invalid();
         return tx.execute(
                 s -> {
+                    accounts.lock(user).requireAdmitted();
                     Integer saved = id;
                     if (id == null)
                         saved =
@@ -271,6 +276,7 @@ public class ProfileService {
                 key = education ? "EducationId" : "CertificateId";
         tx.executeWithoutResult(
                 s -> {
+                    accounts.lock(user).requireAdmitted();
                     if (db.update(
                                     "DELETE dbo." + table + " WHERE " + key + "=? AND UserId=?",
                                     id,

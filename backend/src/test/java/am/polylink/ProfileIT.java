@@ -264,7 +264,22 @@ class ProfileIT {
         assertThat(media.size()).isEqualTo(2);
         for (var item : media) {
             String path = "/account/export/profile-media/" + item.path("id").asText();
-            assertThat(a.browser().get(path).statusCode()).isEqualTo(200);
+            var download =
+                    java.net.http.HttpClient.newHttpClient()
+                            .send(
+                                    java.net.http.HttpRequest.newBuilder(
+                                                    java.net.URI.create(
+                                                            "http://localhost:" + port + path))
+                                            .header("Authorization", "Bearer " + a.browser().access)
+                                            .header("X-Export-Grant", a.browser().exportGrant)
+                                            .GET()
+                                            .build(),
+                                    java.net.http.HttpResponse.BodyHandlers.ofByteArray());
+            assertThat(download.statusCode()).isEqualTo(200);
+            assertThat(
+                            javax.imageio.ImageIO.read(
+                                    new java.io.ByteArrayInputStream(download.body())))
+                    .isNotNull();
             call(b, "GET", path, null, 404);
         }
         lifecycle.apply(
@@ -297,6 +312,12 @@ class ProfileIT {
                 new am.polylink.chat.AccountLifecycle.Request("1", a.secret()),
                 false);
         assertThat(imageStatus(url)).isEqualTo(404);
+        assertThatThrownBy(
+                        () ->
+                                profiles.update(
+                                        a.id(),
+                                        Map.of("jobTitle", "stale save", "description", "")))
+                .isInstanceOf(AuthFailure.class);
         assertThat(
                         db.queryForObject(
                                 "SELECT COUNT(*) FROM auth.ProfileCovers WHERE UserId=?",

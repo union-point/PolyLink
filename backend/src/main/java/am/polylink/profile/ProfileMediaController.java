@@ -14,6 +14,7 @@ import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 @RestController
 @IdentityEnabled
 public class ProfileMediaController {
+    private final Accounts accounts;
     private final Sessions sessions;
     private final JdbcTemplate db;
     private final TransactionTemplate tx;
@@ -21,11 +22,13 @@ public class ProfileMediaController {
     private final RateLimiter limits;
 
     public ProfileMediaController(
+            Accounts accounts,
             Sessions sessions,
             JdbcTemplate db,
             TransactionTemplate tx,
             ProfileService profiles,
             RateLimiter limits) {
+        this.accounts = accounts;
         this.sessions = sessions;
         this.db = db;
         this.tx = tx;
@@ -73,6 +76,7 @@ public class ProfileMediaController {
                         .toUriString();
         return tx.execute(
                 s -> {
+                    accounts.lock(user).requireAdmitted();
                     if (sessions.require(r).account().id() != user) throw AuthFailure.denied();
                     // Serialize replacements for this owner so concurrent first uploads cannot race
                     // on PK.
