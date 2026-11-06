@@ -1,549 +1,116 @@
 import { openPostForm } from '../posts/form.js';
-// ============================================
-// PROFILE SECTIONS MANAGEMENT
-// ============================================
 import { Modal } from './profile-modal.js';
-import { monthLabel as formatDate, dateRange as formatDateRange, relativeTime as formatTimeAgo,
-  notify as showNotification, confirmAction as customConfirm, pending, showError } from '../shared/ui.js';
-import { validateForm, initializeValidation } from './profile-validation.js';
-import { profiles, posts } from '../services/index.js';
-import { certificateEntry, announcementEntry } from './profile-render.js';
-import { escapeHtml as e, safeUrl, sanitizeHtml } from '../shared/content.js';
+import { profiles } from '../services/index.js';
+import { educationEntry, certificateEntry, announcementEntry } from './profile-render.js';
+import { profileImage } from './images.js';
+import { educationInput } from './contracts.js';
+import { validateCertificate } from '../data/validation.js';
+import { notify, confirmAction, pending, showError } from '../shared/ui.js';
+import { safeUrl } from '../shared/content.js';
 const modal = new Modal();
-
-// ============================================
-// EDUCATION SECTION
-// ============================================
-
-/**
- * Show modal to add education entry
- */
-function showAddEducationModal() {
-  const form = document.createElement('div');
-  form.innerHTML = `
-    <div style=" padding: 24px; margin: -24px -24px 0 -24px; border-radius: 12px 12px 0 0;">
-      <div style="display: flex; align-items: center; gap: 16px;">
-        <div style="width: 56px; height: 56px; background: #667eea; border-radius: 16px; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(10px);">
-          <i class="fas fa-graduation-cap" style="font-size: 28px; color: var(--card-background);"></i>
-        </div>
-        <div>
-          <h3 style="margin: 0; color: var(--font-color-primary); font-size: 20px; font-weight: 700;">Ավելացնել կրթություն</h3>
-          <p style="margin: 4px 0 0 0; color: var(--font-color-secondary); font-size: 14px;">Լրացրեք ձեր կրթական տվյալները</p>
-        </div>
-      </div>
-    </div>
-    
-    <div style="margin-bottom: 20px;">
-      <label style="display: flex; align-items: center; gap: 8px; margin-bottom: 10px; font-weight: 600; color: var(--font-color-primary); font-size: 14px;">
-        <i class="fas fa-university" style="color: #667eea; font-size: 16px;"></i>
-        Ուսումնական հաստատություն 
-        <span style="color: #e74c3c; font-size: 16px;">*</span>
-      </label>
-      <input type="text" id="edu-institution" name="institution" required data-required
-        style="width: 100%; padding: 14px 16px; border-radius: 12px; font-size: 15px; background: var(--card-background); color: var(--font-color-primary); border: 2px solid var(--border-color); transition: all 0.3s ease; box-sizing: border-box;"
-        placeholder="Օրինակ՝ Հայաստանի ազգային պոլիտեխնիկական համալսարան"
-        onfocus="this.style.borderColor='#667eea'; this.style.boxShadow='0 0 0 4px rgba(102, 126, 234, 0.1)'"
-        onblur="this.style.borderColor='var(--border-color)'; this.style.boxShadow='none'">
-    </div>
-    
-    <div style="margin-bottom: 20px;">
-      <label style="display: flex; align-items: center; gap: 8px; margin-bottom: 10px; font-weight: 600; color: var(--font-color-primary); font-size: 14px;">
-        <i class="fas fa-award" style="color: #667eea; font-size: 16px;"></i>
-        Աստիճան և մասնագիտություն 
-        <span style="color: #e74c3c; font-size: 16px;">*</span>
-      </label>
-      <input type="text" id="edu-degree" name="degree" required data-required
-        style="width: 100%; padding: 14px 16px; border-radius: 12px; font-size: 15px; background: var(--card-background); color: var(--font-color-primary); border: 2px solid var(--border-color); transition: all 0.3s ease; box-sizing: border-box;"
-        placeholder="Օրինակ՝ Բակալավրի աստիճան, Ծրագրային ինժեներություն"
-        onfocus="this.style.borderColor='#667eea'; this.style.boxShadow='0 0 0 4px rgba(102, 126, 234, 0.1)'"
-        onblur="this.style.borderColor='var(--border-color)'; this.style.boxShadow='none'">
-    </div>
-    
-    <div style="background: var(--window-background); padding: 16px; border-radius: 12px; margin-bottom: 20px;">
-      <label style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px; font-weight: 600; color: var(--font-color-primary); font-size: 14px;">
-        <i class="fas fa-calendar-alt" style="color: #667eea; font-size: 16px;"></i>
-        Ժամանակահատված
-      </label>
-      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
-        <div>
-          <label style="display: block; margin-bottom: 8px; font-size: 13px; color: var(--font-color-secondary); font-weight: 500;">
-            Սկիզբ <span style="color: #e74c3c;">*</span>
-          </label>
-          <input type="month" id="edu-start" name="startDate" required data-required
-            style="width: 100%; padding: 12px; border-radius: 10px; font-size: 14px; background: var(--card-background); color: var(--font-color-primary); border: 2px solid var(--border-color); transition: all 0.3s ease; box-sizing: border-box;"
-            onfocus="this.style.borderColor='#667eea'; this.style.boxShadow='0 0 0 4px rgba(102, 126, 234, 0.1)'"
-            onblur="this.style.borderColor='var(--border-color)'; this.style.boxShadow='none'">
-        </div>
-        <div>
-          <label style="display: block; margin-bottom: 8px; font-size: 13px; color: var(--font-color-secondary); font-weight: 500;">
-            Ավարտ
-          </label>
-          <input type="month" id="edu-end" name="endDate"
-            style="width: 100%; padding: 12px; border-radius: 10px; font-size: 14px; background: var(--card-background); color: var(--font-color-primary); border: 2px solid var(--border-color); transition: all 0.3s ease; box-sizing: border-box;"
-            onfocus="this.style.borderColor='#667eea'; this.style.boxShadow='0 0 0 4px rgba(102, 126, 234, 0.1)'"
-            onblur="this.style.borderColor='var(--border-color)'; this.style.boxShadow='none'">
-        </div>
-      </div>
-    </div>
-    
-    <div style="background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%); padding: 12px 16px; border-radius: 10px; border-left: 4px solid #667eea;">
-      <p style="margin: 0; font-size: 13px; color: var(--font-color-secondary); line-height: 1.5;">
-        <i class="fas fa-info-circle" style="color: #667eea; margin-right: 8px;"></i>
-        Լրացրեք բոլոր պարտադիր դաշտերը՝ նշված աստղանիշով (*)
-      </p>
-    </div>
-  `;
-
-  modal.create('Ավելացնել կրթություն', form, async data => {
-    if (!validateForm(form)) return false;
-    const record = await profiles.education.create(data);
-    addEducationEntry(record);
-    showNotification('Կրթությունը ավելացվել է');
-  });
-
-  // Initialize validation for form inputs
-  setTimeout(() => {
-    initializeValidation(form);
-
-  }, 100);
+function field(form, label, control) {
+  const wrap=document.createElement('label');wrap.style.cssText='display:block;margin:16px 0';
+  const text=document.createElement('span');text.textContent=label;wrap.append(text,control);
+  control.style.cssText='display:block;width:100%;padding:10px;margin-top:6px;border:1px solid var(--border-color);border-radius:8px;background:var(--card-background);color:var(--font-color-primary);box-sizing:border-box';
+  form.append(wrap);return control;
 }
-
-/**
- * Add education entry to the DOM
- * @param {Object} data - Education data
- */
-function addEducationEntry(data) {
-  const educationSection = document.querySelector('.education-section');
-  const newEntry = document.createElement('div');
-  newEntry.className = 'item-entry';
-  newEntry.dataset.entryId = data.id;
-  newEntry.innerHTML = `
-    <div class="item-logo">
-      ${data.logo ? `<img src="${e(safeUrl(data.logo, { image: true }))}" class="entry-logo" alt="University Logo">` : `<div class="cert-logo-bg" style="width: 48px; height: 48px; display: flex; align-items: center; justify-content: center;">
-        <i class="fas fa-graduation-cap" style="color: white; font-size: 20px;"></i>
-      </div>`}
-    </div>
-    <div class="item-details">
-      <p class="item-title">${e(data.institution || 'Նոր ուսումնական հաստատություն')}</p>
-      <p class="item-subtitle">${e(data.degree || 'Աստիճան և մասնագիտություն')}</p>
-      <p class="item-date">${formatDateRange(data.startDate, data.endDate)}</p>
-    </div>
-    <div class="edit-icons">
-      <i class="fas fa-pencil-alt edit-icon"></i>
-    </div>
-  `;
-  educationSection.appendChild(newEntry);
-  attachEducationHandlers(newEntry, data);
+function input(form,label,name,value='',type='text') {
+  const el=document.createElement('input');el.name=name;el.type=type;el.value=value||'';return field(form,label,el);
 }
-
-/**
- * Edit an education entry
- * @param {HTMLElement} entry - Education entry element
- * @param {Object} currentData - Current education data
- */
-function editEducation(entry, currentData) {
-  const form = document.createElement('div');
-  form.innerHTML = `
-    <div style=" padding: 24px; margin: -24px -24px 0 -24px; border-radius: 12px 12px 0 0;">
-      <div style="display: flex; align-items: center; gap: 16px;">
-        <div style="width: 56px; height: 56px; background: #667eea; border-radius: 16px; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(10px);">
-          <i class="fas fa-graduation-cap" style="font-size: 28px; color: var(--card-background);"></i>
-        </div>
-        <div>
-          <h3 style="margin: 0; color: var(--font-color-primary); font-size: 20px; font-weight: 700;">Փոփոխել կրթությունը</h3>
-          <p style="margin: 4px 0 0 0; color: var(--font-color-secondary); font-size: 14px;">Թարմացրեք ձեր կրթական տվյալները</p>
-        </div>
-      </div>
-    </div>
-    
-    <div style="margin-bottom: 20px;">
-      <label style="display: flex; align-items: center; gap: 8px; margin-bottom: 10px; font-weight: 600; color: var(--font-color-primary); font-size: 14px;">
-        <i class="fas fa-university" style="color: #667eea; font-size: 16px;"></i>
-        Ուսումնական հաստատություն 
-        <span style="color: #e74c3c; font-size: 16px;">*</span>
-      </label>
-      <input type="text" id="edu-institution" name="institution" required data-required
-        value="${e(currentData.institution || '')}"
-        style="width: 100%; padding: 14px 16px; border-radius: 12px; font-size: 15px; background: var(--card-background); color: var(--font-color-primary); border: 2px solid var(--border-color); transition: all 0.3s ease; box-sizing: border-box;"
-        placeholder="Օրինակ՝ Հայաստանի ազգային պոլիտեխնիկական համալսարան"
-        onfocus="this.style.borderColor='#667eea'; this.style.boxShadow='0 0 0 4px rgba(102, 126, 234, 0.1)'"
-        onblur="this.style.borderColor='var(--border-color)'; this.style.boxShadow='none'">
-    </div>
-    
-    <div style="margin-bottom: 20px;">
-      <label style="display: flex; align-items: center; gap: 8px; margin-bottom: 10px; font-weight: 600; color: var(--font-color-primary); font-size: 14px;">
-        <i class="fas fa-award" style="color: #667eea; font-size: 16px;"></i>
-        Աստիճան և մասնագիտություն 
-        <span style="color: #e74c3c; font-size: 16px;">*</span>
-      </label>
-      <input type="text" id="edu-degree" name="degree" required data-required
-        value="${e(currentData.degree || '')}"
-        style="width: 100%; padding: 14px 16px; border-radius: 12px; font-size: 15px; background: var(--card-background); color: var(--font-color-primary); border: 2px solid var(--border-color); transition: all 0.3s ease; box-sizing: border-box;"
-        placeholder="Օրինակ՝ Բակալավրի աստիճան, Ծրագրային ինժեներություն"
-        onfocus="this.style.borderColor='#667eea'; this.style.boxShadow='0 0 0 4px rgba(102, 126, 234, 0.1)'"
-        onblur="this.style.borderColor='var(--border-color)'; this.style.boxShadow='none'">
-    </div>
-    
-    <div style="background: var(--window-background); padding: 16px; border-radius: 12px; margin-bottom: 20px;">
-      <label style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px; font-weight: 600; color: var(--font-color-primary); font-size: 14px;">
-        <i class="fas fa-calendar-alt" style="color: #667eea; font-size: 16px;"></i>
-        Ժամանակահատված
-      </label>
-      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
-        <div>
-          <label style="display: block; margin-bottom: 8px; font-size: 13px; color: var(--font-color-secondary); font-weight: 500;">
-            Սկիզբ <span style="color: #e74c3c;">*</span>
-          </label>
-          <input type="month" id="edu-start" name="startDate" required data-required
-            value="${e(currentData.startDate || '')}"
-            style="width: 100%; padding: 12px; border-radius: 10px; font-size: 14px; background: var(--card-background); color: var(--font-color-primary); border: 2px solid var(--border-color); transition: all 0.3s ease; box-sizing: border-box;"
-            onfocus="this.style.borderColor='#667eea'; this.style.boxShadow='0 0 0 4px rgba(102, 126, 234, 0.1)'"
-            onblur="this.style.borderColor='var(--border-color)'; this.style.boxShadow='none'">
-        </div>
-        <div>
-          <label style="display: block; margin-bottom: 8px; font-size: 13px; color: var(--font-color-secondary); font-weight: 500;">
-            Ավարտ
-          </label>
-          <input type="month" id="edu-end" name="endDate"
-            value="${e(currentData.endDate || '')}"
-            style="width: 100%; padding: 12px; border-radius: 10px; font-size: 14px; background: var(--card-background); color: var(--font-color-primary); border: 2px solid var(--border-color); transition: all 0.3s ease; box-sizing: border-box;"
-            onfocus="this.style.borderColor='#667eea'; this.style.boxShadow='0 0 0 4px rgba(102, 126, 234, 0.1)'"
-            onblur="this.style.borderColor='var(--border-color)'; this.style.boxShadow='none'">
-        </div>
-      </div>
-    </div>
-    
-    <div style="margin-top: 24px; padding-top: 20px; border-top: 1px solid var(--border-color);">
-      <button type="button" class="delete-entry-btn" style="width: 100%; padding: 12px; background: #e74c3c; color: white; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.3s ease;">
-        <i class="fas fa-trash-alt" style="margin-right: 8px;"></i>
-        Հեռացնել կրթությունը
-      </button>
-    </div>
-  `;
-
-  modal.create('Փոփոխել կրթությունը', form, async data => {
-    if (!validateForm(form)) return false;
-    const record = await profiles.education.update(currentData.id, { ...currentData, ...data });
-    Object.assign(currentData, record);
-    // Update the entry with new data
-    const titleEl = entry.querySelector('.item-title');
-    const subtitleEl = entry.querySelector('.item-subtitle');
-    const dateEl = entry.querySelector('.item-date');
-
-    if (titleEl) titleEl.textContent = data.institution;
-    if (subtitleEl) subtitleEl.textContent = data.degree;
-    if (dateEl) dateEl.textContent = formatDateRange(data.startDate, data.endDate);
-
-    showNotification('Կրթությունը թարմացվել է');
-  });
-
-  // Add delete button handler
-  setTimeout(() => {
-    const deleteBtn = form.querySelector('.delete-entry-btn');
-    if (deleteBtn) {
-      deleteBtn.addEventListener('click', () => {
-        deleteEducation(entry, currentData.id, deleteBtn, form);
-      });
-    }
-
-    initializeValidation(form);
-
-  }, 100);
-}
-
-/**
- * Delete an education entry
- * @param {HTMLElement} entry - Education entry element
- */
-async function deleteEducation(entry, id, button, form) {
-  if (button.disabled) return;
-  button.disabled = true;
-  const confirmed = await customConfirm('Վստա՞հ եք, որ ցանկանում եք հեռացնել այս կրթությունը։');
-  button.disabled = false;
-  if (!confirmed) return;
-  modal.saving = true;
-  const saved = await pending(button, form, () => profiles.education.delete(id));
-  modal.saving = false;
-  if (saved) { entry.remove(); modal.close(); showNotification('Կրթությունը հեռացվել է'); }
-}
-
-/**
- * Attach event handlers to education entry buttons
- * @param {HTMLElement} entry - Education entry element
- * @param {Object} data - Education data
- */
-function attachEducationHandlers(entry, data) {
-  const editIcon = entry.querySelector('.fa-pencil-alt');
-
-  if (editIcon) {
-    editIcon.style.cursor = 'pointer';
-    editIcon.tabIndex = 0; editIcon.setAttribute('role', 'button'); editIcon.setAttribute('aria-label', 'Փոփոխել կրթությունը');
-    editIcon.onclick = () => editEducation(entry, data);
-  }
-}
-
-// ============================================
-// LICENSE/CERTIFICATE SECTION
-// ============================================
-
-/**
- * Show modal to add license/certificate entry
- */
-function showAddLicenseModal() {
-  const form = document.createElement('div');
-  form.innerHTML = `
-    <div style=" padding: 24px; margin: -24px -24px 24px -24px; border-radius: 12px 12px 0 0;">
-      <div style="display: flex; align-items: center; gap: 16px;">
-        <div style="width: 56px; height: 56px; background: #f5576c; border-radius: 16px; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(10px);">
-          <i class="fas fa-certificate" style="font-size: 28px; color: white;"></i>
-        </div>
-        <div>
-          <h3 style="margin: 0; color: var(--font-color-primary); font-size: 20px; font-weight: 700;">Ավելացնել հավաստագիր</h3>
-          <p style="margin: 4px 0 0 0; color: var(--font-color-secondary); font-size: 14px;">Լրացրեք ձեր հավաստագրի տվյալները</p>
-        </div>
-      </div>
-    </div>
-    
-    <div style="margin-bottom: 20px;">
-      <label style="display: flex; align-items: center; gap: 8px; margin-bottom: 10px; font-weight: 600; color: var(--font-color-primary); font-size: 14px;">
-        <i class="fas fa-award" style="color: #f5576c; font-size: 16px;"></i>
-        Հավաստագրի անվանում
-      </label>
-      <input type="text" id="cert-name" name="name" 
-        style="width: 100%; padding: 14px 16px; border-radius: 12px; font-size: 15px; background: var(--card-background); color: var(--font-color-primary); border: 2px solid var(--border-color); transition: all 0.3s ease; box-sizing: border-box;"
-        placeholder="Օրինակ՝ Python Ծրագրավորում"
-        onfocus="this.style.borderColor='#f5576c'; this.style.boxShadow='0 0 0 4px rgba(245, 87, 108, 0.1)'"
-        onblur="this.style.borderColor='var(--border-color)'; this.style.boxShadow='none'">
-    </div>
-    
-    <div style="margin-bottom: 20px;">
-      <label style="display: flex; align-items: center; gap: 8px; margin-bottom: 10px; font-weight: 600; color: var(--font-color-primary); font-size: 14px;">
-        <i class="fas fa-building" style="color: #f5576c; font-size: 16px;"></i>
-        Կազմակերպություն
-      </label>
-      <input type="text" id="cert-org" name="organization" 
-        style="width: 100%; padding: 14px 16px; border-radius: 12px; font-size: 15px; background: var(--card-background); color: var(--font-color-primary); border: 2px solid var(--border-color); transition: all 0.3s ease; box-sizing: border-box;"
-        placeholder="Օրինակ՝ Armenian Code Academy"
-        onfocus="this.style.borderColor='#f5576c'; this.style.boxShadow='0 0 0 4px rgba(245, 87, 108, 0.1)'"
-        onblur="this.style.borderColor='var(--border-color)'; this.style.boxShadow='none'">
-    </div>
-    
-    <div style="background: var(--window-background); padding: 16px; border-radius: 12px; margin-bottom: 20px;">
-      <label style="display: flex; align-items: center; gap: 8px; margin-bottom: 10px; font-weight: 600; color: var(--font-color-primary); font-size: 14px;">
-        <i class="fas fa-calendar-check" style="color: #f5576c; font-size: 16px;"></i>
-        Տրման ամսաթիվ
-      </label>
-      <input type="month" id="cert-date" name="issueDate" 
-        style="width: 100%; padding: 12px; border-radius: 10px; font-size: 14px; background: var(--card-background); color: var(--font-color-primary); border: 2px solid var(--border-color); transition: all 0.3s ease; box-sizing: border-box;"
-        onfocus="this.style.borderColor='#f5576c'; this.style.boxShadow='0 0 0 4px rgba(245, 87, 108, 0.1)'"
-        onblur="this.style.borderColor='var(--border-color)'; this.style.boxShadow='none'">
-    </div>
-    
-    <div style="margin-bottom: 20px;">
-      <label style="display: flex; align-items: center; gap: 8px; margin-bottom: 10px; font-weight: 600; color: var(--font-color-primary); font-size: 14px;">
-        <i class="fas fa-link" style="color: #f5576c; font-size: 16px;"></i>
-        Հավաստագրի հղում
-        <span style="font-size: 12px; color: var(--font-color-secondary); font-weight: 400; margin-left: 4px;">(ոչ պարտադիր)</span>
-      </label>
-      <input type="url" id="cert-url" name="credentialUrl" 
-        style="width: 100%; padding: 14px 16px; border-radius: 12px; font-size: 15px; background: var(--card-background); color: var(--font-color-primary); border: 2px solid var(--border-color); transition: all 0.3s ease; box-sizing: border-box;"
-        placeholder="https://..."
-        onfocus="this.style.borderColor='#f5576c'; this.style.boxShadow='0 0 0 4px rgba(245, 87, 108, 0.1)'"
-        onblur="this.style.borderColor='var(--border-color)'; this.style.boxShadow='none'">
-    </div>
-    
-    <div style="background: linear-gradient(135deg, rgba(240, 147, 251, 0.1) 0%, rgba(245, 87, 108, 0.1) 100%); padding: 12px 16px; border-radius: 10px; border-left: 4px solid #f5576c;">
-      <p style="margin: 0; font-size: 13px; color: var(--font-color-secondary); line-height: 1.5;">
-        <i class="fas fa-lightbulb" style="color: #f5576c; margin-right: 8px;"></i>
-        Ավելացրեք հավաստագրի հղումը՝ այլ օգտատերերին հնարավորություն տալու դիտել այն
-      </p>
-    </div>
-  `;
-
-  modal.create('Ավելացնել հավաստագիր', form, async data => {
-    addLicenseEntry(await profiles.certificates.create(data));
-    showNotification('Հավաստագիրը ավելացվել է');
-  });
-}
-
-/**
- * Add license/certificate entry to the DOM
- * @param {Object} data - License data
- */
-function addLicenseEntry(data) {
-  const entry = certificateEntry(data, true);
-  document.querySelector('.licenses-section').appendChild(entry);
-  attachLicenseHandlers(entry, data);
-}
-
-/**
- * Edit a license entry
- * @param {HTMLElement} entry - License entry element
- * @param {Object} currentData - Current license data
- */
-function editLicense(entry, currentData) {
-  const form = document.createElement('div');
-  form.innerHTML = `
-    <div style=" padding: 24px; margin: -24px -24px 24px -24px; border-radius: 12px 12px 0 0;">
-      <div style="display: flex; align-items: center; gap: 16px;">
-        <div style="width: 56px; height: 56px; background: #f5576c; border-radius: 16px; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(10px);">
-          <i class="fas fa-certificate" style="font-size: 28px; color: white;"></i>
-        </div>
-        <div>
-          <h3 style="margin: 0; color: var(--font-color-primary); font-size: 20px; font-weight: 700;">Փոփոխել հավաստագիրը</h3>
-          <p style="margin: 4px 0 0 0; color: var(--font-color-secondary); font-size: 14px;">Թարմացրեք ձեր հավաստագրի տվյալները</p>
-        </div>
-      </div>
-    </div>
-    
-    <div style="margin-bottom: 20px;">
-      <label style="display: flex; align-items: center; gap: 8px; margin-bottom: 10px; font-weight: 600; color: var(--font-color-primary); font-size: 14px;">
-        <i class="fas fa-award" style="color: #f5576c; font-size: 16px;"></i>
-        Հավաստագրի անվանում
-      </label>
-      <input type="text" id="cert-name" name="name" 
-        value="${e(currentData.name || '')}"
-        style="width: 100%; padding: 14px 16px; border-radius: 12px; font-size: 15px; background: var(--card-background); color: var(--font-color-primary); border: 2px solid var(--border-color); transition: all 0.3s ease; box-sizing: border-box;"
-        placeholder="Օրինակ՝ Python Ծրագրավորում"
-        onfocus="this.style.borderColor='#f5576c'; this.style.boxShadow='0 0 0 4px rgba(245, 87, 108, 0.1)'"
-        onblur="this.style.borderColor='var(--border-color)'; this.style.boxShadow='none'">
-    </div>
-    
-    <div style="margin-bottom: 20px;">
-      <label style="display: flex; align-items: center; gap: 8px; margin-bottom: 10px; font-weight: 600; color: var(--font-color-primary); font-size: 14px;">
-        <i class="fas fa-building" style="color: #f5576c; font-size: 16px;"></i>
-        Կազմակերպություն
-      </label>
-      <input type="text" id="cert-org" name="organization" 
-        value="${e(currentData.organization || '')}"
-        style="width: 100%; padding: 14px 16px; border-radius: 12px; font-size: 15px; background: var(--card-background); color: var(--font-color-primary); border: 2px solid var(--border-color); transition: all 0.3s ease; box-sizing: border-box;"
-        placeholder="Օրինակ՝ Armenian Code Academy"
-        onfocus="this.style.borderColor='#f5576c'; this.style.boxShadow='0 0 0 4px rgba(245, 87, 108, 0.1)'"
-        onblur="this.style.borderColor='var(--border-color)'; this.style.boxShadow='none'">
-    </div>
-    
-    <div style="background: var(--window-background); padding: 16px; border-radius: 12px; margin-bottom: 20px;">
-      <label style="display: flex; align-items: center; gap: 8px; margin-bottom: 10px; font-weight: 600; color: var(--font-color-primary); font-size: 14px;">
-        <i class="fas fa-calendar-check" style="color: #f5576c; font-size: 16px;"></i>
-        Տրման ամսաթիվ
-      </label>
-      <input type="month" id="cert-date" name="issueDate" 
-        value="${e(currentData.issueDate || '')}"
-        style="width: 100%; padding: 12px; border-radius: 10px; font-size: 14px; background: var(--card-background); color: var(--font-color-primary); border: 2px solid var(--border-color); transition: all 0.3s ease; box-sizing: border-box;"
-        onfocus="this.style.borderColor='#f5576c'; this.style.boxShadow='0 0 0 4px rgba(245, 87, 108, 0.1)'"
-        onblur="this.style.borderColor='var(--border-color)'; this.style.boxShadow='none'">
-    </div>
-    
-    <div style="margin-bottom: 20px;">
-      <label style="display: flex; align-items: center; gap: 8px; margin-bottom: 10px; font-weight: 600; color: var(--font-color-primary); font-size: 14px;">
-        <i class="fas fa-link" style="color: #f5576c; font-size: 16px;"></i>
-        Հավաստագրի հղում
-        <span style="font-size: 12px; color: var(--font-color-secondary); font-weight: 400; margin-left: 4px;">(ոչ պարտադիր)</span>
-      </label>
-      <input type="url" id="cert-url" name="credentialUrl" 
-        value="${e(currentData.credentialUrl || '')}"
-        style="width: 100%; padding: 14px 16px; border-radius: 12px; font-size: 15px; background: var(--card-background); color: var(--font-color-primary); border: 2px solid var(--border-color); transition: all 0.3s ease; box-sizing: border-box;"
-        placeholder="https://..."
-        onfocus="this.style.borderColor='#f5576c'; this.style.boxShadow='0 0 0 4px rgba(245, 87, 108, 0.1)'"
-        onblur="this.style.borderColor='var(--border-color)'; this.style.boxShadow='none'">
-    </div>
-    
-    <div style="margin-top: 24px; padding-top: 20px; border-top: 1px solid var(--border-color);">
-      <button type="button" class="delete-entry-btn" style="width: 100%; padding: 12px; background: #e74c3c; color: white; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.3s ease;">
-        <i class="fas fa-trash-alt" style="margin-right: 8px;"></i>
-        Հեռացնել հավաստագիրը
-      </button>
-    </div>
-  `;
-
-  modal.create('Փոփոխել հավաստագիրը', form, async data => {
-    const saved = await profiles.certificates.update(currentData.id, { ...currentData, ...data });
-    const replacement = certificateEntry(saved, true); entry.replaceWith(replacement);
-    attachLicenseHandlers(replacement, saved);
-    showNotification('Հավաստագիրը թարմացվել է');
-  });
-
-  // Add delete button handler
-  setTimeout(() => {
-    const deleteBtn = form.querySelector('.delete-entry-btn');
-    if (deleteBtn) {
-      deleteBtn.addEventListener('click', () => {
-        deleteLicense(entry, currentData.id, deleteBtn, form);
-      });
-    }
-  }, 100);
-}
-
-/**
- * Delete a license entry
- * @param {HTMLElement} entry - License entry element
- */
-async function deleteLicense(entry, id, button, form) {
-  if (button.disabled) return;
-  button.disabled = true;
-  const confirmed = await customConfirm('Վստա՞հ եք, որ ցանկանում եք հեռացնել այս հավաստագիրը։');
-  button.disabled = false;
-  if (!confirmed) return;
-  modal.saving = true;
-  const saved = await pending(button, form, () => profiles.certificates.delete(id));
-  modal.saving = false;
-  if (saved) { entry.remove(); modal.close(); showNotification('Հավաստագիրը հեռացվել է'); }
-}
-
-/**
- * Attach event handlers to license entry buttons
- * @param {HTMLElement} entry - License entry element
- * @param {Object} data - License data
- */
-function attachLicenseHandlers(entry, data) {
-  const editIcon = entry.querySelector('.fa-pencil-alt');
-  if (editIcon) {
-    editIcon.style.cursor = 'pointer';
-    editIcon.onclick = () => editLicense(entry, data);
-  }
-}
-
-// ============================================
-// ANNOUNCEMENTS SECTION
-// ============================================
-
-/**
- * Show modal to add announcement
- */
-function showAddAnnouncementModal() {
-  openPostForm({onSaved:saved=>document.dispatchEvent(new CustomEvent('polylink-post-created',{detail:saved}))});
-}
-function addAnnouncementEntry(data) {
-  const section=document.querySelector('.announcements-section');
-  if ([...section.querySelectorAll('[data-post-id]')].some(card=>card.dataset.postId===data.id)) return;
-  section.prepend(announcementEntry(data));
-}
-
-// ============================================
-// PHOTO UPLOAD
-// ============================================
-
-/**
- * Handle banner photo upload
- */
-function handleBannerUpload() { uploadPhoto('cover'); }
-function handleProfilePhotoUpload() { uploadPhoto('avatar'); }
-function uploadPhoto(kind) {
-  const input = document.createElement('input'); input.type = 'file'; input.accept = 'image/png,image/jpeg,image/webp,image/gif';
-  input.onchange = async () => {
-    const file = input.files[0]; if (!file) return;
-    const container = document.querySelector('.intro-card');
-    await pending(null, container, async () => {
-      const user = await profiles.upload(kind, file);
-      if (kind === 'cover') document.querySelector('.banner-photo').style.backgroundImage = `url("${safeUrl(user.cover, { image: true })}")`;
-      else document.querySelector('.profile-photo img').src = safeUrl(user.avatar, { image: true });
-      showNotification('Լուսանկարը թարմացվել է');
-    });
+function select(form,label,name,rows,value) {
+  const search=input(form,`Որոնել՝ ${label}`,'','','search');search.removeAttribute('name');search.setAttribute('aria-label',`Որոնել՝ ${label}`);
+  const el=document.createElement('select');el.name=name;
+  let selected=String(value||'');
+  const populate=()=>{
+    const blank=new Option(name==='universityId'?'Ընտրեք հաստատությունը':'Նշված չէ','');
+    const matches=rows.filter(row=>row.id===selected||row.name.toLocaleLowerCase().includes(search.value.toLocaleLowerCase()));
+    el.replaceChildren(blank,...matches.map(row=>new Option(row.name,row.id)));el.value=selected;
   };
-  input.click();
+  populate();el.onchange=()=>{selected=el.value;};search.oninput=()=>{selected=el.value;populate();};return field(form,label,el);
 }
-
-export { showAddEducationModal, addEducationEntry, attachEducationHandlers,
- showAddLicenseModal, addLicenseEntry, attachLicenseHandlers,
- showAddAnnouncementModal, addAnnouncementEntry,
- handleBannerUpload, handleProfilePhotoUpload };
+function dateField(form,label,name,value) {
+  const precision=document.createElement('select');precision.setAttribute('aria-label',`${label}՝ ճշգրտություն`);
+  precision.append(new Option('Տարի','YEAR'),new Option('Ամիս','MONTH'));
+  if(value?.length===10)precision.append(new Option('Նախկին ամսաթիվ','DAY'));
+  precision.value=value?.length===4?'YEAR':value?.length===10?'DAY':'MONTH';
+  field(form,`${label}՝ ճշգրտություն`,precision);
+  const el=input(form,label,name,value?.slice(0,7),precision.value==='YEAR'?'number':'month');
+  const apply=()=>{el.type=precision.value==='YEAR'?'number':'month';el.value=value?(precision.value==='YEAR'?value.slice(0,4):value.slice(0,7)):'';if(el.type==='number'){el.min='1900';el.max='2200';}};
+  apply();precision.onchange=()=>{value=el.value;apply();};
+  el.addEventListener('input',()=>{if(precision.value==='DAY')precision.value='MONTH';});
+  return { el, precision, get:()=>precision.value==='DAY'?value:(el.value||null) };
+}
+function addDelete(form,entry,record,service) {
+  if(!record.id)return;
+  const button=document.createElement('button');button.type='button';button.className='delete-entry-btn';button.textContent='Հեռացնել';form.append(button);
+  button.onclick=async()=>{
+    if(modal.saving||button.disabled)return;
+    button.disabled=true;
+    try {
+      if(!await confirmAction('Վստա՞հ եք, որ ցանկանում եք հեռացնել այս գրառումը։'))return;
+      modal.saving=true;button.disabled=false;
+      const saved=await pending(button,form,()=>service.delete(record.id));
+      modal.saving=false;if(saved){entry.remove();modal.close(true);notify('Գրառումը հեռացվել է');}
+    }finally{modal.saving=false;button.disabled=false;}
+  };
+}
+function educationModal(entry,record={}) {
+  const form=document.createElement('div'),status=document.createElement('p');status.textContent='Բեռնվում է…';status.setAttribute('role','status');form.append(status);
+  let ready=false,options,controls,start,end,ongoing;
+  modal.create(record.id?'Փոփոխել կրթությունը':'Ավելացնել կրթություն',form,async()=>{
+    if(!ready)return false;
+    const data=educationInput({...Object.fromEntries(Object.entries(controls).map(([key,el])=>[key,el.value])),startDate:start.get(),endDate:ongoing.checked?null:end.get(),isOngoing:ongoing.checked},options,record);
+    const saved=record.id?await profiles.education.update(record.id,data):await profiles.education.create(data);
+    if(entry){const replacement=educationEntry(saved,true);entry.replaceWith(replacement);attachEducationHandlers(replacement,saved);}else addEducationEntry(saved);
+    notify('Կրթությունը պահպանվել է');
+  });
+  const load=async()=>{
+    status.replaceChildren(document.createTextNode('Բեռնվում է…'));
+    try {
+      options=await profiles.education.options();if(!form.isConnected)return;
+      form.replaceChildren();controls={};
+      for(const [key,list,label] of [['universityId','universities','Ուսումնական հաստատություն *'],['degreeId','degrees','Աստիճան'],['instituteId','institutes','Ինստիտուտ'],['specializationId','specializations','Մասնագիտություն']])controls[key]=select(form,label,key,options[list],record[key]);
+      if(!options.universities.length){const text=document.createElement('p');text.textContent='Հաստատությունների ցանկը դատարկ է։';form.append(text);}
+      start=dateField(form,'Սկիզբ','startDate',record.startDate);end=dateField(form,'Ավարտ','endDate',record.endDate);
+      ongoing=input(form,'Ուսումը շարունակվում է','isOngoing','','checkbox');ongoing.checked=!!record.isOngoing;
+      const sync=()=>{end.el.disabled=ongoing.checked;end.precision.disabled=ongoing.checked;if(ongoing.checked){end.el.value='';if(end.precision.value==='DAY')end.precision.value='MONTH';}};ongoing.onchange=sync;sync();
+      addDelete(form,entry,record,profiles.education);ready=true;
+    }catch(error){
+      showError(form,error);const retry=document.createElement('button');retry.type='button';retry.textContent='Կրկին փորձել';retry.onclick=()=>{retry.remove();load();};status.replaceChildren(retry);
+    }
+  };load();
+}
+export function showAddEducationModal(){educationModal(null);}
+export function addEducationEntry(record){const entry=educationEntry(record,true);document.querySelector('.education-section').append(entry);attachEducationHandlers(entry,record);}
+export function attachEducationHandlers(entry,record){const button=entry.querySelector('.edit-icon');if(button)button.onclick=()=>educationModal(entry,record);}
+function certificateModal(entry,record={}) {
+  const form=document.createElement('div');
+  const name=input(form,'Հավաստագրի անվանում *','name',record.name);name.required=true;name.maxLength=255;
+  const org=input(form,'Կազմակերպություն *','organization',record.organization);org.required=true;org.maxLength=255;
+  input(form,'Տրման ամիս','issueDate',record.issueDate,'month');
+  const url=input(form,'Հավաստագրի հղում (ոչ պարտադիր)','credentialUrl',record.credentialUrl,'url');url.maxLength=2048;
+  addDelete(form,entry,record,profiles.certificates);
+  modal.create(record.id?'Փոփոխել հավաստագիրը':'Ավելացնել հավաստագիր',form,async data=>{
+    const input=validateCertificate(data);
+    const saved=record.id?await profiles.certificates.update(record.id,input):await profiles.certificates.create(input);
+    if(entry){const replacement=certificateEntry(saved,true);entry.replaceWith(replacement);attachLicenseHandlers(replacement,saved);}else addLicenseEntry(saved);
+    notify('Հավաստագիրը պահպանվել է');
+  });
+}
+export function showAddLicenseModal(){certificateModal(null);}
+export function addLicenseEntry(record){const entry=certificateEntry(record,true);document.querySelector('.licenses-section').append(entry);attachLicenseHandlers(entry,record);}
+export function attachLicenseHandlers(entry,record){const button=entry.querySelector('.edit-icon');if(button)button.onclick=()=>certificateModal(entry,record);}
+export function showAddAnnouncementModal(){openPostForm({onSaved:saved=>document.dispatchEvent(new CustomEvent('polylink-post-created',{detail:saved}))});}
+export function addAnnouncementEntry(record){const section=document.querySelector('.announcements-section');if(!section.querySelector(`[data-post-id="${CSS.escape(record.id)}"]`))section.prepend(announcementEntry(record));}
+let imageSaving=false;
+function uploadPhoto(kind) {
+  if(imageSaving)return;
+  const picker=document.createElement('input');picker.type='file';picker.accept='image/png,image/jpeg';
+  picker.onchange=async()=>{const file=picker.files[0];if(!file||imageSaving)return;imageSaving=true;try{await pending(null,document.querySelector('.intro-card'),async()=>{
+    profileImage(file);const user=await profiles.upload(kind,file);
+    if(kind==='cover')document.querySelector('.banner-photo').style.backgroundImage=`url("${safeUrl(user.cover,{image:true})}")`;
+    else document.querySelector('.profile-photo img').src=safeUrl(user.avatar,{image:true});notify('Լուսանկարը թարմացվել է');
+  });}finally{imageSaving=false;}};picker.click();
+}
+export function handleBannerUpload(){uploadPhoto('cover');}
+export function handleProfilePhotoUpload(){uploadPhoto('avatar');}

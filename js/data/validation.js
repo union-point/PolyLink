@@ -36,9 +36,12 @@ export function validateEducation(data) {
   return record;
 }
 export function validateCertificate(data) {
+  if(Object.keys(data).some(key=>!['name','organization','issueDate','credentialUrl'].includes(key)))throw new DataError('VALIDATION','Անվավեր դաշտ։');
   const url = String(data.credentialUrl || '').trim();
-  if (url && !/^https?:\/\//i.test(url)) throw new DataError('VALIDATION', 'Անվավեր հավաստագրի հղում։', { credentialUrl: 'Հղումը պետք է սկսվի https:// կամ http://' });
-  return { name: required(data.name, 'name', 255), organization: String(data.organization || ''), issueDate: month(data.issueDate, 'issueDate', true), credentialUrl: url, logo: data.logo || '' };
+  if(url){let parsed;try{parsed=new URL(url);}catch{throw new DataError('VALIDATION','Անվավեր հավաստագրի հղում։');}if(!['http:','https:'].includes(parsed.protocol)||!parsed.hostname||parsed.username||parsed.password||url.length>2048)throw new DataError('VALIDATION','Անվավեր հավաստագրի հղում։');}
+  const issueDate=month(data.issueDate,'issueDate',true);
+  if(issueDate&&(Number(issueDate.slice(0,4))<1900||Number(issueDate.slice(0,4))>2200))throw new DataError('VALIDATION','Անվավեր ամսաթիվ։');
+  return {name:required(data.name,'name',255),organization:required(data.organization,'organization',255),issueDate,credentialUrl:url};
 }
 export function richContent(value) {
   const content = sanitizeHtml(value);

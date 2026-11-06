@@ -1,3 +1,4 @@
+import { normalizeEducationOptions } from '../../profile/contracts.js';
 import { normalizePost, normalizeComment, normalizePostOptions, normalizePostPage } from '../../posts/contracts.js';
 import { normalizeSearchPerson, normalizeSearchPage, normalizeSearchFilters } from '../../search/contracts.js';
 import { normalizeCategory, normalizeForumTopic, normalizeReply, normalizeForumPage } from '../../forum/contracts.js';
@@ -53,6 +54,7 @@ export function createHttpProvider(transportPromise = loadTransport()) {
       if (operation === 'posts.comments.list') return normalizePostPage(body, normalizeComment);
       if (operation.startsWith('posts.comments.')) return normalizeComment(body);
       if (operation.startsWith('posts.')) return normalizePost(body);
+      if (operation === 'profiles.education.options') return normalizeEducationOptions(body);
       if (operation.startsWith('profiles.education.')) return operation.endsWith('.list') ? list(body, normalizeEducation) : normalizeEducation(body);
       if (operation.startsWith('profiles.certificates.')) return operation.endsWith('.list') ? list(body, normalizeCertificate) : normalizeCertificate(body);
       if (operation === 'forum.categories') return list(body, normalizeCategory);

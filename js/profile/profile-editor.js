@@ -1,5 +1,6 @@
 import { profiles } from '../services/index.js';
-import { pending, notify } from '../shared/ui.js';
+import { profileUpdate } from './contracts.js';
+import { pending, notify, confirmAction } from '../shared/ui.js';
 
 export class InlineEditor {
   constructor() {
@@ -8,7 +9,8 @@ export class InlineEditor {
     this.secondary = this.card.querySelector('.secondary-btn');
     this.isEditing = false;
     this.saving = false;
-    this.elements = [this.card.querySelector('h1'), this.card.querySelector('.job-title'), this.card.querySelector('.desc p')];
+    this.elements = [this.card.querySelector('.job-title'), this.card.querySelector('.desc p')];
+    window.addEventListener('beforeunload',event=>{if(this.isEditing&&this.elements.some((el,i)=>el.textContent!==this.original[i])){event.preventDefault();event.returnValue='';}});
     this.secondary.onclick = () => this.isEditing ? this.cancel() : this.startEditing();
     this.primary.onclick = () => this.isEditing ? this.save() : this.onAdd?.();
   }
@@ -23,15 +25,15 @@ export class InlineEditor {
     this.saving = true;
     this.secondary.disabled = true;
     const saved = await pending(this.primary, this.card, async () => {
-      const parts = this.elements[0].textContent.trim().split(/\s+/);
-      const user = await profiles.update({ firstName: parts.shift(), lastName: parts.join(' '), jobTitle: this.elements[1].textContent, description: this.elements[2].textContent });
-      this.elements[0].textContent = user.name; this.elements[1].textContent = user.jobTitle; this.elements[2].textContent = user.description;
+      const user = await profiles.update(profileUpdate({jobTitle:this.elements[0].textContent,description:this.elements[1].textContent}));
+      this.elements[0].textContent = user.jobTitle; this.elements[1].textContent = user.description;
     });
     this.saving = false; this.secondary.disabled = false;
     if (saved) { this.finish(); notify('Փոփոխությունները պահպանվել են'); }
   }
-  cancel() {
+  async cancel() {
     if (!this.isEditing || this.saving) return;
+    if (this.elements.some((element,index)=>element.textContent!==this.original[index]) && !await confirmAction('Չպահպանված փոփոխությունները չեղարկե՞լ։')) return;
     this.elements.forEach((element, index) => { element.textContent = this.original[index]; });
     this.finish();
   }

@@ -1,4 +1,4 @@
-import { showError } from '../shared/ui.js';
+import { showError, confirmAction } from '../shared/ui.js';
 // ============================================
 // MODAL CLASS
 // ============================================
@@ -10,6 +10,7 @@ class Modal {
   constructor() {
     this.modal = null;
     this.saving = false;
+    window.addEventListener('beforeunload',event=>{if(this.modal&&this.dirty){event.preventDefault();event.returnValue='';}});
   }
 
   /**
@@ -21,7 +22,7 @@ class Modal {
    */
   create(title, content, onSave, options = {}) {
     // Remove existing modal if any
-    this.close();
+    this.close(true);
 
     // Create modal overlay
     const overlay = document.createElement('div');
@@ -80,6 +81,9 @@ class Modal {
       }
     };
 
+    this.dirty = false;
+    contentEl.addEventListener('input',()=>{this.dirty=true;});
+    contentEl.addEventListener('change',()=>{this.dirty=true;});
     document.body.appendChild(overlay);
     this.modal = overlay;
     this.previousFocus = document.activeElement;
@@ -174,7 +178,7 @@ class Modal {
       this.saving = true; saveBtn.disabled = true; saveBtn.setAttribute('aria-busy', 'true');
       try {
         const result = onSave ? await onSave(this.getFormData(contentEl)) : undefined;
-        if (result !== false) { this.saving = false; this.close(); }
+        if (result !== false) { this.saving = false; this.close(true); }
       } catch (error) { showError(contentEl, error); }
       finally { this.saving = false; saveBtn.disabled = false; saveBtn.removeAttribute('aria-busy'); }
     });
@@ -219,7 +223,7 @@ class Modal {
     const formData = {};
     const inputs = contentEl.querySelectorAll('input, textarea, select');
     inputs.forEach(input => {
-      formData[input.name || input.id] = input.value;
+      if(input.name || input.id) formData[input.name || input.id] = input.type === 'checkbox' ? input.checked : input.value;
     });
     // Handle contenteditable elements
     const editables = contentEl.querySelectorAll('[contenteditable="true"]');
@@ -232,8 +236,10 @@ class Modal {
   /**
    * Close the modal
    */
-  close() {
+  async close(force = false) {
     if (this.saving) return;
+    if (!force && this.dirty && !await confirmAction('Չպահպանված փոփոխությունները չեղարկե՞լ։')) return;
+    this.dirty = false;
     if (this.modal) {
       this.modal.remove();
       this.modal = null;

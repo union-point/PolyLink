@@ -1,6 +1,6 @@
 /**
  * Application contracts. Providers return these objects, never Axios responses.
- * IDs are opaque strings; dates use YYYY-MM (profile precision), timestamps ISO UTC.
+ * IDs are opaque strings; education dates use YYYY or YYYY-MM (legacy YYYY-MM-DD is preserved), timestamps ISO UTC.
  *
  * @typedef {{id:string, firstName:string, lastName:string, name:string,
  * jobTitle:string, description:string, avatar:string, cover:string,
@@ -8,8 +8,8 @@
  * institute:string, specialization:string, graduationYear:string,
  * department?:string, passwordChangedAt?:string|null,
  * education:Education[], licenses:Certificate[]}} User
- * @typedef {{id:string, institution:string, degree:string, institute:string,
- * specialization:string, startDate:string, endDate:string|null, logo:string}} Education
+ * @typedef {{id:string, universityId:string, degreeId:string|null, instituteId:string|null, specializationId:string|null, startPrecision:string|null, endPrecision:string|null, isOngoing:boolean, institution:string, degree:string, institute:string,
+ * specialization:string, startDate:string|null, endDate:string|null, logo:string}} Education
  * @typedef {{id:string, name:string, organization:string, issueDate:string|null,
  * credentialUrl:string, logo:string}} Certificate
  * @typedef {{id:string,name:string,avatar:string}} Author

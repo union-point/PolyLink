@@ -16,7 +16,7 @@ export const auth = {
 };
 export const profiles = {
   get: operation('profiles.get'), update: operation('profiles.update'), onboard: operation('profiles.onboard'), upload: operation('profiles.upload'),
-  education: { list: operation('profiles.education.list'), create: operation('profiles.education.create'), update: operation('profiles.education.update'), delete: operation('profiles.education.delete') },
+  education: { options: operation('profiles.education.options'), list: operation('profiles.education.list'), create: operation('profiles.education.create'), update: operation('profiles.education.update'), delete: operation('profiles.education.delete') },
   certificates: { list: operation('profiles.certificates.list'), create: operation('profiles.certificates.create'), update: operation('profiles.certificates.update'), delete: operation('profiles.certificates.delete') },
 };
 export const posts = {

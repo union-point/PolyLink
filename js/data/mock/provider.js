@@ -1,3 +1,5 @@
+import { normalizeMockImage } from '../../profile/images.js';
+import { profileOptions, upgradeProfiles, saveEducation, profileUpdate } from './profile-state.js';
 import { postOperations, activityOperations, upgradePostsState } from './posts-state.js';
 import { searchOperations } from './search-state.js';
 import { forumOperations, upgradeForumState } from './forum-state.js';
@@ -9,7 +11,7 @@ import { universityEmail, email, password, required, validateEducation, validate
 
 const now = () => new Date().toISOString();
 const defaults = () => ({ isProfilePublic: true, showEmail: false, twoFactorEnabled: false, language: 'hy', emailEnabled: true, newListingNotifications: true, forumReplyNotifications: true, directMessageNotifications: true, postCommentNotifications: true });
-const readOperations = new Set(['auth.me', 'profiles.get', 'profiles.education.list', 'profiles.certificates.list', 'posts.options', 'posts.get', 'posts.list', 'posts.comments.list', 'notifications.list', 'notifications.history', 'forum.categories', 'forum.list', 'forum.get', 'forum.replies.list', 'forum.replies.get', 'search.people', 'search.page', 'search.filters', 'chat.list', 'chat.messages', 'chat.page', 'chat.participants', 'chat.loadDraft', 'settings.get', 'settings.export']);
+const readOperations = new Set(['auth.me', 'profiles.get', 'profiles.education.options', 'profiles.education.list', 'profiles.certificates.list', 'posts.options', 'posts.get', 'posts.list', 'posts.comments.list', 'notifications.list', 'notifications.history', 'forum.categories', 'forum.list', 'forum.get', 'forum.replies.list', 'forum.replies.get', 'search.people', 'search.page', 'search.filters', 'chat.list', 'chat.messages', 'chat.page', 'chat.participants', 'chat.loadDraft', 'settings.get', 'settings.export']);
 const publicOperations = new Set(['auth.uploadEnrollmentAvatar','auth.removeEnrollmentAvatar','auth.enrollment','auth.enrollmentOptions','auth.saveEnrollment','auth.submitEnrollment','auth.logoutEnrollment','auth.verifyEmail','auth.me', 'auth.login', 'auth.register', 'auth.verifySecondFactor', 'auth.resendChallenge', 'auth.forgotPassword', 'auth.verifyRecovery', 'auth.resetPassword', 'auth.logout']);
 
 function find(records, id) {
@@ -217,9 +219,7 @@ const operations = {
   'profiles.get': (state, id) => profile(state, id ? find(state.users, id) : me(state)),
   'profiles.update': (state, data) => {
     const user = me(state);
-    for (const key of ['firstName', 'lastName']) if (key in data) user[key] = required(data[key], key, 100);
-    for (const key of ['jobTitle', 'description', 'institute', 'specialization', 'department', 'graduationYear']) if (key in data) user[key] = String(data[key] || '').trim();
-    user.name = `${user.firstName} ${user.lastName}`;
+    Object.assign(user,profileUpdate(data));
     return profile(state, user);
   },
   'profiles.onboard': (state, data) => {
@@ -238,9 +238,10 @@ const operations = {
     Object.assign(user, { role, institute: role === 'graduate' ? data.institute : '', department: role === 'lecturer' ? data.department : '', specialization: data.specialization, description: data.description, onboardingComplete: true });
     return profile(state, user);
   },
+  'profiles.education.options': () => profileOptions(),
   'profiles.education.list': state => state.education.filter(record => record.userId === me(state).id),
-  'profiles.education.create': (state, data) => { const entry = { ...validateEducation(data), id: nextId(state, 'education'), userId: me(state).id }; state.education.push(entry); return entry; },
-  'profiles.education.update': (state, id, data) => Object.assign(owner(state, find(state.education, id)), validateEducation(data)),
+  'profiles.education.create': (state, data) => { const entry = { ...saveEducation(state,data), id: nextId(state, 'education'), userId: me(state).id }; state.education.push(entry); return entry; },
+  'profiles.education.update': (state, id, data) => Object.assign(owner(state, find(state.education, id)), saveEducation(state,data,find(state.education,id))),
   'profiles.education.delete': (state, id) => { owner(state, find(state.education, id)); state.education = state.education.filter(record => record.id !== String(id)); return null; },
   'profiles.certificates.list': state => state.certificates.filter(record => record.userId === me(state).id),
   'profiles.certificates.create': (state, data) => { const entry = { ...validateCertificate(data), id: nextId(state, 'certificate'), userId: me(state).id }; state.certificates.push(entry); return entry; },
@@ -248,7 +249,8 @@ const operations = {
   'profiles.certificates.delete': (state, id) => { owner(state, find(state.certificates, id)); state.certificates = state.certificates.filter(record => record.id !== String(id)); return null; },
   'profiles.upload': (state, kind, file) => {
     if (!['avatar', 'cover'].includes(kind)) throw new DataError('VALIDATION', 'Անվավեր պատկերի տեսակ։');
-    const id = nextId(state, 'media'); state.media.push({ id, userId: me(state).id, blob: validateImage(file) });
+    state.media=state.media.filter(item=>item.userId!==me(state).id||item.kind!==kind);
+    const id = nextId(state, 'media'); state.media.push({ id, kind, userId: me(state).id, blob: validateImage(file) });
     me(state)[kind] = `media:${id}`;
     return profile(state, me(state));
   },
@@ -277,7 +279,8 @@ const operations = {
     if (!text && !data.file) throw new DataError('VALIDATION', 'Մուտքագրեք հաղորդագրություն։');
     if (text.length > 5000) throw new DataError('VALIDATION', 'Հաղորդագրությունը չափազանց երկար է։');
     let attachment = null;
-    if (data.file) { const id = nextId(state, 'media'); state.media.push({ id, userId: own, blob: validateImage(data.file) }); attachment = { url: `media:${id}`, name: data.file.name, type: data.file.type }; }
+    if (data.file) { state.media=state.media.filter(item=>item.userId!==me(state).id||item.kind!==kind);
+    const id = nextId(state, 'media'); state.media.push({ id, userId: own, blob: validateImage(data.file) }); attachment = { url: `media:${id}`, name: data.file.name, type: data.file.type }; }
     const message = { id: nextId(state, 'message'), roomId: room.id, senderId: own, text, attachment, createdAt: now() }; appendMessage(state,room,message);
     return messageView(state, message);
   },
@@ -401,9 +404,11 @@ export function createMockProvider() {
       } else if (operation === 'settings.changePassword') args = [{ oldDigest: await digest(user.email, data.oldPassword), newDigest: await digest(user.email, password(data.newPassword)) }];
       else args = [{ ...data,digest: await digest(user.email, data.password) }];
     }
+    if(operation==='profiles.upload')args=[args[0],await normalizeMockImage(args[0],args[1])];
     if(operation==='chat.send'&&args[1]?.file){const file=validateImage(args[1].file);await validateImageBytes(new Uint8Array(await file.arrayBuffer()),file.type);}
     const write = !readOperations.has(operation) || ['posts.list','posts.comments.list','notifications.history'].includes(operation);
     const result = await transaction(state => {
+      upgradeProfiles(state);
       for(const room of state.rooms)if(room.isGroup&&!room.ownerId&&!room.closed){room.ownerId=[...room.participants].sort(compareUserIds)[0];room.membershipVersion||='1';room.metadataVersion||='1';}
       if (!publicOperations.has(operation)) me(state);
       return operations[operation](state, ...args);
