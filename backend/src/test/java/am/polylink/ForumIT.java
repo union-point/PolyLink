@@ -85,7 +85,12 @@ class ForumIT {
         var a = fixture.enroll("graduate");
         var b = fixture.enroll("lecturer");
         assertThat(fixture.new Browser().get("/forum/categories").statusCode()).isEqualTo(401);
-        assertThat(call(a, "GET", "/forum/categories", null, 200).size()).isEqualTo(6);
+        assertThat(call(a, "GET", "/forum/categories", null, 200))
+                .isEqualTo(
+                        mapper.valueToTree(
+                                am.polylink.auth.Rows.query(
+                                        db,
+                                        "SELECT CONVERT(varchar(10),CategoryId) AS id,Code AS code,Name AS name FROM dbo.ForumCategories ORDER BY CategoryId")));
         var input = creation("informatics");
         var topic = call(a, "POST", "/forum/topics", input, 201);
         String id = topic.path("id").asText();

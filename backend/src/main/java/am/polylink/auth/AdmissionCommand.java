@@ -67,48 +67,7 @@ public final class AdmissionCommand {
                             user,
                             actor);
                 } else {
-                    if (!Set.of("ADMITTED", "DEACTIVATED").contains(a.get("AdmissionStatus"))
-                            || !args[2].equals(a.get("RoleCode"))
-                            || Rows.query(
-                                            db,
-                                            "SELECT UserId FROM auth.RegistryClaims WHERE UserId=?",
-                                            user)
-                                    .isEmpty()) throw AuthFailure.denied();
-                    int registry = Integer.parseInt(args[3]);
-                    if (registry < 1)
-                        throw new IllegalArgumentException("Supply a positive registry ID");
-                    boolean lecturer = args[2].equals("lecturer");
-                    String column = lecturer ? "LecturerRegistryId" : "AlumniRegistryId";
-                    int old =
-                            db.queryForObject(
-                                    "SELECT " + column + " FROM auth.RegistryClaims WHERE UserId=?",
-                                    Integer.class,
-                                    user);
-                    for (int record : new TreeSet<>(List.of(old, registry))) {
-                        if (RegistryLinks.lock(db, lecturer, record) == null)
-                            throw new IllegalArgumentException("Registry record does not exist");
-                        var claims = RegistryLinks.claims(db, lecturer, record);
-                        if (record == registry
-                                && claims.stream()
-                                        .anyMatch(
-                                                claim ->
-                                                        ((Number) claim.get("UserId")).intValue()
-                                                                != user))
-                            throw new IllegalArgumentException("Registry record is already linked");
-                    }
-                    db.update(
-                            "INSERT auth.RegistryClaimAudit(UserId,AlumniRegistryId,LecturerRegistryId,Action,Actor) SELECT UserId,AlumniRegistryId,LecturerRegistryId,'CORRECT_OLD',? FROM auth.RegistryClaims WHERE UserId=?",
-                            actor,
-                            user);
-                    db.update(
-                            "UPDATE auth.RegistryClaims SET AlumniRegistryId=?,LecturerRegistryId=?,VerifiedAt=SYSDATETIMEOFFSET() WHERE UserId=?",
-                            args[2].equals("graduate") ? registry : null,
-                            args[2].equals("lecturer") ? registry : null,
-                            user);
-                    db.update(
-                            "INSERT auth.RegistryClaimAudit(UserId,AlumniRegistryId,LecturerRegistryId,Action,Actor) SELECT UserId,AlumniRegistryId,LecturerRegistryId,'CORRECT_NEW',? FROM auth.RegistryClaims WHERE UserId=?",
-                            actor,
-                            user);
+                    correct(connection, user, args[2], Integer.parseInt(args[3]), actor);
                 }
                 connection.commit();
             } catch (Exception failure) {
@@ -117,6 +76,70 @@ public final class AdmissionCommand {
             }
         }
         System.out.println("Audited registry maintenance completed.");
+    }
+
+    /**
+     * Caller owns the transaction; account, sorted registry rows and claim keys lock in that order.
+     */
+    public static void correct(
+            Connection connection, int user, String role, int registry, String actor)
+            throws SQLException {
+        if (connection.getAutoCommit())
+            throw new IllegalStateException("An explicit transaction is required");
+        if (user < 1
+                || registry < 1
+                || actor == null
+                || actor.isBlank()
+                || actor.length() > 200
+                || !Set.of("graduate", "lecturer").contains(role))
+            throw new IllegalArgumentException(
+                    "Supply a valid user, role, registry and operator identity");
+        var db =
+                new org.springframework.jdbc.core.JdbcTemplate(
+                        new org.springframework.jdbc.datasource.SingleConnectionDataSource(
+                                connection, true));
+        var rows =
+                Rows.query(
+                        db,
+                        "SELECT a.*,r.Name AS RoleCode FROM auth.AccountSecurity a WITH(UPDLOCK,HOLDLOCK) JOIN dbo.Users u ON u.UserId=a.UserId JOIN dbo.Roles r ON r.RoleId=u.RoleId WHERE a.UserId=?",
+                        user);
+        if (rows.isEmpty()) throw AuthFailure.denied();
+        var a = rows.getFirst();
+        if (!Set.of("ADMITTED", "DEACTIVATED").contains(a.get("AdmissionStatus"))
+                || !role.equals(a.get("RoleCode"))
+                || Rows.query(db, "SELECT UserId FROM auth.RegistryClaims WHERE UserId=?", user)
+                        .isEmpty()) throw AuthFailure.denied();
+
+        if (registry < 1) throw new IllegalArgumentException("Supply a positive registry ID");
+        boolean lecturer = role.equals("lecturer");
+        String column = lecturer ? "LecturerRegistryId" : "AlumniRegistryId";
+        int old =
+                db.queryForObject(
+                        "SELECT " + column + " FROM auth.RegistryClaims WHERE UserId=?",
+                        Integer.class,
+                        user);
+        for (int record : new TreeSet<>(List.of(old, registry))) {
+            if (RegistryLinks.lock(db, lecturer, record) == null)
+                throw new IllegalArgumentException("Registry record does not exist");
+            var claims = RegistryLinks.claims(db, lecturer, record);
+            if (record == registry
+                    && claims.stream()
+                            .anyMatch(claim -> ((Number) claim.get("UserId")).intValue() != user))
+                throw new IllegalArgumentException("Registry record is already linked");
+        }
+        db.update(
+                "INSERT auth.RegistryClaimAudit(UserId,AlumniRegistryId,LecturerRegistryId,Action,Actor) SELECT UserId,AlumniRegistryId,LecturerRegistryId,'CORRECT_OLD',? FROM auth.RegistryClaims WHERE UserId=?",
+                actor,
+                user);
+        db.update(
+                "UPDATE auth.RegistryClaims SET AlumniRegistryId=?,LecturerRegistryId=?,VerifiedAt=SYSDATETIMEOFFSET() WHERE UserId=?",
+                role.equals("graduate") ? registry : null,
+                role.equals("lecturer") ? registry : null,
+                user);
+        db.update(
+                "INSERT auth.RegistryClaimAudit(UserId,AlumniRegistryId,LecturerRegistryId,Action,Actor) SELECT UserId,AlumniRegistryId,LecturerRegistryId,'CORRECT_NEW',? FROM auth.RegistryClaims WHERE UserId=?",
+                actor,
+                user);
     }
 
     private static String required(String name) {

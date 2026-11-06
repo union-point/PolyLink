@@ -66,6 +66,25 @@ class EnrollmentIT {
             Map<String, Object> profile) {}
 
     @Test
+    void normalizedIdentityLookupAdmitsAmongMoreThanAThousandStudyPeers() throws Exception {
+        var a = applicant("graduate");
+        db.update(
+                """
+            INSERT dbo.AlumniRegistry(FirstName,LastName,DiplomaNumber,StudyStartDate,StudyEndDate,SpecializationId,DiplomaKey,KeySourceHash)
+            SELECT N'Other',N'Fixture',v.Diploma,'2020-09-01','2024-06-01',?,HASHBYTES('SHA2_256',v.Diploma),HASHBYTES('SHA2_256',v.Diploma)
+            FROM (SELECT TOP(1001) CONVERT(nvarchar(100),LOWER(CONVERT(varchar(36),NEWID()))) AS Diploma FROM sys.all_objects) v
+            """,
+                a.profile.get("specializationId"));
+        admit(a);
+        assertThat(
+                        db.queryForObject(
+                                "SELECT COUNT(*) FROM auth.RegistryClaims WHERE UserId=?",
+                                Integer.class,
+                                a.id))
+                .isEqualTo(1);
+    }
+
+    @Test
     void admissionUsesStablePolytechnicIdentityRatherThanUniversityLabel() throws Exception {
         int university =
                 db.queryForObject(

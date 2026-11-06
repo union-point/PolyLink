@@ -28,6 +28,15 @@ final class AdminFailure extends RuntimeException {
         return new AdminFailure(409, code, message, Map.of());
     }
 
+    static AdminFailure registryMissing() {
+        return new AdminFailure(404, "NOT_FOUND", "The registry record was not found.", Map.of());
+    }
+
+    static AdminFailure registryDuplicate(String field, String code) {
+        String message = "A registry record with this identity already exists.";
+        return new AdminFailure(409, code, message, Map.of(field, message));
+    }
+
     static AdminFailure duplicate(String field) {
         String message = "A reference value with this " + field + " already exists.";
         return new AdminFailure(

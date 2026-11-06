@@ -52,7 +52,10 @@ public class SecurityConfiguration {
                     authorize.requestMatchers("/actuator/health").permitAll();
                     if (enabled && admin)
                         authorize
-                                .requestMatchers("/admin/auth/**", "/admin/references/**")
+                                .requestMatchers(
+                                        "/admin/auth/**",
+                                        "/admin/references/**",
+                                        "/admin/registries/**")
                                 .permitAll();
                     if (enabled) {
                         authorize

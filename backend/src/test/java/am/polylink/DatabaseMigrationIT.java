@@ -14,6 +14,48 @@ import org.springframework.jdbc.datasource.SingleConnectionDataSource;
 
 class DatabaseMigrationIT {
     @Test
+    void v25SyntheticSeedWritesCanonicalKeysForEveryRegistryIdentity() throws Exception {
+        inIsolatedDatabase(
+                connection -> {
+                    SchemaCommand.migrate(connection, "fresh");
+                    var db =
+                            new org.springframework.jdbc.core.JdbcTemplate(
+                                    new SingleConnectionDataSource(connection, true));
+                    try (var seed = getClass().getResourceAsStream("/db/test-seed/armenian.sql")) {
+                        db.execute(
+                                new String(
+                                        seed.readAllBytes(),
+                                        java.nio.charset.StandardCharsets.UTF_8));
+                    }
+                    for (var row :
+                            db.queryForList(
+                                    "SELECT Email,EmailKey,KeySourceHash FROM dbo.LecturerRegistry")) {
+                        assertThat((byte[]) row.get("EmailKey"))
+                                .isEqualTo(
+                                        am.polylink.auth.RegistryKeys.lecturer(
+                                                (String) row.get("Email")));
+                        assertThat((byte[]) row.get("KeySourceHash"))
+                                .isEqualTo(
+                                        am.polylink.auth.RegistryKeys.source(
+                                                (String) row.get("Email")));
+                    }
+                    for (var row :
+                            db.queryForList(
+                                    "SELECT DiplomaNumber,DiplomaKey,KeySourceHash FROM dbo.AlumniRegistry")) {
+                        assertThat((byte[]) row.get("DiplomaKey"))
+                                .isEqualTo(
+                                        am.polylink.auth.RegistryKeys.diploma(
+                                                (String) row.get("DiplomaNumber")));
+                        assertThat((byte[]) row.get("KeySourceHash"))
+                                .isEqualTo(
+                                        am.polylink.auth.RegistryKeys.source(
+                                                (String) row.get("DiplomaNumber")));
+                    }
+                    SchemaCommand.assertCurrentSchema(connection);
+                });
+    }
+
+    @Test
     void v25BackfillsJavaNormalizedKeysWithoutChangingRegistryDisplayOrIds() throws Exception {
         inIsolatedDatabase(
                 connection -> {
