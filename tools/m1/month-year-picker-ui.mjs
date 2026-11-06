@@ -16,6 +16,7 @@ try {
   window.edits = 0; picker.root.addEventListener('change', () => window.edits++);
  }, { value, preservePrecision });
  const input = page.locator('[name=period]'), panel = page.locator('.profile-month-panel');
+ await page.clock.setFixedTime(new Date('2026-11-06T12:00:00Z'));
  await mount('2020-09');
  assert.equal(await input.inputValue(), 'սեպտեմբեր 2020');
  assert.equal(await page.locator('input[type=date],input[type=month]').count(), 0);
@@ -46,6 +47,23 @@ try {
   await input.click();await page.keyboard.press('Escape');assert.equal(await page.evaluate(() => picker.get()), value);
  }
  await mount('2020-09-23', false);assert.equal(await input.inputValue(), 'սեպտեմբեր 2020');assert.equal(await page.evaluate(() => picker.get()), '2020-09');
+ for(const [date,year,month] of [['2031-01-15',2031,0],['2031-12-15',2031,11],['2032-01-01',2032,0]]) {
+  await page.clock.setFixedTime(new Date(`${date}T12:00:00Z`));
+  await mount(`${year}-01`);await input.click();
+  assert.equal(await panel.locator('.profile-month-year').textContent(),String(year));
+  assert(await panel.getByRole('button',{name:'Հաջորդ տարի',exact:true}).isDisabled());
+  assert.deepEqual(await panel.locator('.profile-month-choice').evaluateAll(buttons=>buttons.map(button=>button.disabled)),Array.from({length:12},(_,index)=>index>month));
+  await page.keyboard.press('PageDown');assert.equal(await panel.locator('.profile-month-year').textContent(),String(year));
+  if(month<11){await panel.locator('.profile-month-choice').nth(11).dispatchEvent('click');assert.equal(await page.evaluate(()=>picker.get()),`${year}-01`);assert(await panel.isVisible());}
+  await panel.getByRole('button',{name:'Նախորդ տարի',exact:true}).click();assert.equal(await panel.locator('.profile-month-choice:disabled').count(),0);
+  await panel.getByRole('button',{name:'Հաջորդ տարի',exact:true}).click();
+  await panel.locator('.profile-month-year').click();
+  assert(await panel.locator('.profile-month-choice').evaluateAll(buttons=>buttons.every(button=>Number(button.textContent)<=new Date().getFullYear())));
+  assert(await panel.getByRole('button',{name:'Հաջորդ տարիները',exact:true}).isDisabled());
+  await panel.getByRole('button',{name:String(year),exact:true}).click();
+  await page.keyboard.press('End');assert.equal(await page.evaluate(()=>Number(document.activeElement.dataset.index)),month);
+  await page.keyboard.press('Enter');assert.equal(await page.evaluate(()=>picker.get()),`${year}-${String(month+1).padStart(2,'0')}`);assert(await panel.isHidden());
+ }
  for(const year of ['1900', '2200']) {
   await mount(`${year}-01`);await input.click();
   assert(await panel.getByRole('button', { name: year === '1900' ? 'Նախորդ տարի' : 'Հաջորդ տարի', exact: true }).isDisabled());

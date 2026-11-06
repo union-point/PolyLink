@@ -1,5 +1,8 @@
 const firstYear = 1900;
-const lastYear = 2200;
+const currentPeriod = () => {
+  const now = new Date();
+  return { year: now.getFullYear(), month: now.getMonth() };
+};
 const months = ['հունվար', 'փետրվար', 'մարտ', 'ապրիլ', 'մայիս', 'հունիս', 'հուլիս', 'օգոստոս', 'սեպտեմբեր', 'հոկտեմբեր', 'նոյեմբեր', 'դեկտեմբեր'];
 const shortMonths = ['հունվ.', 'փետր.', 'մարտ', 'ապր.', 'մայիս', 'հունիս', 'հուլիս', 'օգս.', 'սեպտ.', 'հոկտ.', 'նոյ.', 'դեկտ.'];
 const chevron = direction => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="${direction === 'previous' ? 'm14 6-6 6 6 6' : 'm10 6 6 6-6 6'}"/></svg>`;
@@ -9,7 +12,7 @@ let sequence = 0;
 export function createMonthYearPicker({ name, value = '', label, preservePrecision = true }) {
   let selected = value || '';
   if (!preservePrecision && selected.length > 7) selected = selected.slice(0, 7);
-  let year = Math.min(lastYear, Math.max(firstYear, Number(selected.slice(0, 4)) || new Date().getFullYear()));
+  let year = Math.min(currentPeriod().year, Math.max(firstYear, Number(selected.slice(0, 4)) || currentPeriod().year));
   let yearView = false;
   let pageStart;
   let openListeners, removalObserver;
@@ -46,6 +49,8 @@ export function createMonthYearPicker({ name, value = '', label, preservePrecisi
     input.dispatchEvent(new Event('change', { bubbles: true }));
   }
   function choose(selectedYear, month) {
+    const limit = currentPeriod();
+    if (selectedYear > limit.year || (selectedYear === limit.year && month > limit.month)) return;
     selected = `${selectedYear}-${String(month + 1).padStart(2, '0')}`;
     year = selectedYear; update(); close(true);
   }
@@ -55,9 +60,11 @@ export function createMonthYearPicker({ name, value = '', label, preservePrecisi
     if (focus) input.focus({ preventScroll: true });
   }
   function focusChoice() {
-    (grid.querySelector('[aria-pressed="true"]') || grid.children[0])?.focus({ preventScroll: true });
+    (grid.querySelector('[aria-pressed="true"]:not(:disabled)') || grid.querySelector('button:not(:disabled)'))?.focus({ preventScroll: true });
   }
   function render() {
+    const hadFocus = panel.contains(document.activeElement);
+    const limit = currentPeriod(), lastYear = limit.year;
     heading.textContent = yearView ? `${pageStart}–${Math.min(lastYear, pageStart + 11)}` : String(year);
     heading.setAttribute('aria-label', yearView ? 'Ընտրել ամիսը' : `${year}՝ ընտրել տարին`);
     previous.setAttribute('aria-label', yearView ? 'Նախորդ տարիները' : 'Նախորդ տարի');
@@ -71,16 +78,21 @@ export function createMonthYearPicker({ name, value = '', label, preservePrecisi
         if (yearView) { year = text; yearView = false; render(); focusChoice(); }
         else choose(year, index);
       });
+      choice.disabled = !yearView && year === limit.year && index > limit.month;
       choice.dataset.index = index;
       choice.setAttribute('aria-pressed', String(yearView ? Number(selected.slice(0, 4)) === text : selected.slice(0, 7) === `${year}-${String(index + 1).padStart(2, '0')}`));
       if (!yearView) choice.setAttribute('aria-label', `${months[index]} ${year}`);
       return choice;
     }));
-    if (!panel.hidden) position();
+    if (!panel.hidden) {
+      position();
+      if (hadFocus && (document.activeElement.disabled || !panel.contains(document.activeElement))) heading.focus({ preventScroll: true });
+    }
   }
   function navigate(direction) {
-    if (yearView) pageStart = Math.max(firstYear, Math.min(lastYear - 11, pageStart + direction * 12));
-    else year = Math.max(firstYear, Math.min(lastYear, year + direction));
+    if ((direction < 0 && previous.disabled) || (direction > 0 && next.disabled)) return;
+    if (yearView) pageStart = Math.max(firstYear, Math.min(currentPeriod().year, pageStart + direction * 12));
+    else year = Math.max(firstYear, Math.min(currentPeriod().year, year + direction));
     render();
   }
   function position() {
@@ -105,7 +117,7 @@ export function createMonthYearPicker({ name, value = '', label, preservePrecisi
   }
   function open() {
     if (input.disabled || !panel.hidden) return;
-    year = Math.min(lastYear, Math.max(firstYear, Number(selected.slice(0, 4)) || new Date().getFullYear()));
+    year = Math.min(currentPeriod().year, Math.max(firstYear, Number(selected.slice(0, 4)) || currentPeriod().year));
     yearView = false; render(); panel.hidden = false; panel.showPopover();
     input.setAttribute('aria-expanded', 'true'); position(); focusChoice();
     openListeners = new AbortController();
@@ -133,7 +145,8 @@ export function createMonthYearPicker({ name, value = '', label, preservePrecisi
     if (event.key === 'Home') target = 0;
     if (event.key === 'End') target = grid.children.length - 1;
     if (!Number.isFinite(target)) return;
-    event.preventDefault(); grid.children[Math.max(0, Math.min(grid.children.length - 1, target))].focus();
+    const lastEnabled = [...grid.children].filter(choice => !choice.disabled).at(-1);
+    event.preventDefault(); grid.children[Math.max(0, Math.min(Number(lastEnabled.dataset.index), target))].focus({ preventScroll: true });
   });
   root.addEventListener('focusout', event => {
     if (event.relatedTarget) { if (!root.contains(event.relatedTarget)) close(); }
