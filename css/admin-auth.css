@@ -1,0 +1,20 @@
+:root { color-scheme: light; font-family: system-ui, sans-serif; color: #172d42; background: #edf3f8; }
+* { box-sizing: border-box; }
+body { margin: 0; padding: 28px 16px; }
+main { max-width: 480px; margin: 5vh auto; padding: 32px; border: 1px solid #dce5ee; border-radius: 18px; background: white; box-shadow: 0 12px 32px #1630470c; }
+a { color: #17649e; }
+h1 { font-size: 1.65rem; line-height: 1.3; }
+p { line-height: 1.6; }
+label { display: block; margin: 20px 0 8px; font-weight: 600; }
+input, button { font: inherit; width: 100%; border-radius: 8px; padding: 12px; }
+input { border: 1px solid #9aafc1; }
+input:read-only { background: #f0f4f7; }
+button { margin-top: 20px; border: 1px solid #15598d; background: #15598d; color: white; cursor: pointer; }
+button.secondary { background: white; color: #15598d; }
+button:disabled { opacity: .55; cursor: wait; }
+:focus-visible { outline: 3px solid #e5a21a; outline-offset: 3px; }
+#message { overflow-wrap: anywhere; }
+#message.error { color: #a42828; }
+small { display: block; margin-top: 8px; line-height: 1.6; color: #475e70; }
+[hidden] { display: none !important; }
+@media (max-width: 480px) { main { padding: 22px; margin: 0 auto; } }

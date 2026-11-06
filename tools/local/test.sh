@@ -4,7 +4,7 @@ set -euo pipefail
 umask 077
 script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 repo_dir="$(cd "$script_dir/../.." && pwd)"
-case "${1:-}" in ''|--full|--forum|--posts|--profile) ;; *) echo 'Usage: bash tools/local/test.sh [--full|--forum|--posts|--profile]' >&2; exit 1 ;; esac
+case "${1:-}" in ''|--full|--forum|--posts|--profile|--admin) ;; *) echo 'Usage: bash tools/local/test.sh [--full|--forum|--posts|--profile|--admin]' >&2; exit 1 ;; esac
 if [ -r "${POLYLINK_LOCAL_DIR:-$HOME/.config/polylink}/local.env" ]; then
   source "$script_dir/env.sh"
 else
@@ -32,7 +32,9 @@ if [ -n "${1:-}" ]; then
   [ -n "$DB_TEST_ADMIN_PASSWORD" ] || { echo 'Set DB_TEST_ADMIN_PASSWORD for disposable SQL databases.' >&2; exit 1; }
   npm ci --prefix tools/m1 --ignore-scripts
   npx --prefix tools/m1 playwright install chromium
-  if [ "$1" = --profile ]; then
+  if [ "$1" = --admin ]; then
+    python3 tools/m1/verify.py --admin
+  elif [ "$1" = --profile ]; then
     python3 tools/m1/verify.py --profile
   elif [ "$1" = --posts ]; then
     python3 tools/m1/verify.py --posts

@@ -2,9 +2,9 @@ import os,pathlib,socket,subprocess,time,urllib.request
 
 def free_port():
     with socket.socket() as sock:sock.bind(('127.0.0.1',0));return sock.getsockname()[1]
-def run(root,env,admin_sql,bao_request,root_token,messenger=False,continuity=False,recovery=False,messenger_ui=False,messenger_ui_only=False,groups=False,groups_only=False,forum=False,enrollment=False,posts=False,profile=False):
+def run(root,env,admin_sql,bao_request,root_token,messenger=False,continuity=False,recovery=False,messenger_ui=False,messenger_ui_only=False,groups=False,groups_only=False,forum=False,enrollment=False,posts=False,profile=False,admin=False):
     api_port=free_port();frontend_port=free_port();child=env.copy()
-    child.update(MESSENGER_ENABLED='true' if messenger or profile else 'false',IDENTITY_ENABLED='true',DB_USERNAME=env['MIGRATION_DB_USERNAME'],DB_PASSWORD=env['MIGRATION_DB_PASSWORD'],SERVER_PORT=str(api_port),FRONTEND_ORIGINS=f'http://localhost:{frontend_port}',M1_API=f'http://localhost:{api_port}',M1_FRONTEND=f'http://localhost:{frontend_port}',M1_ARTIFACT_DIR=str(pathlib.Path(env['OPENBAO_TOKEN_FILE']).parent))
+    child.update(ADMIN_ENABLED='true' if admin else 'false',MESSENGER_ENABLED='true' if messenger or profile else 'false',IDENTITY_ENABLED='true',DB_USERNAME=env['MIGRATION_DB_USERNAME'],DB_PASSWORD=env['MIGRATION_DB_PASSWORD'],SERVER_PORT=str(api_port),FRONTEND_ORIGINS=f'http://localhost:{frontend_port}',M1_API=f'http://localhost:{api_port}',M1_FRONTEND=f'http://localhost:{frontend_port}',M1_ARTIFACT_DIR=str(pathlib.Path(env['OPENBAO_TOKEN_FILE']).parent))
     email='browser-'+env['M1_DB_NAME'].removeprefix('polylink_m1_')+'@polytechnic.am';child['M1_BROWSER_EMAIL']=email
     maven=[str(root/'backend/mvnw'),'-B','-q','-f',str(root/'backend/pom.xml')]
     # Synthetic eligibility records exist only inside this disposable acceptance database.
@@ -44,6 +44,9 @@ def run(root,env,admin_sql,bao_request,root_token,messenger=False,continuity=Fal
                     if backend.poll() is not None:raise RuntimeError('M1 browser backend failed: '+logpath.read_text()[-4000:])
                     if i==149:raise RuntimeError('M1 browser backend readiness timeout')
                     time.sleep(.1)
+            if admin:
+                subprocess.run(['node',str(root/'tools/m1/admin-ui.mjs')],cwd=root,env=child,check=True)
+                return
             if profile:
                 subprocess.run(['node',str(root/'tools/m1/profile-ui.mjs')],cwd=root,env=child,check=True)
                 subprocess.run(['node',str(root/'tools/m1/profile-ui.mjs'),'--mock'],cwd=root,env=child,check=True)
