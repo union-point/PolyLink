@@ -29,7 +29,8 @@ BEGIN TRY
       AND c.Code LIKE N'%[0-9]%' AND c.Code LIKE N'%.%';
 
     WHILE EXISTS (SELECT 1 FROM #SpecializationMerge WHERE CleanName LIKE N'%  %')
-        UPDATE #SpecializationMerge SET CleanName = REPLACE(CleanName, N'  ', N' ');
+        UPDATE #SpecializationMerge SET CleanName = REPLACE(CleanName, N'  ', N' ')
+        WHERE CleanName LIKE N'%  %';
 
     IF EXISTS (SELECT 1 FROM #SpecializationMerge WHERE CleanName = N'')
         THROW 51000, 'An empty specialization name needs manual correction.', 1;
@@ -38,19 +39,24 @@ BEGIN TRY
     -- collation does not provide Armenian case folding.
     UPDATE #SpecializationMerge SET NameKey = LOWER(TRANSLATE(CleanName,
         N'ԱԲԳԴԵԶԷԸԹԺԻԼԽԾԿՀՁՂՃՄՅՆՇՈՉՊՋՌՍՎՏՐՑՒՓՔՕՖ',
-        N'աբգդեզէըթժիլխծկհձղճմյնշոչպջռսվտրցւփքօֆ'));
+        N'աբգդեզէըթժիլխծկհձղճմյնշոչպջռսվտրցւփքօֆ'))
+    WHERE NameKey = N'';
 
     UPDATE m SET NewId = g.NewId
     FROM #SpecializationMerge m
     JOIN (SELECT NameKey, MIN(OldId) AS NewId FROM #SpecializationMerge GROUP BY NameKey) g
-      ON g.NameKey = m.NameKey;
+      ON g.NameKey = m.NameKey
+    WHERE m.NewId <> g.NewId;
 
     -- Prefer the original spelling of the oldest record; capitalize an Armenian initial.
     UPDATE m SET CleanName = c.CleanName
-    FROM #SpecializationMerge m JOIN #SpecializationMerge c ON c.OldId = m.NewId;
+    FROM #SpecializationMerge m JOIN #SpecializationMerge c ON c.OldId = m.NewId
+    WHERE m.CleanName COLLATE Latin1_General_100_BIN2 <> c.CleanName COLLATE Latin1_General_100_BIN2;
     UPDATE #SpecializationMerge SET CleanName = TRANSLATE(LEFT(CleanName, 1),
         N'աբգդեզէըթժիլխծկհձղճմյնշոչպջռսվտրցւփքօֆ',
-        N'ԱԲԳԴԵԶԷԸԹԺԻԼԽԾԿՀՁՂՃՄՅՆՇՈՉՊՋՌՍՎՏՐՑՒՓՔՕՖ') + SUBSTRING(CleanName, 2, 255);
+        N'ԱԲԳԴԵԶԷԸԹԺԻԼԽԾԿՀՁՂՃՄՅՆՇՈՉՊՋՌՍՎՏՐՑՒՓՔՕՖ') + SUBSTRING(CleanName, 2, 255)
+    WHERE CHARINDEX(LEFT(CleanName, 1) COLLATE Latin1_General_100_BIN2,
+        N'աբգդեզէըթժիլխծկհձղճմյնշոչպջռսվտրցւփքօֆ' COLLATE Latin1_General_100_BIN2) > 0;
 
     -- Discover every FK rather than assuming the database has a specific schema version.
     IF EXISTS (
