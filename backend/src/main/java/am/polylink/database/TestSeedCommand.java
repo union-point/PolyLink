@@ -35,9 +35,9 @@ public final class TestSeedCommand {
                                 "SELECT DB_NAME(), (SELECT MAX(TRY_CONVERT(int,version)) FROM dbo.flyway_schema_history WHERE success=1)")) {
                     if (!result.next()
                             || !database.equals(result.getString(1))
-                            || result.getInt(2) != 21)
+                            || result.getInt(2) != 22)
                         throw new IllegalStateException(
-                                "Expected the named database migrated through V21");
+                                "Expected the named database migrated through V22");
                 }
                 for (String table :
                         java.util.List.of(
