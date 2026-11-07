@@ -10,6 +10,7 @@ const fields=(data,keys)=>{if(!data||typeof data!=='object'||Array.isArray(data)
 const time=()=>new Date().toISOString();
 export function upgradePostsState(state) {
   state.postTypes??=structuredClone(defaultTypes);
+  state.postSpheres??=structuredClone(spheres);
   if(state.postsDataVersion===2)return;
   const oldIds={'1':'programming','2':'engineering','3':'data-science','5':'marketing','4':'other'};
   for(const post of state.posts){
@@ -26,9 +27,9 @@ function user(state,write=false){const user=state.users.find(u=>u.id===state.ses
 function own(state,item){if(item.userId!==user(state,true).id)throw new DataError('FORBIDDEN','Այս գործողությունը հասանելի չէ։');return item;}
 function author(state,id){const u=state.users.find(u=>u.id===id);const deleted=!u||u.status==='deleted';return {id:deleted?null:id,name:deleted?'Ջնջված օգտատեր':u.name,avatar:deleted?'':u.avatar||'',canOpenProfile:!deleted&&u.status==='active'&&(id===state.sessionUserId||state.settings[id]?.isProfilePublic!==false)};}
 function common(state,item){const editable=item.userId===state.sessionUserId&&state.users.find(u=>u.id===item.userId)?.status==='active';return {id:item.id,createdAt:item.createdAt,updatedAt:item.updatedAt??null,author:author(state,item.userId),canEdit:editable,canDelete:editable};}
-function postView(state,item){const type=state.postTypes.find(t=>t.code===item.category),sphere=spheres.find(s=>s.code===item.sphereCode);return {...common(state,item),title:item.title?.trim()?item.title:null,content:sanitizePostHtml(item.content),category:type?.code??null,categoryName:type?.name??null,sphereCode:sphere?.code??null,sphereName:sphere?.name??null,commentCount:state.comments.filter(c=>c.postId===item.id).length};}
+function postView(state,item){const type=state.postTypes.find(t=>t.code===item.category),sphere=state.postSpheres.find(s=>s.code===item.sphereCode);return {...common(state,item),title:item.title?.trim()?item.title:null,content:sanitizePostHtml(item.content),category:type?.code??null,categoryName:type?.name??null,sphereCode:sphere?.code??null,sphereName:sphere?.name??null,commentCount:state.comments.filter(c=>c.postId===item.id).length};}
 function commentView(state,item){return {...common(state,item),postId:item.postId,text:item.text};}
-function input(state,data){fields(data,['title','content','category','sphereCode']);const result=validatePostInput(data);if(!state.postTypes.some(t=>t.code===result.category))throw invalid('category');if(!spheres.some(s=>s.code===result.sphereCode))throw invalid('sphereCode');return result;}
+function input(state,data){fields(data,['title','content','category','sphereCode']);const result=validatePostInput(data);if(!state.postTypes.some(t=>t.code===result.category))throw invalid('category');if(!state.postSpheres.some(s=>s.code===result.sphereCode))throw invalid('sphereCode');return result;}
 const compare=(a,b)=>Date.parse(a.createdAt)-Date.parse(b.createdAt)||a.id.localeCompare(b.id,undefined,{numeric:true});
 function page(state,items,scope,cursor,view,descending=false){
   user(state);if(cursor){const key=state.postCursors[cursor];if(!key||key.scope!==scope||key.user!==state.sessionUserId)throw invalid('cursor');items=items.filter(item=>(descending?-1:1)*compare(item,key)>0);}
@@ -39,9 +40,9 @@ function page(state,items,scope,cursor,view,descending=false){
 function parentComment(state,post,id){find(state.posts,post);const comment=find(state.comments,id);if(comment.postId!==String(post))throw missing();return comment;}
 function clearActivity(state,predicate){state.activity=state.activity.filter(item=>!predicate(item));}
 export const postOperations={
-  'posts.options':state=>{user(state);return {types:structuredClone(state.postTypes),spheres:structuredClone(spheres)};},
+  'posts.options':state=>{user(state);return {types:structuredClone(state.postTypes),spheres:structuredClone(state.postSpheres)};},
   'posts.get':(state,id)=>{user(state);return postView(state,find(state.posts,id));},
-  'posts.list':(state,filters={})=>{fields(filters,['category','sphereCode','userId','cursor']);if(filters.category&&!state.postTypes.some(t=>t.code===filters.category))throw invalid('category');if(filters.sphereCode&&!spheres.some(s=>s.code===filters.sphereCode))throw invalid('sphereCode');if(filters.userId&&(typeof filters.userId!=='string'||!/^([1-9][0-9]*|user-[0-9]+)$/.test(filters.userId)))throw invalid('userId');const scope=JSON.stringify([filters.category||'',filters.sphereCode||'',filters.userId||'']);return page(state,state.posts.filter(p=>(!filters.category||p.category===filters.category)&&(!filters.sphereCode||p.sphereCode===filters.sphereCode)&&(!filters.userId||p.userId===filters.userId)),scope,filters.cursor,postView,true);},
+  'posts.list':(state,filters={})=>{fields(filters,['category','sphereCode','userId','cursor']);if(filters.category&&!state.postTypes.some(t=>t.code===filters.category))throw invalid('category');if(filters.sphereCode&&!state.postSpheres.some(s=>s.code===filters.sphereCode))throw invalid('sphereCode');if(filters.userId&&(typeof filters.userId!=='string'||!/^([1-9][0-9]*|user-[0-9]+)$/.test(filters.userId)))throw invalid('userId');const scope=JSON.stringify([filters.category||'',filters.sphereCode||'',filters.userId||'']);return page(state,state.posts.filter(p=>(!filters.category||p.category===filters.category)&&(!filters.sphereCode||p.sphereCode===filters.sphereCode)&&(!filters.userId||p.userId===filters.userId)),scope,filters.cursor,postView,true);},
   'posts.create':(state,data)=>{const actor=user(state,true);const record={...input(state,data),id:nextId(state,'post'),userId:actor.id,createdAt:time(),updatedAt:null};state.posts.push(record);return postView(state,record);},
   'posts.update':(state,id,data)=>{const post=own(state,find(state.posts,id)),values=input(state,data);if(Object.entries(values).some(([key,value])=>post[key]!==value))Object.assign(post,values,{updatedAt:time()});return postView(state,post);},
   'posts.delete':(state,id)=>{const post=own(state,find(state.posts,id));clearActivity(state,item=>item.postId===post.id);state.comments=state.comments.filter(c=>c.postId!==post.id);state.posts=state.posts.filter(p=>p!==post);return null;},

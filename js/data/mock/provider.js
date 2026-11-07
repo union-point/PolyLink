@@ -34,11 +34,22 @@ function enrollmentState(state) {
   return user.status==='active'?{status:'admitted',email:user.email}:{status:'enrollment',email:user.email,revision:entry.revision,profile:entry.profile,avatar:user.avatar,challenge:entry.challenge,expiresAt:new Date(entry.savedAt+7*86400000).toISOString()};
 }
 const enrollmentOptions={institutes:[{id:1,name:'ՏՀՏԷ'}],specializations:[{id:1,name:'Ծրագրային ճարտարագիտություն'}],departments:[{id:1,name:'Ծրագրային ապահովման ամբիոն'}],professions:[{id:1,name:'Դասախոս'}]};
+function enrollmentChoices(state){
+  if(!state.adminMock?.references)return enrollmentOptions;
+  return Object.fromEntries(['institutes','specializations','departments','professions'].map(kind=>[kind,state.adminMock.references[kind].map(({id,name})=>({id:Number(id),name}))]));
+}
 function checkRegistry(state,user) {
   const p=user.enrollment.profile;
-  if(!enrollmentOptions.institutes.some(item=>item.id===p.instituteId))throw new DataError('VALIDATION','Ընտրեք ֆակուլտետը/ինստիտուտը։');
+  if(!enrollmentChoices(state).institutes.some(item=>item.id===p.instituteId))throw new DataError('VALIDATION','Ընտրեք ֆակուլտետը/ինստիտուտը։');
   const normalize=value=>String(value??'').normalize('NFKC').replace(/[\s\p{Z}]+/gu,' ').trim().toLowerCase();
   const graduate=p.role==='graduate';
+  const rows=state.adminMock?.registries?.[graduate?'alumni':'lecturers'];
+  if(rows){
+    const row=rows.find(row=>normalize(row.firstName)===normalize(p.firstName)&&normalize(row.lastName)===normalize(p.lastName)&&(graduate?normalize(row.diplomaNumber)===normalize(p.diplomaNumber)&&Number(row.specializationId)===p.specializationId&&Number(row.studyStartDate?.slice(0,4))===p.startYear&&Number(row.studyEndDate?.slice(0,4))===p.endYear:row.email===user.email&&Number(row.departmentId)===p.departmentId));
+    const claim=(graduate?'graduate-':'lecturer-')+row?.id;
+    if(!row||row.linked||state.users.some(other=>other.id!==user.id&&other.registryClaim===claim))throw new DataError('REGISTRY_MISMATCH','Տվյալները չեն համապատասխանում ցուցադրական գրանցամատյանին։');
+    return claim;
+  }
   const valid=graduate?normalize(p.firstName)==='demo'&&normalize(p.lastName)==='graduate'&&normalize(p.diplomaNumber)==='demo-2025'&&p.specializationId===1&&p.startYear===2021&&p.endYear===2025:normalize(p.firstName)==='demo'&&normalize(p.lastName)==='lecturer'&&user.email==='new.lecturer@polytechnic.am'&&p.departmentId===1&&p.professionId===1;
   if(!valid||state.users.some(other=>other.id!==user.id&&other.registryClaim===(graduate?'graduate-1':'lecturer-1')))throw new DataError('REGISTRY_MISMATCH','Տվյալները չեն համապատասխանում ցուցադրական գրանցամատյանին։');
   return graduate?'graduate-1':'lecturer-1';
@@ -125,14 +136,14 @@ const operations = {
   },
   'auth.removeEnrollmentAvatar':state=>{const user=enrollmentUser(state);state.media=state.media.filter(item=>`media:${item.id}`!==user.avatar);user.avatar='';return null;},
   'auth.enrollment':state=>({...enrollmentState(state),avatar:enrollmentUser(state).avatar}),
-  'auth.enrollmentOptions':state=>{enrollmentUser(state);return enrollmentOptions;},
+  'auth.enrollmentOptions':state=>{enrollmentUser(state);return enrollmentChoices(state);},
   'auth.logoutEnrollment':state=>{state.enrollmentUserId=null;return null;},
   'auth.saveEnrollment':(state,data)=>{
     const user=enrollmentUser(state),entry=user.enrollment;
     if(user.status!=='pending'||data.revision!==entry.revision)throw new DataError('REVISION_CONFLICT','Թարմացրեք էջը։');
     if(!['graduate','lecturer'].includes(data.role))throw new DataError('VALIDATION','Ընտրեք դերը։');
     required(data.firstName,'firstName',100);required(data.lastName,'lastName',100);
-    if(!enrollmentOptions.institutes.some(item=>item.id===data.instituteId))throw new DataError('VALIDATION','Ընտրեք ֆակուլտետը/ինստիտուտը։',{instituteId:'Ընտրեք ֆակուլտետը/ինստիտուտը։'});
+    if(!enrollmentChoices(state).institutes.some(item=>item.id===data.instituteId))throw new DataError('VALIDATION','Ընտրեք ֆակուլտետը/ինստիտուտը։',{instituteId:'Ընտրեք ֆակուլտետը/ինստիտուտը։'});
     if(data.role==='graduate') {required(data.diplomaNumber,'diplomaNumber',100);if(!data.specializationId||!data.startYear||data.endYear<data.startYear)throw new DataError('VALIDATION','Լրացրեք ուսման տվյալները։');}
     else if(!data.departmentId||!data.professionId)throw new DataError('VALIDATION','Ընտրեք ամբիոնը և մասնագիտությունը։');
     entry.profile={...data};delete entry.profile.revision;entry.revision++;entry.savedAt=Date.now();delete entry.challenge;
@@ -155,7 +166,7 @@ const operations = {
     const failure=checkCode(item,code);if(failure)return failure;
     const claim=checkRegistry(state,user);item.consumed=true;entry.completed=challengeId;user.registryClaim=claim;
     const graduate=entry.profile.role==='graduate';
-    state.education.push({id:nextId(state,'education'),userId:user.id,institution:'Հայաստանի ազգային պոլիտեխնիկական համալսարան',degree:null,institute:enrollmentOptions.institutes.find(item=>item.id===entry.profile.instituteId).name,specialization:graduate?enrollmentOptions.specializations.find(item=>item.id===entry.profile.specializationId).name:null,startDate:graduate?'2021-09-01':null,endDate:graduate?'2025-06-01':null});
+    state.education.push({id:nextId(state,'education'),userId:user.id,institution:'Հայաստանի ազգային պոլիտեխնիկական համալսարան',degree:null,institute:enrollmentChoices(state).institutes.find(item=>item.id===entry.profile.instituteId).name,specialization:graduate?enrollmentChoices(state).specializations.find(item=>item.id===entry.profile.specializationId).name:null,startDate:graduate?'2021-09-01':null,endDate:graduate?'2025-06-01':null});
     Object.assign(user,{firstName:entry.profile.firstName,lastName:entry.profile.lastName,role:entry.profile.role,status:'active',onboardingComplete:true});user.name=`${user.firstName} ${user.lastName}`;
     return enrollmentState(state);
   },
@@ -238,7 +249,7 @@ const operations = {
     Object.assign(user, { role, institute: role === 'graduate' ? data.institute : '', department: role === 'lecturer' ? data.department : '', specialization: data.specialization, description: data.description, onboardingComplete: true });
     return profile(state, user);
   },
-  'profiles.education.options': () => profileOptions(),
+  'profiles.education.options': state => profileOptions(state),
   'profiles.education.list': state => state.education.filter(record => record.userId === me(state).id),
   'profiles.education.create': (state, data) => { const entry = { ...saveEducation(state,data), id: nextId(state, 'education'), userId: me(state).id }; state.education.push(entry); return entry; },
   'profiles.education.update': (state, id, data) => Object.assign(owner(state, find(state.education, id)), saveEducation(state,data,find(state.education,id))),
