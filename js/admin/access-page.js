@@ -12,7 +12,7 @@ let pending, busy = false;
 function notice(text, error = false) { message.textContent = text; message.className = error ? 'error' : ''; }
 function savePending(value) { pending = value; try { value ? sessionStorage.setItem(key, JSON.stringify(value)) : sessionStorage.removeItem(key); } catch {} }
 function showPending(value) { savePending(value); credentials.hidden = true; verification.hidden = false; success.hidden = true; document.getElementById('code').focus(); }
-function signedIn(admin) { savePending(null); credentials.reset(); verification.reset(); credentials.hidden = verification.hidden = true; success.hidden = false; document.getElementById('account').textContent = `${admin.firstName} ${admin.lastName} · ${admin.email}`; document.getElementById('logout').hidden = false; notice('Մուտքը հաստատված է։'); }
+function signedIn(admin) { savePending(null); credentials.reset(); verification.reset(); credentials.hidden = verification.hidden = true; success.hidden = false; document.getElementById('account').textContent = `${admin.firstName} ${admin.lastName} · ${admin.email}`; document.getElementById('logout').hidden = false; const link=document.getElementById('admin-continue');if(link)link.hidden=false; notice('Մուտքը հաստատված է։'); }
 async function work(action) {
   if (busy) return;
   busy = true; document.querySelectorAll('button').forEach(button => button.disabled = true); notice('');
@@ -38,7 +38,7 @@ resend.addEventListener('click', () => work(async () => {
 }));
 document.getElementById('logout').addEventListener('click', () => work(async () => {
   try { await client.logout(); } catch (error) { if (error.code !== 'UNAUTHORIZED') throw error; }
-  savePending(null); document.getElementById('account').textContent = ''; success.hidden = true; credentials.hidden = false; notice('Դուք դուրս եք եկել։');
+  savePending(null); const link=document.getElementById('admin-continue');if(link)link.hidden=true; document.getElementById('account').textContent = ''; success.hidden = true; credentials.hidden = false; notice('Դուք դուրս եք եկել։');
 }));
 work(async () => {
   try { const saved = JSON.parse(sessionStorage.getItem(key)); if (saved?.challengeId && Date.parse(saved.expiresAt) > Date.now()) pending = saved; } catch {}

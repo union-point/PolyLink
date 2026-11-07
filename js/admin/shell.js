@@ -27,6 +27,6 @@ export async function adminShell(page,clear) {
   window.addEventListener('focus',check);document.addEventListener('visibilitychange',check);
   window.addEventListener('pagehide',event=>{main.inert=true;main.style.visibility='hidden';if(!event.persisted)clearInterval(interval);});
   window.addEventListener('pageshow',event=>{if(event.persisted){main.style.visibility='';check();}});
-  header.querySelectorAll('nav a,.admin-brand').forEach(link=>link.addEventListener('click',async event=>{if(!dirty())return;event.preventDefault();if(await (await import('../shared/ui.js')).confirmAction('Հրաժարվե՞լ չպահպանված փոփոխություններից։')){dirty=()=>false;location.href=link.href;}}));
+  header.querySelectorAll('nav a,.admin-brand').forEach(link=>link.addEventListener('click',async event=>{if(!dirty())return;event.preventDefault();if(await (await import('../shared/ui.js')).confirmAction('Հրաժարվե՞լ չպահպանված փոփոխություններից։')){dirty=()=>false;clear();location.href=link.href;}}));
   return {fail,active:()=>!ended,setDirty:fn=>{dirty=fn;}};
 }

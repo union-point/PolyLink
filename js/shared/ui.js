@@ -89,6 +89,8 @@ export function confirmAction(message) {
       document.body.appendChild(backdrop);
     }
   }
+  // Keep confirmations in the native modal's top layer when a form is open.
+  ([...document.querySelectorAll('dialog[open]')].at(-1) || document.body).appendChild(backdrop);
   return new Promise(resolve => {
     const previous = document.activeElement;
     const yes = backdrop.querySelector('#confirm-yes,[data-confirm-yes]'), no = backdrop.querySelector('#confirm-no,[data-confirm-no]');
@@ -97,7 +99,7 @@ export function confirmAction(message) {
     backdrop.style.display = 'flex';
     backdrop.classList.remove('hidden'); backdrop.setAttribute('role', 'dialog'); backdrop.setAttribute('aria-modal', 'true');
     backdrop.setAttribute('aria-label', 'Հաստատել գործողությունը');
-    const finish = answer => { backdrop.classList.add('hidden'); backdrop.style.display = 'none'; yes.onclick = no.onclick = null; backdrop.onkeydown = null; previous?.focus(); resolve(answer); };
+    const finish = answer => { backdrop.classList.add('hidden'); backdrop.style.display = 'none'; yes.onclick = no.onclick = null; backdrop.onkeydown = null; document.body.appendChild(backdrop); previous?.focus(); resolve(answer); };
     yes.onclick = () => finish(true); no.onclick = () => finish(false);
     backdrop.onkeydown = event => {
       if (event.key === 'Escape') { event.stopPropagation(); finish(false); }
