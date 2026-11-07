@@ -1,24 +1,10 @@
-import { config } from '../config.js';
+import { adminTransport } from './transport.js';
 import { derive, sodium, parameters } from '../crypto/sodium.js';
 import { validatePassword } from '../auth/password-policy.js';
 import { DataError } from '../data/errors.js';
 
-const cookie = name => globalThis.document?.cookie.split('; ').find(value => value.startsWith(name + '='))?.slice(name.length + 1) || '';
-export async function adminRequest(path, data) {
-  if (config.dataMode !== 'http') throw new DataError('UNAVAILABLE', 'Admin access requires the connected server.');
-  const challenge = path.startsWith('/registration/') || path.startsWith('/login/');
-  const csrf = cookie(challenge ? '__Host-plk-admin-challenge-csrf' : '__Host-plk-admin-csrf');
-  let response;
-  try {
-    response = await fetch(`${config.apiBaseUrl}/admin/auth${path}`, {
-      method: data === undefined ? 'GET' : 'POST', credentials: 'include', cache: 'no-store',
-      headers: { ...(data === undefined ? {} : { 'Content-Type': 'application/json' }), ...(csrf ? { 'X-CSRF-Token': csrf } : {}) },
-      body: data === undefined ? undefined : JSON.stringify(data), signal: AbortSignal.timeout(15000),
-    });
-  } catch { throw new DataError('NETWORK', 'The server could not be reached. Please retry.'); }
-  const body = response.status === 204 ? null : await response.json().catch(() => null);
-  if (!response.ok) throw new DataError(body?.code || 'SERVICE_ERROR', body?.message || 'The request could not be completed.');
-  return body;
+export function adminRequest(path, data) {
+  return adminTransport(`/auth${path}`, { method: data === undefined ? 'GET' : 'POST', data });
 }
 const invalid = () => new DataError('CONTRACT', 'The admin server returned an invalid response.');
 function challenge(value) {

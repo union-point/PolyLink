@@ -38,3 +38,20 @@ test('admin transport uses only its isolated CSRF cookie and never a member bear
     for(const {request} of calls){assert.equal(request.headers.Authorization,undefined);assert.equal(request.credentials,'include');assert.equal(request.cache,'no-store');}
   } finally {globalThis.fetch=previousFetch;globalThis.document=previousDocument;}
 });
+
+test('management transport scopes routes, preserves versions and rejects malformed authority data',async()=>{
+ const {createManagementClient}=await import('../../js/admin/management-client.js');
+ const calls=[],row={id:'2',name:'Reference',version:'opaque',protectionReasons:[]};
+ const client=createManagementClient(async(path,options)=>{calls.push({path,options});return options?.method==='DELETE'?null:path.includes('?')?{items:[row],nextCursor:null}:row;});
+ assert.equal((await client.list('references','degrees',{q:'A & B'})).items[0].id,'2');
+ assert.match(calls[0].path,/q=A\+%26\+B/);
+ await client.update('references','degrees','2',{name:'New',version:'opaque'});
+ assert.equal(calls[1].options.method,'PUT');assert.equal(calls[1].options.data.version,'opaque');
+ await client.delete('references','degrees','2','opaque');assert.deepEqual(calls[2].options.data,{version:'opaque'});
+ await assert.rejects(client.list('references','roles'),e=>e.code==='VALIDATION');
+ await assert.rejects(client.get('references','degrees','../auth'),e=>e.code==='VALIDATION');
+ const {normalizeReference,normalizeRegistry,normalizeAdminPage}=await import('../../js/admin/contracts.js');
+ assert.throws(()=>normalizeReference({...row,protectionReasons:['forged']}),e=>e.code==='CONTRACT');
+ assert.throws(()=>normalizeAdminPage({items:[row]},normalizeReference),e=>e.code==='CONTRACT');
+ assert.throws(()=>normalizeRegistry({id:'1',version:'v',linked:'false'},'lecturers'),e=>e.code==='CONTRACT');
+});
