@@ -157,7 +157,7 @@ class AdminReferencesIT {
     }
 
     @Test
-    void protectsSystemValuesAndKeepsPostTypeMutationsUnreleased() throws Exception {
+    void protectsSystemValuesAndAllowsUnusedCustomPostTypes() throws Exception {
         for (var row : db.queryForList("SELECT Resource,ReferenceId FROM admin.SystemReferences")) {
             String kind = row.get("Resource").toString(), id = row.get("ReferenceId").toString();
             var value = detail(kind, id);
@@ -177,39 +177,65 @@ class AdminReferencesIT {
                     409,
                     "SYSTEM_VALUE");
         }
+        var created =
+                browser.json(
+                        browser.post(
+                                ROOT + "post-types",
+                                Map.of(
+                                        "name",
+                                        "Custom " + UUID.randomUUID(),
+                                        "code",
+                                        "x" + UUID.randomUUID().toString().substring(0, 8))));
+        String path = ROOT + "post-types/" + created.path("id").asText();
+        var member = f.enroll("graduate").browser();
+        String code = created.path("code").asText();
+        var publication =
+                member.post(
+                        "/posts",
+                        Map.of(
+                                "title",
+                                "Dynamic type",
+                                "content",
+                                "<p>Custom publication</p>",
+                                "category",
+                                code,
+                                "sphereCode",
+                                "other"));
+        assertThat(publication.statusCode()).as(publication.body()).isEqualTo(201);
+        String postId = member.json(publication).path("id").asText();
+        assertThat(member.get("/posts?category=" + code).body()).contains(code);
+        assertThat(member.get("/posts/" + postId).body()).contains(code);
         failure(
-                browser.post(ROOT + "post-types", Map.of("name", "Custom", "code", "custom")),
+                browser.call("DELETE", path, Map.of("version", created.path("version").asText())),
                 409,
-                "POST_TYPE_COMPATIBILITY");
-        int custom =
-                db.queryForObject(
-                        "INSERT dbo.PostTypes(Name,Code) OUTPUT inserted.PostTypeId VALUES (?,?)",
-                        Integer.class,
-                        "Offline " + UUID.randomUUID(),
-                        "x" + UUID.randomUUID().toString().substring(0, 8));
-        try {
-            var value = detail("post-types", "" + custom);
-            failure(
-                    browser.call(
-                            "DELETE",
-                            ROOT + "post-types/" + custom,
-                            Map.of("version", value.path("version").asText())),
-                    409,
-                    "POST_TYPE_COMPATIBILITY");
-            failure(
-                    browser.call(
-                            "PUT",
-                            ROOT + "post-types/" + custom,
-                            Map.of(
-                                    "version",
-                                    value.path("version").asText(),
-                                    "name",
-                                    "Cannot rename")),
-                    409,
-                    "POST_TYPE_COMPATIBILITY");
-        } finally {
-            db.update("DELETE dbo.PostTypes WHERE PostTypeId=?", custom);
-        }
+                "REFERENCE_IN_USE");
+        failure(
+                browser.call(
+                        "PUT",
+                        path,
+                        Map.of("version", created.path("version").asText(), "name", "Used")),
+                409,
+                "REFERENCE_IN_USE");
+        assertThat(member.call("DELETE", "/posts/" + postId, Map.of()).statusCode()).isEqualTo(204);
+        assertThat(created.path("protectionReasons").isEmpty()).isTrue();
+        var renamed =
+                browser.json(
+                        browser.call(
+                                "PUT",
+                                path,
+                                Map.of(
+                                        "version",
+                                        created.path("version").asText(),
+                                        "name",
+                                        "Renamed " + UUID.randomUUID())));
+        assertThat(renamed.path("code").asText()).isEqualTo(created.path("code").asText());
+        assertThat(
+                        browser.call(
+                                        "DELETE",
+                                        path,
+                                        Map.of("version", renamed.path("version").asText()))
+                                .statusCode())
+                .isEqualTo(204);
     }
 
     @Test

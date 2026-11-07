@@ -87,7 +87,6 @@ public class AdminReferences {
                 () -> {
                     sessions.require(request, true);
                     var resource = ReferenceCatalog.require(kind);
-                    compatible(resource);
                     fields(input, resource.coded() ? Set.of("name", "code") : Set.of("name"));
                     String name = name(resource, input.get("name"));
                     String code = resource.coded() ? code(resource, input.get("code")) : null;
@@ -227,7 +226,6 @@ public class AdminReferences {
                 .isEmpty())
             throw AdminFailure.conflict(
                     "SYSTEM_VALUE", "This system value cannot be changed or deleted.");
-        compatible(resource);
         for (var dependency : resource.dependencies()) {
             if (!Rows.query(
                             db,
@@ -244,13 +242,6 @@ public class AdminReferences {
                         "REFERENCE_IN_USE",
                         "This value is in use and cannot be changed or deleted.");
         }
-    }
-
-    private static void compatible(ReferenceCatalog.Resource resource) {
-        if (resource.key().equals("post-types"))
-            throw AdminFailure.conflict(
-                    "POST_TYPE_COMPATIBILITY",
-                    "Post-type changes are unavailable until all publication clients support dynamic types.");
     }
 
     private void unique(
@@ -303,7 +294,6 @@ public class AdminReferences {
         var reasons = new ArrayList<String>();
         if (((Number) row.get("SystemValue")).intValue() == 1) reasons.add("SYSTEM_VALUE");
         if (((Number) row.get("InUse")).intValue() == 1) reasons.add("REFERENCE_IN_USE");
-        if (resource.key().equals("post-types")) reasons.add("POST_TYPE_COMPATIBILITY");
         var output = new LinkedHashMap<String, Object>();
         output.put("id", row.get("Id").toString());
         output.put("name", row.get("Name"));
