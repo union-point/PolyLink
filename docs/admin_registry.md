@@ -1,6 +1,6 @@
 # Admin registry services
 
-This delivers the manual registry-service phase of the [admin plan](admin_panel_implementation_plan.md), under the [approved decisions](admin_panel_decisions.md). Registry management screens and mock management providers belong to the subsequent admin-interface phase. Excel import and a general admin action log are outside this version.
+This delivers the manual registry-service phase of the [admin plan](admin_panel_implementation_plan.md), under the [approved decisions](admin_panel_decisions.md). Phase 6 now supplies registry management screens and mock management providers; see [admin implementation](admin_implementation.md). Excel import and a general admin action log are outside this version.
 
 ## API
 

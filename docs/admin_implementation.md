@@ -1,6 +1,6 @@
 # Admin access implementation and operations
 
-Status: access, reference-service and registry-service slices, 7 November 2026. Product authority: [admin decisions](admin_panel_decisions.md). Contracts and locking: [reference services](admin_references.md), [registry services](admin_registry.md). Remaining delivery: [implementation plan](admin_panel_implementation_plan.md).
+Status: phases 1–6 implemented, 7 November 2026. Product authority: [admin decisions](admin_panel_decisions.md). Contracts and locking: [reference services](admin_references.md), [registry services](admin_registry.md). Remaining delivery: [implementation plan](admin_panel_implementation_plan.md).
 
 ## Implemented boundary
 
@@ -8,17 +8,17 @@ V23 adds a separate `admin` schema for admin identities, invitations, registrati
 
 The local command creates email-bound invitations valid for exactly 24 hours, storing only token hashes. Owners send links manually. Registration collects names and matching passwords, verifies the invited mailbox and consumes the invitation atomically. GET/link previews do not consume it. Repeating a completed proof from the same browser is safe; a second browser cannot redeem an already-used invitation.
 
-`admin-register.html` and `admin-login.html` use a separate native-fetch client and the existing PLK1 password derivation without messenger key setup. Invitation tokens arrive in URL fragments, are removed from the browser URL immediately and are never stored persistently. Only challenge identifiers/times are retained in session storage for reload; passwords and derived keys are not retained between steps. The screens currently support the connected HTTP server; mock admin access is not implemented.
+`admin-register.html` and `admin-login.html` use a separate native-fetch client and the existing PLK1 password derivation without messenger key setup. Invitation tokens arrive in URL fragments, are removed from the browser URL immediately and are never stored persistently. Only challenge identifiers/times are retained in session storage for reload; passwords and derived keys are not retained between steps. The screens support the connected HTTP server and an isolated mock provider. Mock access requires an explicitly provisioned invitation and full registration/login with 2FA; it has no seeded admin credentials.
 
 Every login requires a password and a browser-bound email code. Codes expire after ten minutes (or at invitation expiry if sooner), allow five incorrect attempts and have a 60-second resend cooldown. Resending preserves the original expiry and failed-attempt budget and replaces the code. Account/IP issuance limits and verification limits use the existing rate-limit store under separate admin purposes. Registration completion directs the user to login; it does not issue an authenticated session.
 
 Admin sessions use independent Secure, HttpOnly, SameSite=Lax cookies and a session-bound CSRF header for mutations. They have a 30-minute idle deadline and a 12-hour absolute deadline. `/refresh` rotates the opaque session and CSRF token, extends the idle deadline and preserves the absolute deadline; old tokens immediately stop working. Protected reads check current enabled state and session version. Member bearer/enrollment credentials do not authorize admin access; admin cookies do not authorize member APIs. Session expiry and local disabling are enforced server-side. An enabled cleanup task removes expired security records in bounded batches.
 
-## Deliberately unfinished
+## Management interface and remaining rollout
 
-The three management pages and mock management providers are not implemented yet. Lecturer/alumni search, detail and CRUD APIs now enforce normalized uniqueness, current versions and linked-record immutability. Reference CRUD now enforces V23's system identities, all incoming dependency paths, stale-write versions and disable/write serialization; V24 supplies database-maintained versions. Enrollment uses the protected stable Polytechnic identity. Phase 5 enables custom post-type CRUD: live and mock publication consumers support dynamic codes, generic labels and refreshed choices. Built-in types remain protected and used types remain immutable. V25 adds Java-normalized binary identity keys, source binding and registry versions; enrollment and local claim correction share the registry/claim lock order. Mock management parity remains subsequent work. No admin password-recovery or re-enable operation is currently exposed. Mandatory 2FA cannot be disabled. No invitation cancellation, Excel import or separate admin action audit log is implemented.
+`admin-academic.html`, `admin-content.html` and `admin-registry.html` provide the three approved management pages. They share navigation, bounded search/paging, detail, add/edit/delete forms and isolated admin session handling. Lecturer/alumni search, detail and CRUD APIs now enforce normalized uniqueness, current versions and linked-record immutability. Reference CRUD now enforces V23's system identities, all incoming dependency paths, stale-write versions and disable/write serialization; V24 supplies database-maintained versions. Enrollment uses the protected stable Polytechnic identity. Phase 5 enables custom post-type CRUD: live and mock publication consumers support dynamic codes, generic labels and refreshed choices. Built-in types remain protected and used types remain immutable. V25 adds Java-normalized binary identity keys, source binding and registry versions; enrollment and local claim correction share the registry/claim lock order. Mock management uses the same response contracts, versions and lock explanations. No admin password-recovery or re-enable operation is currently exposed. Mandatory 2FA cannot be disabled. No invitation cancellation, Excel import or separate admin action audit log is implemented.
 
-After successful login the current access page shows the authenticated admin identity and logout control. It does not advertise unfinished management actions. Keep this feature disabled for normal use until the remaining management and integration gates pass.
+After successful login, the access page offers a link to management. The three pages show why records are locked, preserve failed-save drafts, offer explicit refresh on stale versions and confirm deletion. Registry fields are manually maintained; no import or member moderation UI is exposed. Full regression and restored-copy rollout rehearsal remain phase 7 work; keep normal rollout disabled until those gates pass.
 
 ## Explicit rollout and local commands
 
@@ -72,3 +72,49 @@ bash tools/local/test.sh --admin
 ```
 
 The focused runner provisions uniquely named disposable SQL/OpenBao/mail resources, runs admin access/reference/registry HTTP/SQL, enrollment and migration integration checks, then exercises the registration/login screens in Chromium. Browser checks invoke the real invite/disable commands only against the disposable database. They cover invitation URL removal, password clearing, verification reload, password-only denial, mandatory 2FA, session reload, disabling and mobile overflow. Migration tests cover fresh/upgraded layouts, repeat validation, member preservation, exact invitation duration, schema-drift rejection and rollback on an unresolved Polytechnic identity. SQL/HTTP tests cover concurrent redemption/retries, wrong/replayed/foreign-browser/cross-purpose codes, CSRF, invitation expiry, resend budgets, session rotation/expiry, cleanup and disabled-session/challenge rejection.
+
+
+## Phase 6 interface behavior
+
+The shared controller and shell in `js/admin/` use `css/style.css` theme values and
+`css/admin.css` components. Admin pages never call member bootstrap or use member
+session transport. Search is bounded, supports Enter and IME-safe debounce, and
+ignores superseded responses. Queries stay in memory because registry searches
+can contain private identifiers; only the selected list is represented in the URL.
+
+Native styled selects and date controls preserve platform keyboard behavior.
+Dialogs associate field errors with labels, keep actions visible on narrow screens,
+retain drafts after failures, and require explicit discard before refresh or close.
+Reference codes remain immutable. Linked registry records and protected/in-use
+references expose read-only details with textual lock reasons.
+
+The shell checks enabled session state periodically and on return to the page.
+Resume checks hide sensitive content until identity is confirmed. Offline checks
+suspend native dialogs while preserving drafts and expose a reachable retry;
+successful checks restore focus and selection. Expiry, logout and account changes
+clear records, drafts, dialogs and pending confirmations. Background checks do not
+interrupt typing. No browser guard replaces backend authorization.
+
+For local mock development, select `dataMode: 'mock'` in the existing configuration.
+Use the explicit mock-only operator helpers from a local development console:
+
+```js
+const mock = await import('/js/admin/mock.js');
+const invite = await mock.provisionMockInvitation('owner@example.org');
+// Open /admin-register.html#invite=<invite.token>, then complete registration.
+// The mock mailbox provides the current verification code after each send:
+await mock.takeMockCode('owner@example.org');
+```
+
+These helpers reject in HTTP mode and create no default admin or fixed password.
+Mock state lives in the existing local IndexedDB dataset; its admin session/browser
+keys are separate from member state. Academic/content edits refresh mock member
+options, and registry admission uses current mock registry rows. Mock mode remains
+a local simulation and is not evidence that a server deployment is enabled.
+
+`bash tools/local/test.sh --admin` now includes real and mock management browser
+journeys covering CRUD across all three pages, protections, stale drafts, delete
+confirmation, keyboard/mobile behavior and disabled-session cleanup. The mock
+journey also covers bounded pagination, correction states and logout. Contract
+checks include `admin-mock.test.mjs` with an injected clock/storage for expiry,
+one-use invitations, 2FA isolation, versions, normalization and record protection.

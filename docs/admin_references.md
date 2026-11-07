@@ -1,6 +1,6 @@
 # Admin reference services
 
-This is the reference-service milestone of the [admin delivery plan](admin_panel_implementation_plan.md), following the [approved decisions](admin_panel_decisions.md). It does not deliver the management screens. [Registry CRUD](admin_registry.md) is delivered by the subsequent service phase. Keep the admin feature disabled for general rollout until the remaining integration gates pass.
+This is the reference-service milestone of the [admin delivery plan](admin_panel_implementation_plan.md), following the [approved decisions](admin_panel_decisions.md). Phase 6 adds the management screens and mock providers; see [admin implementation](admin_implementation.md). [Registry CRUD](admin_registry.md) is delivered by the subsequent service phase. Keep the admin feature disabled for general rollout until the remaining integration gates pass.
 
 ## Schema and admission
 
