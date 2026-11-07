@@ -68,4 +68,4 @@ bash tools/local/test.sh --admin
 bash tools/local/test.sh --full
 ```
 
-V25 is applied explicitly through `SchemaCommand`, never on startup and never automatically to the working database by these tests. Back up and rehearse on a restored copy before rollout. Inspect reported collision IDs and resolve them deliberately before retrying an upgrade. Keep the admin feature disabled for general use until the remaining interface/post-type compatibility and complete rollout gates pass.
+V25 is applied explicitly through `SchemaCommand`, never on startup and never automatically to the working database by these tests. Back up and rehearse on a restored copy before rollout. Inspect reported collision IDs and resolve them deliberately before retrying an upgrade. Keep the admin feature disabled for general use until the remaining interface and complete rollout gates pass.

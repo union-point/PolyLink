@@ -22,7 +22,7 @@ Routes are under `/admin/references/{kind}`:
 | `PUT /{id}` | `{ "name": "…", "version": "…" }`. Returns the updated value and new version. Codes are immutable. |
 | `DELETE /{id}` | `{ "version": "…" }`. Returns status 204. |
 
-Each item contains string `id`, `name`, opaque `version`, optional `code` and `protectionReasons`. Reasons are `SYSTEM_VALUE`, `REFERENCE_IN_USE` and/or `POST_TYPE_COMPATIBILITY`. They disclose no dependent records or user information. They describe the read snapshot; writes always recompute protection in their transaction.
+Each item contains string `id`, `name`, opaque `version`, optional `code` and `protectionReasons`. Reasons are `SYSTEM_VALUE` and/or `REFERENCE_IN_USE`. They disclose no dependent records or user information. They describe the read snapshot; writes always recompute protection in their transaction.
 
 Only the exact required fields are accepted. Clients cannot write verification flags, logos, protection metadata, eligibility or IDs. Names are trimmed, must be nonempty, reject control characters and follow the existing column limits. Codes use lowercase ASCII letters/digits with single interior hyphens and the existing column limits. Duplicate comparison follows the database's established collation. No reference hierarchy is introduced.
 
@@ -38,7 +38,7 @@ Only the exact required fields are accepted. Clients cannot write verification f
 | `post-spheres` | `dbo.Spheres.SphereId` | 150 | 32 | `dbo.Posts.SphereId` |
 | `forum-categories` | `dbo.ForumCategories.CategoryId` | 255 | 32 | `dbo.ForumTopics.CategoryId` |
 
-The protected main university, three built-in post types and `other` sphere cannot be edited/deleted. Every post-type mutation, including creation or mutation of an offline-created custom type, remains explicitly rejected with `POST_TYPE_COMPATIBILITY` until the frontend compatibility phase is delivered. Other listed kinds support CRUD subject to usage and system protection.
+The protected main university, three built-in post types and `other` sphere cannot be edited/deleted. Custom post types support creation and unused-only editing/deletion after phase 5. Codes are immutable, lowercase ASCII slug codes of at most 16 characters, matching publication validation. Publication options are fetched from current references; custom types use the shared generic card presentation.
 
 Validation returns status 400 and `fieldErrors`. Missing resources/records return 404. Duplicate names/codes, stale versions, system values and in-use values return status 409 with `DUPLICATE_NAME`, `DUPLICATE_CODE`, `VERSION_CONFLICT`, `SYSTEM_VALUE` or `REFERENCE_IN_USE`. A database uniqueness/FK race has the fallback code `DUPLICATE_REFERENCE`/`REFERENCE_CONFLICT`; a deadlock or lock timeout returns `REFERENCE_BUSY`. No raw SQL error is exposed. Clients should retain drafts and offer a reload on conflicts; no automatic mutation retry is performed.
 
@@ -50,7 +50,7 @@ Each mutation runs in one transaction:
 
 1. Lock and recheck the admin account, then its session, using the same account-first order as local disable and session rotation. Disable cannot commit between authorization and the reference write.
 2. For update/delete, acquire `XLOCK,HOLDLOCK` on the reference row and compare its database version.
-3. Hold the matching system-protection key/range and reject system values. Reject unsupported post-type mutations.
+3. Hold the matching system-protection key/range and reject system values.
 4. Check every incoming dependency with `HOLDLOCK` in catalog order. These serializable scans retain key/range locks through commit, including an empty result. Any retained consumer counts as use: deactivation, hidden posts and unfinished/expired-but-not-yet-cleaned enrollment drafts do not bypass protection.
 5. For creation/rename, use `UPDLOCK,HOLDLOCK` on duplicate name/code checks, then write and commit. Names/codes remain subject to existing database constraints; forum-category name uniqueness is serialized by its name scan even though the legacy table has no unique name index.
 
@@ -60,7 +60,7 @@ Existing enrollment, claim correction/release, account deletion and pending-expi
 
 ## Verification
 
-`AdminReferencesIT` covers all supported resources, system values, the post-type release gate, payload allowlists, immutable codes, literal search/pagination, duplicate names/codes, version conflicts between distinct admins and after offline edits, credential/CSRF boundaries and disabled/expired sessions. A metadata assertion checks the complete foreign-key boundary. Dependency fixtures cover all mutable incoming paths, including pending enrollment. SQL lock-timeout checks attempt real concurrent inserts while the reference mutation holds its locks, a consumer-first race and local disable during a write.
+`AdminReferencesIT` covers all supported resources, system values, custom post-type creation/use/deletion, payload allowlists, immutable codes, literal search/pagination, duplicate names/codes, version conflicts between distinct admins and after offline edits, credential/CSRF boundaries and disabled/expired sessions. A metadata assertion checks the complete foreign-key boundary. Dependency fixtures cover all mutable incoming paths, including pending enrollment. SQL lock-timeout checks attempt real concurrent inserts while the reference mutation holds its locks, a consumer-first race and local disable during a write.
 
 Run the standard backend build and contracts, then the disposable admin suite using privately configured test-administrator credentials:
 
@@ -71,3 +71,24 @@ bash tools/local/test.sh --admin
 ```
 
 The admin runner includes migrations, reference services, identity, enrollment and the existing access-screen browser journey. Use `bash tools/local/test.sh --full` for the eventual complete rollout gate. No test applies V24 to the working database.
+
+## Phase 5 publication compatibility
+
+`js/posts/contracts.js` accepts unique database-backed type options while requiring
+existing built-ins; DTOs allow any valid type code up to 16 characters. Input
+validation uses the same code syntax and the server validates current existence.
+Feed, detail and profile publications reuse generic escaped labels and cards.
+Mock references live in `state.postTypes`, initialized without replacing existing
+custom reference state; mock writes and filters validate against that current list.
+Mock admin management itself remains phase 6 work.
+
+Composers refetch options when the window regains focus and after reference
+validation failures. They retain text and removed selections, marking unavailable
+choices instead of substituting another value. Feed refreshes retain valid filters.
+Superseded responses cannot overwrite newer choices.
+
+Phase 5 verification extends `AdminReferencesIT` with custom-type publication and
+in-use rejection, `posts-ui.mjs` with custom feed/detail/profile, safe labels and
+removed-choice/mobile checks, and `posts-live.mjs` with a disposable custom type.
+Run `bash tools/local/test.sh --admin` and `bash tools/local/test.sh --posts` for
+these targeted checks. The final full rollout gate remains phase 7.

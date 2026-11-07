@@ -10,6 +10,6 @@ Armenian copy, native select semantics and generic text badge.
 - [x] Preserve composer drafts and missing selections; refresh options on window focus
   and reference validation failure. Never silently select another value.
 - [x] Refresh feed choices on window focus and preserve valid filters.
-- [ ] Verify custom creation, filtering, detail and profile publication rendering,
+- [x] Verify custom creation, filtering, detail and profile publication rendering,
   removed options, keyboard use, desktop and mobile in browser acceptance.
-- [ ] Release server mutations only with system, usage and version protections intact.
+- [x] Release server mutations only with system, usage and version protections intact.
