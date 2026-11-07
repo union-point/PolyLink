@@ -42,6 +42,7 @@ if [ -n "${1:-}" ]; then
     python3 tools/m1/verify.py --forum
   else
     python3 tools/m1/verify.py --groups
+    python3 tools/m1/verify.py --admin
   fi
 else
   ./backend/mvnw -f backend/pom.xml verify

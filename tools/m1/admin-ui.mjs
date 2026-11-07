@@ -2,6 +2,7 @@ import { chromium } from 'playwright';
 import { spawnSync } from 'node:child_process';
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
+import { adminManagementCases } from './admin-management-cases.mjs';
 const origin=process.env.M1_FRONTEND,api=process.env.M1_API;
 assert(process.env.DB_NAME?.startsWith('polylink_m1_'),'Admin browser checks require disposable infrastructure');
 const email=`admin-browser-${randomUUID()}@example.org`,password='Admin browser fixture!4';
@@ -23,6 +24,7 @@ async function code(){
 const browser=await chromium.launch({headless:true,executablePath:process.env.M1_CHROMIUM||undefined});
 try {
   const context=await browser.newContext({viewport:{width:1100,height:900}});context.setDefaultTimeout(15000);
+  await context.addInitScript(()=>{const original=window.setInterval;window.setInterval=(callback,delay,...args)=>{if(delay===15000)window.__adminPoll=callback;return original(callback,delay,...args);};});
   await context.route('**/js/config.js',async route=>{const response=await route.fetch();await route.fulfill({response,body:(await response.text()).replace('http://localhost:3004',api),contentType:'application/javascript'});});
   const page=await context.newPage(),errors=[];page.on('pageerror',error=>errors.push(error.message));
   await page.goto(link);await page.locator('#credentials').waitFor({state:'visible'});
@@ -44,7 +46,12 @@ try {
   const session=await page.evaluate(async(api)=>(await(await fetch(api+'/admin/auth/session',{credentials:'include'})).json()),api);
   assert.equal(session.role,'admin');
   await page.reload();await page.locator('#logout').waitFor({state:'visible'});
+  try{await adminManagementCases(page,{origin,artifactDir:process.env.M1_ARTIFACT_DIR||'/tmp'});}catch(error){await page.screenshot({path:'/tmp/admin6-live-failure.png',fullPage:true});console.error(await page.locator('.admin-dialog').evaluateAll(dialogs=>dialogs.map(d=>({open:d.open,title:d.querySelector('h2')?.textContent,fields:[...d.querySelectorAll('input')].map(f=>[f.name,f.value]),status:d.querySelector('[data-status]')?.textContent}))));throw error;}
   command(`disable ${session.id}`);
+  await page.evaluate(()=>window.dispatchEvent(new Event('focus')));
+  await page.getByRole('link',{name:'Ադմինիստրատորի մուտք',exact:true}).waitFor();
+  assert.equal(await page.locator('.admin-dialog').count(),0,'Disabled sessions clear registry drafts');
+  await page.goto(origin+'/admin-login.html');
   await page.reload();await page.locator('#credentials').waitFor({state:'visible'});assert(await page.locator('#success').isHidden());
   assert.deepEqual(errors,[],'Admin pages have no uncaught browser errors');
   await page.setViewportSize({width:390,height:844});

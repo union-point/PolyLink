@@ -46,6 +46,7 @@ def run(root,env,admin_sql,bao_request,root_token,messenger=False,continuity=Fal
                     time.sleep(.1)
             if admin:
                 subprocess.run(['node',str(root/'tools/m1/admin-ui.mjs')],cwd=root,env=child,check=True)
+                subprocess.run(['node',str(root/'tools/m1/admin-mock-ui.mjs')],cwd=root,env=child,check=True)
                 return
             if profile:
                 subprocess.run(['node',str(root/'tools/m1/profile-ui.mjs')],cwd=root,env=child,check=True)

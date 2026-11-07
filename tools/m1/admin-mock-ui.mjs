@@ -1,0 +1,33 @@
+import {chromium} from 'playwright';
+import assert from 'node:assert/strict';
+import {adminManagementCases} from './admin-management-cases.mjs';
+const origin=process.env.M1_FRONTEND||'http://localhost:8138';
+const browser=await chromium.launch({headless:true,executablePath:process.env.M1_CHROMIUM||undefined});
+try{
+ const context=await browser.newContext({viewport:{width:1280,height:900}});context.setDefaultTimeout(15000);
+  await context.addInitScript(()=>{const original=window.setInterval;window.setInterval=(callback,delay,...args)=>{if(delay===15000)window.__adminPoll=callback;return original(callback,delay,...args);};});
+ await context.route('**/js/config.js',async route=>{const response=await route.fetch();await route.fulfill({response,body:(await response.text()).replace("dataMode: 'http'","dataMode: 'mock'"),contentType:'application/javascript'});});
+ const page=await context.newPage(),errors=[];page.on('pageerror',error=>errors.push(error.message));
+ await page.goto(origin+'/admin-academic.html');await page.getByRole('link',{name:'Ադմինիստրատորի մուտք',exact:true}).waitFor();assert.equal(await page.locator('#admin-kind').count(),0);
+ const email='admin-mock@example.org',password='Mock admin password!4';
+ const invitation=await page.evaluate(async email=>(await import('/js/admin/mock.js')).provisionMockInvitation(email),email);
+ await page.goto(origin+'/admin-register.html#invite='+invitation.token);await page.locator('#email').waitFor();
+ await page.locator('#firstName').fill('Mock');await page.locator('#lastName').fill('Admin');await page.locator('#password').fill(password);await page.locator('#confirmation').fill(password);await page.locator('#credentials [type=submit]').click();await page.locator('#verification').waitFor({state:'visible'});
+ const code=()=>page.evaluate(async email=>(await import('/js/admin/mock.js')).takeMockCode(email),email);
+ await page.locator('#code').fill(await code());await page.locator('#verification [type=submit]').click();await page.locator('#success').waitFor({state:'visible'});
+ await page.goto(origin+'/admin-login.html');await page.locator('#email').fill(email);await page.locator('#password').fill(password);await page.locator('#credentials [type=submit]').click();await page.locator('#verification').waitFor({state:'visible'});
+ assert.equal(await page.evaluate(async()=>{try{await (await import('/js/admin/client.js')).createAdminClient().session();return false;}catch(error){return error.code==='UNAUTHORIZED';}}),true,'No session before 2FA');
+ await page.locator('#code').fill(await code());await page.locator('#verification [type=submit]').click();await page.locator('#admin-continue').waitFor({state:'visible'});
+ const identity=await page.evaluate(async()=>(await import('/js/admin/client.js')).createAdminClient().session());
+ await page.goto(origin+'/admin-academic.html?kind=degrees');await page.locator('#admin-search').waitFor();
+ await page.evaluate(async()=>{const {createManagementClient}=await import('/js/admin/management-client.js');const client=createManagementClient();for(let i=0;i<55;i++)await client.create('references','degrees',{name:'Paged fixture '+String(i).padStart(2,'0')});});
+ await page.locator('#admin-search').fill('Paged fixture');await page.locator('#admin-search').press('Enter');await page.waitForFunction(()=>document.querySelectorAll('tbody tr').length===50);await page.locator('[data-more]').click();await page.waitForFunction(()=>document.querySelectorAll('tbody tr').length===55);
+ await page.evaluate(async()=>{const {transaction}=await import('/js/data/mock/store.js');await transaction(state=>{const row=state.adminMock.registries.lecturers[0];row.linked=true;row.firstName=null;},{write:true});});
+ await page.goto(origin+'/admin-registry.html');await page.locator('tbody tr').first().waitFor();assert(await page.locator('tbody tr').first().locator('[data-edit]').isDisabled());await page.locator('tbody tr').first().locator('[data-view]').click();await page.locator('.admin-dialog').getByText('Տվյալները լրացման կարիք ունեն։',{exact:true}).waitFor();await page.locator('.admin-dialog [data-close]').click();
+ await page.locator('[data-admin-logout]').click();await page.getByRole('link',{name:'Ադմինիստրատորի մուտք',exact:true}).waitFor();assert.equal(await page.locator('tbody').count(),0);
+ await page.goto(origin+'/admin-login.html');await page.locator('#email').fill(email);await page.locator('#password').fill(password);await page.locator('#credentials [type=submit]').click();await page.locator('#verification').waitFor({state:'visible'});await page.locator('#code').fill(await code());await page.locator('#verification [type=submit]').click();await page.locator('#admin-continue').waitFor({state:'visible'});
+ await adminManagementCases(page,{origin,artifactDir:process.env.M1_ARTIFACT_DIR||'/tmp'});
+ await page.evaluate(async id=>{await (await import('/js/admin/mock.js')).disableMockAdmin(id);window.dispatchEvent(new Event('focus'));},identity.id);
+ await page.getByRole('link',{name:'Ադմինիստրատորի մուտք',exact:true}).waitFor();assert.equal(await page.locator('.admin-dialog').count(),0);assert.equal(await page.locator('#admin-kind').count(),0);assert(!(await page.locator('body').textContent()).includes('Sensitive draft'));
+ assert.deepEqual(errors,[]);console.log('Mock admin invitation, 2FA, protected management and disabled-session purge passed.');
+}finally{await browser.close();}
