@@ -31,11 +31,11 @@ export function openPostForm({record=null,onSaved=()=>{}}={}) {
   document.body.append(dialog);const form=dialog.querySelector('form'),title=form.elements.title,category=form.elements.category,sphere=form.elements.sphereCode,submit=form.querySelector('[type=submit]');
   const editor=createEditor(form.querySelector('[data-editor]'),{value:record?.content||'',sanitize:sanitizePostHtml,compact:true});editor.element.id='announcement-content';
   const value=()=>({title:title.value,content:editor.element.innerHTML,category:category.value,sphereCode:sphere.value});
-  const initial=JSON.stringify(value());let saving=false,closed=false,optionsReady=false;
+  const initial=JSON.stringify(value());let saving=false,closed=false,optionsReady=false,optionsGeneration=0;
   const dirty=()=>JSON.stringify(value())!==initial;
   const unload=event=>{if(dirty()){event.preventDefault();event.returnValue='';}};
   window.addEventListener('beforeunload',unload);
-  function close(force=false){if(saving&&!force)return;if(!force&&dirty()&&!window.confirm('Հրաժարվե՞լ չպահպանված փոփոխություններից։'))return;closed=true;window.removeEventListener('beforeunload',unload);editor.destroy();dialog.close();dialog.remove();previous?.focus();}
+  function close(force=false){if(saving&&!force)return;if(!force&&dirty()&&!window.confirm('Հրաժարվե՞լ չպահպանված փոփոխություններից։'))return;closed=true;window.removeEventListener('beforeunload',unload);window.removeEventListener('focus',refreshOptions);editor.destroy();dialog.close();dialog.remove();previous?.focus();}
   form.querySelector('[data-close]').onclick=form.querySelector('[data-cancel]').onclick=()=>close();
   dialog.addEventListener('cancel',event=>{event.preventDefault();close();});
   dialog.addEventListener('click',event=>{if(event.target!==dialog)return;const r=dialog.getBoundingClientRect();if(event.clientX<r.left||event.clientX>r.right||event.clientY<r.top||event.clientY>r.bottom)close();});
@@ -48,16 +48,19 @@ export function openPostForm({record=null,onSaved=()=>{}}={}) {
     name.removeAttribute('aria-busy');
     avatar.src=safeUrl(user?.avatar,{image:true})||'image/logo.png';
   }).catch(()=>{if(!closed){const name=form.querySelector('[data-author-name]');name.textContent='Օգտատեր';name.removeAttribute('aria-busy');}});
-  async function options(){const host=form.querySelector('[data-options-status]');submit.disabled=true;stateMessage(host,'Բեռնվում են ընտրանքները...');try{const result=await posts.options();if(closed)return;const selectedCategory=category.value,selectedSphere=sphere.value;category.innerHTML='<option value="">Տեսակ</option>'+result.types.map(t=>`<option value="${e(t.code)}">${e(t.name)}</option>`).join('');sphere.innerHTML='<option value="">Ուղղություն</option>'+result.spheres.map(s=>`<option value="${e(s.code)}">${e(s.name)}</option>`).join('');category.value=selectedCategory;sphere.value=selectedSphere;host.replaceChildren();optionsReady=true;submit.disabled=false;}catch(error){if(!closed)stateMessage(host,error.message,{retry:options});}}
+  async function options(){const generation=++optionsGeneration;optionsReady=false;const host=form.querySelector('[data-options-status]');submit.disabled=true;stateMessage(host,'Բեռնվում են ընտրանքները...');try{const result=await posts.options();if(closed||generation!==optionsGeneration)return;const selectedCategory=category.value,selectedSphere=sphere.value;category.innerHTML='<option value="">Տեսակ</option>'+result.types.map(t=>`<option value="${e(t.code)}">${e(t.name)}</option>`).join('');sphere.innerHTML='<option value="">Ուղղություն</option>'+result.spheres.map(s=>`<option value="${e(s.code)}">${e(s.name)}</option>`).join('');for(const [select,selected] of [[category,selectedCategory],[sphere,selectedSphere]]){if(selected&&![...select.options].some(option=>option.value===selected)){const missing=new Option('Ընտրանքն այլևս հասանելի չէ։ Ընտրեք նորը։',selected);missing.disabled=true;select.add(missing);}select.value=selected;}host.replaceChildren();optionsReady=true;submit.disabled=false;}catch(error){if(!closed)stateMessage(host,error.message,{retry:options});}}
   form.onsubmit=async event=>{event.preventDefault();if(saving||!optionsReady)return;let saved;
     const success=await pending(submit,form,async()=>{
       const errors=form.querySelector('[data-fields-errors]');errors.replaceChildren();let input;
       try{input=validatePostInput({...value(),content:editor.get()});}catch(error){for(const [key,message] of Object.entries(error.fieldErrors||{})){const p=document.createElement('p');p.textContent=message;errors.append(p);}throw error;}
       saving=true;form.querySelectorAll('input,select,button').forEach(el=>el.disabled=true);editor.element.contentEditable='false';
       try{saved=record?await posts.update(record.id,input):await posts.create(input);}
+      catch(error){if(['VALIDATION','CONFLICT'].includes(error.code))await options();throw error;}
       finally{saving=false;form.querySelectorAll('input,select,button').forEach(el=>el.disabled=false);editor.element.contentEditable='true';}
     });
     if(success){close(true);try{await onSaved(saved);}catch(error){notify(error.message);}}
   };
+  function refreshOptions(){if(!closed&&!saving)options();}
+  window.addEventListener('focus',refreshOptions);
   dialog.showModal();title.focus();options();return {dialog,close,dirty};
 }

@@ -21,7 +21,7 @@ export function validatePostInput(value) {
   const raw = typeof value.content === 'string' ? value.content : '';
   const content = sanitizePostHtml(raw), text = postPlainText(content);
   if (raw.length > 100000 || !text || text.length > 20000) errors.content = 'Բովանդակությունը պետք է պարունակի 1–20000 նիշ։';
-  if (!['job','internship','training'].includes(value.category)) errors.category = 'Ընտրեք տեսակը։';
+  if (typeof value.category !== 'string' || value.category.length > 16 || !/^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/.test(value.category)) errors.category = 'Ընտրեք տեսակը։';
   if (typeof value.sphereCode !== 'string' || (value.sphereCode.length > 32 || !/^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/.test(value.sphereCode))) errors.sphereCode = 'Ընտրեք ուղղությունը։';
   if (Object.keys(errors).length) throw new DataError('VALIDATION','Ստուգեք լրացված դաշտերը։',errors);
   return { title, content, category: value.category, sphereCode: value.sphereCode };

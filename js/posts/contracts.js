@@ -7,7 +7,7 @@ const referenceCode = value => { if (text(value).length > 32 || !/^[a-z][a-z0-9]
 const flag = value => { if (typeof value !== 'boolean') throw bad(); return value; };
 const nullable = (value, normalize = text) => value === null ? null : normalize(value);
 const date = value => { if (!text(value) || !Number.isFinite(Date.parse(value)) || !/(Z|[+-]\d\d:\d\d)$/.test(value)) throw bad(); return value; };
-const type = value => { if (!['job','internship','training'].includes(value)) throw bad(); return value; };
+const type = value => { referenceCode(value); if (value.length > 16) throw bad(); return value; };
 function author(value) { object(value); return {id:nullable(value.id,id),name:text(value.name),avatar:text(value.avatar),canOpenProfile:flag(value.canOpenProfile)}; }
 function common(value) { object(value); return {id:id(value.id),author:author(value.author),createdAt:date(value.createdAt),updatedAt:nullable(value.updatedAt,date),canEdit:flag(value.canEdit),canDelete:flag(value.canDelete)}; }
 export function normalizePost(value) {
@@ -25,6 +25,6 @@ export function normalizePostOptions(value) {
   object(value);if (!Array.isArray(value.types)||!Array.isArray(value.spheres))throw bad();
   const types=value.types.map(item=>({code:type(item.code),name:text(item.name)}));
   const spheres=value.spheres.map(item=>({code:referenceCode(item.code),name:text(item.name)}));
-  if (new Set(types.map(t=>t.code)).size!==3 || types.length!==3 || new Set(spheres.map(s=>s.code)).size!==spheres.length || spheres.filter(s=>s.code==='other').length!==1)throw bad();
+  if (new Set(types.map(t=>t.code)).size!==types.length || !['job','internship','training'].every(code=>types.some(t=>t.code===code)) || new Set(spheres.map(s=>s.code)).size!==spheres.length || spheres.filter(s=>s.code==='other').length!==1)throw bad();
   return {types,spheres};
 }

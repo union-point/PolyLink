@@ -37,7 +37,6 @@
  * @typedef {{status:'enrollment',next?:string}|{status:'authenticated',user:User}|{status:'challenge',challengeId:string,
  * expiresAt?:number,resendAfter?:number}} LoginResult
  */
-export const categories = Object.freeze({ job: 'Աշխատանք', internship: 'Պրակտիկա', training: 'Դասընթաց' });
 export const majors = Object.freeze({
   informatics: 'Ինֆորմատիկա և ծրագրավորում', mechanics: 'Մեքենաշինություն և ռոբոտաշինություն',
   electronics: 'Էլեկտրոնիկա և հեռահաղորդակցություն', civil: 'Շինարարություն և ճարտարապետություն',

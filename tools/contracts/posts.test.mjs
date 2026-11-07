@@ -16,16 +16,21 @@ test('posts comments retain independent parent paging and permissions',async()=>
  const page=await provider.call('posts.comments.list','1',{cursor:'earlier',sort:'newest'});assert.deepEqual(requests[0].params,{cursor:'earlier',sort:'newest'});assert.equal(page.items[0].text,'<b>plain</b>');assert.equal(page.items[0].canDelete,false);
 });
 test('strict post DTOs reject fabricated fields and malformed envelopes',()=>{
- for(const value of [{...post,commentCount:'45'},{...post,category:'unknown'},{...post,title:undefined},{...post,createdAt:'2026-01-01 12:00:00'},{...post,canEdit:1},{...post,sphereCode:'13'}])assert.throws(()=>normalizePost(value),e=>e.code==='CONTRACT');
+ for(const value of [{...post,commentCount:'45'},{...post,category:'invalid_code'},{...post,title:undefined},{...post,createdAt:'2026-01-01 12:00:00'},{...post,canEdit:1},{...post,sphereCode:'13'}])assert.throws(()=>normalizePost(value),e=>e.code==='CONTRACT');
  for(const page of [[],{items:[post]},{items:[post],nextCursor:''},{items:Array(21).fill(post),nextCursor:null}])assert.throws(()=>normalizePostPage(page),e=>e.code==='CONTRACT');
  assert.throws(()=>normalizeComment(post),e=>e.code==='CONTRACT');assert.equal(normalizePost({...post,author:{...author,id:null}}).author.id,null);
 });
-test('post options include exactly supported types and unique reference codes with Other',()=>{
+test('post options include built-in and custom types and unique reference codes with Other',()=>{
  const options={types:['job','internship','training'].map(code=>({code,name:code})),spheres:[{code:'other',name:'Այլ'}]};assert.deepEqual(normalizePostOptions(options),options);
  assert.throws(()=>normalizePostOptions({...options,spheres:[]}),e=>e.code==='CONTRACT');
  assert.throws(()=>normalizePostOptions({...options,spheres:[{code:'123',name:'Invalid code'}]}),e=>e.code==='CONTRACT');
  assert.throws(()=>normalizePostOptions({...options,spheres:[...options.spheres,...options.spheres]}),e=>e.code==='CONTRACT');
  assert.throws(()=>normalizePostOptions({...options,types:[options.types[0]]}),e=>e.code==='CONTRACT');
+ const custom={code:'scholarship',name:'<b>Scholarship</b>'};
+ assert.deepEqual(normalizePostOptions({...options,types:[...options.types,custom]}).types.at(-1),custom);
+ assert.equal(normalizePost({...post,category:custom.code,categoryName:custom.name}).category,custom.code);
+ for(const code of ['a'.repeat(17),'bad_code','UPPER'])assert.throws(()=>normalizePostOptions({...options,types:[...options.types,{code,name:code}]}));
+ assert.throws(()=>normalizePostOptions({...options,types:[...options.types,options.types[0]]}));
 });
 test('post writes use full replacement and preserve unknown fields for server rejection',()=>{
  const input={title:'A',content:'B',category:'job',sphereCode:'other',forged:true};assert.deepEqual(routes['posts.create'](input).data,input);assert.deepEqual(routes['posts.update']('1',input),{method:'put',url:'/posts/1',data:input});assert.equal(routes['posts.get']('1').url,'/posts/1');assert.ok(!('expectedVersion'in routes['posts.delete']('1')));
