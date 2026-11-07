@@ -71,3 +71,4 @@
 .admin-dialog header,.admin-dialog footer {flex:0 0 auto;}
 .admin-dialog .admin-form-body {min-height:0;overflow:auto;}
 .admin-search input::-webkit-search-cancel-button {appearance:none;}
+.admin-body:has(.admin-dialog[open]),.admin-body:has([data-common-confirm]:not(.hidden)) {overflow:hidden;}
