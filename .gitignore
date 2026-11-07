@@ -89,3 +89,6 @@ Desktop.ini
 # Contract verification dependencies
 /tools/contracts/node_modules/
 /tools/m1/node_modules/
+
+# Local alumni import environment
+.venv-alumni/
