@@ -144,7 +144,9 @@ export function createMockAdminProvider({transaction: transact,storage,now=()=>D
         if(typeof data[ref]!=='string'||!a.references[refKind].some(r=>r.id===data[ref]))invalid(ref);values[ref]=data[ref];
         if(!lecturer){for(const field of ['studyStartDate','studyEndDate']){const date=data[field];if(typeof date!=='string'||!/^\d{4}-\d{2}-\d{2}$/.test(date)||!Number.isFinite(Date.parse(date))||new Date(date).toISOString().slice(0,10)!==date)invalid(field);values[field]=date;}if(values.studyStartDate>values.studyEndDate)invalid('studyEndDate');}
       }
-      const saved=row||{id:String(Math.max(0,...list.map(r=>Number(r.id)))+1),version:'0',...(area==='registries'?{linked:false}:{})};Object.assign(saved,values,{version:String(Number(saved.version)+1)});if(!row)list.push(saved);syncReferences(state);return view(saved);
+      a.sequences??={};const sequenceKey=area+':'+kind;
+      if(!row)a.sequences[sequenceKey]=Math.max(a.sequences[sequenceKey]||0,...list.map(r=>Number(r.id)))+1;
+      const saved=row||{id:String(a.sequences[sequenceKey]),version:'0',...(area==='registries'?{linked:false}:{})};Object.assign(saved,values,{version:String(Number(saved.version)+1)});if(!row)list.push(saved);syncReferences(state);return view(saved);
     });
   }
   return {

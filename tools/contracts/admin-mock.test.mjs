@@ -76,3 +76,11 @@ test('mock invitation boundary and query-bound pagination reject stale or foreig
  await assert.rejects(f.provider.request('/references/degrees?cursor='+page.nextCursor),e=>e.code==='VALIDATION');
  assert.equal((await f.provider.request('/references/professions?q=Fixture&cursor='+page.nextCursor)).items.length,2);
 });
+
+test('mock deleted IDs are not reused by replacement references or registry rows',async()=>{
+ const f=fixture();await register(f);await login(f);
+ for(const [base,input] of [['/references/degrees',{name:'Temporary'}],['/registries/lecturers',{firstName:'A',lastName:'B',email:'temporary@example.org',departmentId:'1'}]]){
+  const old=await call(f,base,input);await call(f,base+'/'+old.id,{version:old.version},'DELETE');const next=await call(f,base,input);
+  assert.notEqual(next.id,old.id);await assert.rejects(call(f,base+'/'+old.id,{...input,version:old.version},'PUT'),e=>e.code==='NOT_FOUND');
+ }
+});
