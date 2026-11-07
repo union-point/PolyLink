@@ -21,12 +21,12 @@ HEADERS = {
 
 
 def text(value):
-    return ' '.join(unicodedata.normalize('NFKC', str(value or '')).split())
+    return ' '.join(str(value or '').split())
 
 
 def key(value):
     # Same normalization as EnrollmentRules.text, including Armenian lowercase.
-    return text(value).lower()
+    return ' '.join(unicodedata.normalize('NFKC', text(value)).split()).lower()
 
 
 def specialization(value):
