@@ -48,7 +48,7 @@ export function openPostForm({record=null,onSaved=()=>{}}={}) {
     name.removeAttribute('aria-busy');
     avatar.src=safeUrl(user?.avatar,{image:true})||'image/logo.png';
   }).catch(()=>{if(!closed){const name=form.querySelector('[data-author-name]');name.textContent='Օգտատեր';name.removeAttribute('aria-busy');}});
-  async function options(){const generation=++optionsGeneration;optionsReady=false;const host=form.querySelector('[data-options-status]');submit.disabled=true;stateMessage(host,'Բեռնվում են ընտրանքները...');try{const result=await posts.options();if(closed||generation!==optionsGeneration)return;const selectedCategory=category.value,selectedSphere=sphere.value;category.innerHTML='<option value="">Տեսակ</option>'+result.types.map(t=>`<option value="${e(t.code)}">${e(t.name)}</option>`).join('');sphere.innerHTML='<option value="">Ուղղություն</option>'+result.spheres.map(s=>`<option value="${e(s.code)}">${e(s.name)}</option>`).join('');for(const [select,selected] of [[category,selectedCategory],[sphere,selectedSphere]]){if(selected&&![...select.options].some(option=>option.value===selected)){const missing=new Option('Ընտրանքն այլևս հասանելի չէ։ Ընտրեք նորը։',selected);missing.disabled=true;select.add(missing);}select.value=selected;}host.replaceChildren();optionsReady=true;submit.disabled=false;}catch(error){if(!closed)stateMessage(host,error.message,{retry:options});}}
+  async function options(){const generation=++optionsGeneration;optionsReady=false;const host=form.querySelector('[data-options-status]');submit.disabled=true;stateMessage(host,'Բեռնվում են ընտրանքները...');try{const result=await posts.options();if(closed||generation!==optionsGeneration)return;const selectedCategory=category.value,selectedSphere=sphere.value;category.innerHTML='<option value="">Տեսակ</option>'+result.types.map(t=>`<option value="${e(t.code)}">${e(t.name)}</option>`).join('');sphere.innerHTML='<option value="">Ուղղություն</option>'+result.spheres.map(s=>`<option value="${e(s.code)}">${e(s.name)}</option>`).join('');for(const [select,selected] of [[category,selectedCategory],[sphere,selectedSphere]]){if(selected&&![...select.options].some(option=>option.value===selected)){const missing=new Option('Ընտրանքն այլևս հասանելի չէ։ Ընտրեք նորը։',selected);missing.disabled=true;select.add(missing);}select.value=selected;}host.replaceChildren();optionsReady=true;submit.disabled=false;}catch(error){if(!closed&&generation===optionsGeneration)stateMessage(host,error.message,{retry:options});}}
   form.onsubmit=async event=>{event.preventDefault();if(saving||!optionsReady)return;let saved;
     const success=await pending(submit,form,async()=>{
       const errors=form.querySelector('[data-fields-errors]');errors.replaceChildren();let input;
@@ -58,6 +58,7 @@ export function openPostForm({record=null,onSaved=()=>{}}={}) {
       catch(error){if(['VALIDATION','CONFLICT'].includes(error.code))await options();throw error;}
       finally{saving=false;form.querySelectorAll('input,select,button').forEach(el=>el.disabled=false);editor.element.contentEditable='true';}
     });
+    submit.disabled=!optionsReady;
     if(success){close(true);try{await onSaved(saved);}catch(error){notify(error.message);}}
   };
   function refreshOptions(){if(!closed&&!saving)options();}
