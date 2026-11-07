@@ -52,6 +52,7 @@ def run(root,env,admin_sql,bao_request,root_token,messenger=False,continuity=Fal
                 subprocess.run(['node',str(root/'tools/m1/profile-ui.mjs'),'--mock'],cwd=root,env=child,check=True)
                 return
             if posts:
+                admin_sql(f"USE [{env['M1_DB_NAME']}]; IF NOT EXISTS(SELECT 1 FROM dbo.PostTypes WHERE Code='scholarship') INSERT dbo.PostTypes(Name,Code) VALUES (N'Custom scholarship','scholarship');")
                 subprocess.run(['node',str(root/'tools/m1/posts-live.mjs')],cwd=root,env=child,check=True)
                 subprocess.run(['node',str(root/'tools/m1/posts-ui.mjs')],cwd=root,env=child,check=True)
                 return
@@ -100,6 +101,7 @@ def run(root,env,admin_sql,bao_request,root_token,messenger=False,continuity=Fal
                 subprocess.run(['node',str(root/'tools/m1/enrollment-ui.mjs')],cwd=root,env=child,check=True)
                 subprocess.run(['node',str(root/'tools/m1/enrollment-mock.mjs')],cwd=root,env=child,check=True)
                 admin_sql(f"USE [{env['M1_DB_NAME']}]; DELETE auth.RateLimits;")
+                admin_sql(f"USE [{env['M1_DB_NAME']}]; IF NOT EXISTS(SELECT 1 FROM dbo.PostTypes WHERE Code='scholarship') INSERT dbo.PostTypes(Name,Code) VALUES (N'Custom scholarship','scholarship');")
                 subprocess.run(['node',str(root/'tools/m1/posts-live.mjs')],cwd=root,env=child,check=True)
                 subprocess.run(['node',str(root/'tools/m1/posts-ui.mjs')],cwd=root,env=child,check=True)
         finally:

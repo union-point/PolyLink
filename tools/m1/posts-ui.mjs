@@ -118,5 +118,27 @@ try{
  await page.evaluate(async()=>{const {transaction}=await import('/js/data/mock/store.js');await transaction(state=>{state.sessionUserId='1';},{write:true});});await page.reload();await ready();
  await page.goto(origin+'/profile.html');await ready();await page.locator('.announcements-section .post-card').first().waitFor();
  await page.goto(origin+'/post.html?id='+id);await ready();await page.locator('[data-post-delete]').click();await page.locator('[data-common-confirm]').getByRole('button',{name:'Այո',exact:true}).click();await page.getByText('Հայտարարությունը հասանելի չէ։',{exact:true}).waitFor();await page.reload();await ready();await page.getByText('Հայտարարությունը հասանելի չէ։',{exact:true}).waitFor();
+ // Dynamic references use the same composer/card path on feed, detail and profile.
+ await page.goto(origin+'/events.html');await ready();
+ await page.evaluate(async()=>{const {transaction}=await import('/js/data/mock/store.js');await transaction(state=>{state.postTypes.push({code:'scholarship',name:'<b>Կրթաթոշակ</b>'});},{write:true});window.dispatchEvent(new Event('focus'));});
+ await page.locator('.category-selector option[value="scholarship"]').waitFor({state:'attached'});
+ await page.locator('.create-post-btn').click();
+ await form.locator('[name=category] option[value="scholarship"]').waitFor({state:'attached'});
+ await form.locator('[name=title]').fill('Custom type');await form.locator('[name=category]').selectOption('scholarship');await form.locator('[name=sphereCode]').selectOption('other');await form.locator('[contenteditable]').fill('Generic publication');
+ await form.locator('[type=submit]').click();await form.waitFor({state:'detached'});
+ const custom=(await service('list',{category:'scholarship'})).items[0];assert.equal(custom.categoryName,'<b>Կրթաթոշակ</b>');
+ await page.locator('.category-selector').selectOption('scholarship');await count('.post-card',1);
+ assert.equal(await page.locator('.post-type-badge').textContent(),custom.categoryName);assert.equal(await page.locator('.post-type-badge b').count(),0);
+ for(const path of ['/post.html?id='+custom.id,'/profile.html']){await page.goto(origin+path);await ready();await page.locator(`[data-post-id="${custom.id}"]`).waitFor();}
+ await service('delete',custom.id);
+ await page.goto(origin+'/events.html');await ready();await page.locator('.create-post-btn').click();
+ await form.locator('[name=category] option[value="scholarship"]').waitFor({state:'attached'});await form.locator('[name=category]').selectOption('scholarship');await form.locator('[name=title]').fill('Keep this draft');
+ await page.evaluate(async()=>{const {transaction}=await import('/js/data/mock/store.js');await transaction(state=>{state.postTypes=state.postTypes.filter(t=>t.code!=='scholarship');},{write:true});window.dispatchEvent(new Event('focus'));});
+ await page.waitForFunction(()=>document.querySelector('.posts-modal [name=category] option[value="scholarship"]')?.disabled);
+ assert.equal(await form.locator('[name=title]').inputValue(),'Keep this draft');assert.equal(await form.locator('[name=category]').inputValue(),'scholarship');
+ await page.setViewportSize({width:1280,height:900});await page.screenshot({path:'/tmp/posts-dynamic-desktop.png'});
+ await page.setViewportSize({width:390,height:844});await form.locator('[name=category]').focus();await page.keyboard.press('ArrowDown');await page.keyboard.press('Enter');
+ assert(await form.evaluate(el=>el.scrollWidth<=el.clientWidth));await page.screenshot({path:'/tmp/posts-dynamic-mobile.png'});
+ page.once('dialog',d=>d.accept());await form.locator('[data-close]').click();await form.waitFor({state:'detached'});
  assert.deepEqual(errors,[]);console.log('Posts mock provider, feed, forms, comments, profiles, deep links and mobile acceptance passed.');
 }catch(error){console.error(error);throw error;}finally{await context.unrouteAll({behavior:'ignoreErrors'});await browser.close();}
