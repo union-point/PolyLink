@@ -68,7 +68,7 @@ The v1 graduate policy verifies knowledge of official diploma details plus contr
 
 ## Manual synthetic test data
 
-For a disposable, freshly migrated V21 database, the following one-shot command loads Armenian selector labels and invented registry records. It is never run by migrations or application startup. It requires the exact `DB_NAME` as an explicit argument, and refuses a database containing users, registry entries, academic selector values or non-migration sphere values. It inserts everything in one transaction; a second run is refused. Database names are unrestricted; verify the selected target before running. Do not run it against real data.
+For a disposable, freshly migrated V22 database, the following one-shot command loads Armenian selector labels and invented registry records. It is never run by migrations or application startup. It requires the exact `DB_NAME` as an explicit argument, and refuses a database containing users, registry entries, academic selector values or non-migration sphere values. It inserts everything in one transaction; a second run is refused. Database names are unrestricted; verify the selected target before running. Do not run it against real data.
 
 From the repository root, load the local environment, point `DB_NAME` at the already-created and migrated disposable test database, and provide migration-capable credentials privately. For example, after setting the credentials in the shell:
 
@@ -91,4 +91,25 @@ Start the backend with the same `DB_NAME` and the frontend as in the quickstart.
 
 Choose any offered institute and, for lecturers, any profession. Graduate registration accepts an unused address at exactly `polytechnic.am`; lecturer registration requires the listed address. Each registry record can be claimed once. Registration creates the account through the normal interface; the seed creates no accounts or passwords.
 
-For local testing, point SMTP to the local Mailpit capture service and open [localhost:8025](http://localhost:8025) for the verification code. Ensure the backend actually uses that SMTP configuration before registering: the listed lecturer addresses are fictional but use the real required domain, and a real SMTP relay could attempt external delivery. Mailpit captures messages without delivering them externally. See the [local SMTP troubleshooting](../tools/local/README.md#smtp-timeouts-in-disposable-acceptance-tests) if code delivery fails. The seed uses a small illustrative set of selectors rather than importing any machine-local data; migrations supply roles, languages, university, post types and the `other` sphere.
+For local testing, point SMTP to the local Mailpit capture service and open [localhost:8025](http://localhost:8025) for the verification code. Ensure the backend actually uses that SMTP configuration before registering: the listed lecturer addresses are fictional but use the real required domain, and a real SMTP relay could attempt external delivery. Mailpit captures messages without delivering them externally. See the [local SMTP troubleshooting](../tools/local/README.md#smtp-timeouts-in-disposable-acceptance-tests) if code delivery fails. The seed contains a reviewed reference-only snapshot of the local database captured on 7 November 2026. It includes all values from the eleven catalogs below, including verification flags and university logo metadata. No source identity IDs, people, credentials or machine configuration are exported. Migration-provided rows are matched by code (or name for uncoded catalogs), so IDs are resolved in the target database. All 24 post direction names are Armenian; their codes stay unchanged. Existing labels outside this snapshot are not translated by this command. This is a fresh-database seed, not an upgrade tool for populated databases.
+
+
+### Reference snapshot contents
+
+| Catalog | Source rows | Seeded rows |
+| --- | ---: | ---: |
+| Institutes | 6 | 6 |
+| Departments | 14 | 16 |
+| Specializations | 68 | 69 |
+| Professions | 14 | 14 |
+| Degrees | 2 | 2 |
+| Universities | 1 | 1 |
+| Languages | 3 | 3 |
+| Roles | 2 | 2 |
+| PostTypes | 3 | 3 |
+| Spheres | 24 | 24 |
+| ForumCategories | 7 | 7 |
+
+Two additional departments (`Ծրագրային համակարգերի ամբիոն`, `Համակարգչային տեխնիկայի ամբիոն`) and one specialization (`Համակարգչային գիտություն`) preserve the four synthetic profiles documented above. Source verification flags are preserved rather than assuming every imported specialization is verified. The source catalogs are copied as stored, without inventing institute/department relationships or deduplicating differently named specialties.
+
+Validated on Linux with JDK 25: Maven verification, migrations V1–V22 and seed on a uniquely named disposable SQL Server database, all eleven catalogs compared field by field against the reviewed snapshot (allowing only the translations and three fixture selectors), foreign-key/check constraints, synthetic identity links, and rejection of a second run. macOS execution is not separately verified.
