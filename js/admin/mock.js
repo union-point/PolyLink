@@ -13,7 +13,7 @@ const fields=(value,allowed)=>{if(!value||typeof value!=='object'||Array.isArray
 const text=(value,key,max)=>{if(typeof value!=='string'||!value.trim()||value.trim().length>max||/[\p{Cc}\p{Cs}]/u.test(value))invalid(key);return value.trim();};
 const email=value=>{const result=text(value,'email',255).toLowerCase();if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/u.test(result))invalid('email');return result;};
 const slug=(value,max)=>{const result=text(value,'code',max);if(!/^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/.test(result))invalid('code');return result;};
-const normalize=value=>String(value).normalize('NFKC').trim().replace(/\s+/gu,' ').toLowerCase();
+const normalize=value=>String(value).normalize('NFKC').trim().replace(/[\s\p{Z}]+/gu,' ').toLowerCase();
 const secret=()=>crypto.randomUUID()+crypto.randomUUID();
 async function digest(value){return [...new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(value)))].map(n=>n.toString(16).padStart(2,'0')).join('');}
 const safeAdmin=a=>Object.fromEntries(['id','email','firstName','lastName','role'].map(key=>[key,a[key]]));
@@ -123,7 +123,7 @@ export function createMockAdminProvider({transaction: transact,storage,now=()=>D
         for(const key of url.searchParams.keys())if(!['q','cursor'].includes(key))invalid(key);
         const q=(url.searchParams.get('q')||'').trim();if(q.length>255||/\p{Cc}/u.test(q))invalid('q');const scope=JSON.stringify([admin.id,area,kind,q]);let after=0;
         const cursor=url.searchParams.get('cursor');if(cursor){const saved=a.cursors[cursor];if(!saved||saved.scope!==scope)invalid('cursor');after=saved.after;}
-        const matches=list.filter(row=>Number(row.id)>after&&normalize(Object.values(row).filter(v=>typeof v==='string').join(' ')).includes(normalize(q))).sort((a,b)=>Number(a.id)-Number(b.id));
+        const matches=list.filter(row=>Number(row.id)>after&&normalize((area==='references'?[row.name,row.code]:[row.firstName,row.lastName,row.email,row.diplomaNumber]).filter(v=>typeof v==='string').join(' ')).includes(normalize(q))).sort((a,b)=>Number(a.id)-Number(b.id));
         const selected=matches.slice(0,50);let nextCursor=null;if(matches.length>50){nextCursor=crypto.randomUUID();a.cursors[nextCursor]={scope,after:Number(selected.at(-1).id)};}return {items:selected.map(view),nextCursor};
       }
       if(!['POST','PUT','DELETE'].includes(method)||(method==='POST'&&id)||(method!=='POST'&&!id))fail('NOT_FOUND');

@@ -45,7 +45,7 @@ function checkRegistry(state,user) {
   const graduate=p.role==='graduate';
   const rows=state.adminMock?.registries?.[graduate?'alumni':'lecturers'];
   if(rows){
-    const row=rows.find(row=>normalize(row.firstName)===normalize(p.firstName)&&normalize(row.lastName)===normalize(p.lastName)&&(graduate?normalize(row.diplomaNumber)===normalize(p.diplomaNumber)&&Number(row.specializationId)===p.specializationId&&Number(row.studyStartDate?.slice(0,4))===p.startYear&&Number(row.studyEndDate?.slice(0,4))===p.endYear:row.email===user.email&&Number(row.departmentId)===p.departmentId));
+    const row=rows.find(row=>normalize(row.firstName)===normalize(p.firstName)&&normalize(row.lastName)===normalize(p.lastName)&&(graduate?normalize(row.diplomaNumber)===normalize(p.diplomaNumber)&&Number(row.specializationId)===p.specializationId&&Number(row.studyStartDate?.slice(0,4))===p.startYear&&Number(row.studyEndDate?.slice(0,4))===p.endYear:row.email===user.email&&Number(row.departmentId)===p.departmentId&&enrollmentChoices(state).professions.some(r=>r.id===p.professionId)));
     const claim=(graduate?'graduate-':'lecturer-')+row?.id;
     if(!row||row.linked||state.users.some(other=>other.id!==user.id&&other.registryClaim===claim))throw new DataError('REGISTRY_MISMATCH','Տվյալները չեն համապատասխանում ցուցադրական գրանցամատյանին։');
     return claim;
@@ -166,7 +166,7 @@ const operations = {
     const failure=checkCode(item,code);if(failure)return failure;
     const claim=checkRegistry(state,user);item.consumed=true;entry.completed=challengeId;user.registryClaim=claim;
     const graduate=entry.profile.role==='graduate';
-    state.education.push({id:nextId(state,'education'),userId:user.id,institution:'Հայաստանի ազգային պոլիտեխնիկական համալսարան',degree:null,institute:enrollmentChoices(state).institutes.find(item=>item.id===entry.profile.instituteId).name,specialization:graduate?enrollmentChoices(state).specializations.find(item=>item.id===entry.profile.specializationId).name:null,startDate:graduate?'2021-09-01':null,endDate:graduate?'2025-06-01':null});
+    state.education.push({id:nextId(state,'education'),userId:user.id,institution:'Հայաստանի ազգային պոլիտեխնիկական համալսարան',degree:null,institute:enrollmentChoices(state).institutes.find(item=>item.id===entry.profile.instituteId).name,specialization:graduate?enrollmentChoices(state).specializations.find(item=>item.id===entry.profile.specializationId).name:null,startDate:graduate?`${entry.profile.startYear}-09-01`:null,endDate:graduate?`${entry.profile.endYear}-06-01`:null});
     Object.assign(user,{firstName:entry.profile.firstName,lastName:entry.profile.lastName,role:entry.profile.role,status:'active',onboardingComplete:true});user.name=`${user.firstName} ${user.lastName}`;
     return enrollmentState(state);
   },
