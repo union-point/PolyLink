@@ -62,3 +62,12 @@
 .admin-body .custom-confirm {max-width:calc(100vw - 32px);background:var(--card-background);color:var(--font-color-primary);}
 .theme-dark.admin-body,.theme-dark .admin-body {--admin-danger:#ff9999;}
 @media(max-width:760px){.admin-toolbar{grid-template-columns:1fr 1fr;padding:16px;gap:12px;}.admin-toolbar .admin-field{grid-column:1/-1;}.admin-topbar{align-items:flex-start;gap:16px;padding:16px;}.admin-brand{font-size:19px;}.admin-brand span{display:none;}.admin-account{align-items:flex-end;flex-direction:column;gap:8px;max-width:55%;}.admin-nav{padding:0 8px;gap:0;}.admin-nav a{padding:12px 8px;font-size:13px;}#admin-main{margin-top:24px;padding:0 16px 32px;}.admin-heading h1{font-size:24px;}.admin-results-header{padding:16px;}.admin-table :is(th,td){padding:12px 16px;}.admin-form-fields{grid-template-columns:1fr;}.admin-dialog header,.admin-form-body{padding:16px;}.admin-dialog footer{padding:16px;}.admin-table-region:focus-visible{outline-offset:-3px;}}
+
+.admin-body[data-admin-check] > :not([data-admin-session-error]):not(script) {visibility:hidden;}
+
+.admin-announcement:not(:empty) {padding:12px 24px;color:var(--primary-blue);}
+.admin-dialog {overflow:hidden;}
+.admin-dialog form {display:flex;flex-direction:column;max-height:calc(100dvh - 32px);margin:0;}
+.admin-dialog header,.admin-dialog footer {flex:0 0 auto;}
+.admin-dialog .admin-form-body {min-height:0;overflow:auto;}
+.admin-search input::-webkit-search-cancel-button {appearance:none;}
