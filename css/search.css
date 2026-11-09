@@ -231,5 +231,5 @@ h2 {
 @media (max-width: 700px) {
   .search-page .filter-option { width: 100%; max-width: 100%; }
   .search-page .filter-option label { min-width: 0; overflow-wrap: anywhere; }
-  .search-page .filter-option .app-select { flex-shrink: 0; width: 55%; max-width: 55%; }
+  .search-page .filter-option .app-select { flex-shrink: 0; width: 50%; max-width: 50%; }
 }
