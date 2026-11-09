@@ -224,12 +224,14 @@ h2 {
   .search-page .search-bar input { flex: 1; min-width: 0; }
 }
 
-/* Map the shared dropdown to the search theme without changing filter layout. */
-.search-page .filters { --border: var(--form-border); --surface: var(--secondary-hover-bg); }
-.search-page .filter-option .app-select { width: 260px; max-width: 55vw; }
+/* Keep the shared filters in one row, with room for long option labels. */
+.search-page .filters { --border: var(--form-border); --surface: var(--secondary-hover-bg); display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px; }
+.search-page .filter-option { flex-direction: column; align-items: stretch; }
+.search-page .filter-option .app-select { width: 100%; max-width: 100%; }
 .search-page .app-select-trigger { font-size: 15px; }
 @media (max-width: 700px) {
-  .search-page .filter-option { width: 100%; max-width: 100%; }
+  .search-page .filters { grid-template-columns: minmax(0, 1fr); gap: 16px; }
+  .search-page .filter-option { width: 100%; max-width: 100%; flex-direction: row; align-items: center; }
   .search-page .filter-option label { min-width: 0; overflow-wrap: anywhere; }
   .search-page .filter-option .app-select { flex-shrink: 0; width: 50%; max-width: 50%; }
 }
