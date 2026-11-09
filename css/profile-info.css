@@ -1,0 +1,37 @@
+/* Page-owned menus always open below their field, independently of OS popups. */
+.enrollment-select { position: relative; min-width: 0; }
+.enrollment-select-trigger {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  width: 100%; min-width: 0; padding: 9px 12px; text-align: left;
+  border: 1px solid var(--border); border-radius: 10px;
+  color: var(--font-color-primary); background: var(--card-background);
+}
+.enrollment-select-trigger::after {
+  content: ''; flex: 0 0 7px; height: 7px; margin-right: 3px;
+  border-right: 2px solid currentColor; border-bottom: 2px solid currentColor;
+  transform: translateY(-2px) rotate(45deg);
+}
+.enrollment-select-trigger:hover:not(:disabled) { border-color: var(--primary-blue); }
+.enrollment-select-trigger:focus-visible { outline: 2px solid var(--primary-blue); outline-offset: 2px; }
+.enrollment-select-trigger.error { border-color: var(--danger); }
+.enrollment-page .enrollment-select-list {
+  position: absolute; top: calc(100% + 4px); left: 0; z-index: 20;
+  width: 100%; height: auto; max-height: 240px; margin: 0; padding: 4px;
+  appearance: none; -webkit-appearance: none;
+  border: 1px solid var(--border); border-radius: 10px;
+  background: var(--card-background); color: var(--font-color-primary);
+  overflow-y: auto; box-shadow: 0 8px 24px #19395626;
+
+}
+.enrollment-select.is-open { z-index: 20; }
+
+.enrollment-select-list [role=option] { padding: 9px 8px; white-space: normal; overflow-wrap: anywhere; border-radius: 6px; }
+.enrollment-select-list [role=option][aria-selected=true] { background: var(--primary-blue) linear-gradient(var(--primary-blue), var(--primary-blue)); color: var(--card-background); }
+.enrollment-select-list [role=option].is-active { background: var(--surface); color: var(--font-color-primary); }
+@media (max-width: 640px) {
+  .enrollment-select-trigger { padding: 8px 10px; font-size: 13px; }
+}
+
+.enrollment-select-list [role=option] { cursor: pointer; }
+.enrollment-select-list [aria-disabled=true] { opacity: .55; cursor: default; }
+.enrollment-select-native { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; clip-path: inset(50%); }
