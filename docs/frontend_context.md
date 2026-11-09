@@ -36,7 +36,7 @@ HTML → page controller → js/services/index.js → js/data/client.js
 | `settings.html`; `settings.js`, `settings-security.js`, `account-export.js` | Persisted privacy/language/notification preferences, staged email change, password-authorized email factor, password change, full ZIP export, deactivate/delete. Browser notifications and theme are local preferences. |
 | `events.html`, `post.html?id=...`; `posts.js`, `posts/*`, `shared/posts.js` | HTTP/mock paged announcements, combined type/direction filters, shared required create/edit form, last-save-wins, owner actions, lazy comments and durable links. Requires reviewed V19 and `POSTS_ENABLED=true`. |
 | `forum.html`, `new-topic.html`, `topic.html`; `forum/*` | HTTP/mock categories, cursor topics and flat replies, likes, owner edits/deletion, manual refresh and stale-edit review. Enable the backend forum only after V13. |
-| Help/policies/tutorials | Public static content and UI filters. Support submission and unavailable video playback show explicit feedback. |
+| Help/policies | Public static content. Support submission shows explicit feedback when unavailable. |
 | `dev-tools.html` | Mock-only reset, latency/failure injection and incoming-message controls; not a production administration page. |
 
 ## Identity and encryption

@@ -90,7 +90,7 @@ try {
   await open(); await page.locator('[data-activity-status]').getByText('History test error', { exact: true }).waitFor();
   await page.locator('[data-activity-status] button').click(); await page.waitForFunction(() => !document.querySelector('[data-activity-status]').textContent);
 
-  const pages = ['events.html', target, 'forum.html', 'topic.html?id=topic-1', 'new-topic.html', 'profile.html', 'user.html?id=2', 'search.html', 'settings.html', 'help.html', 'tutorials.html', 'privacy.html', 'terms.html', 'message.html?room=room-2'];
+  const pages = ['events.html', target, 'forum.html', 'topic.html?id=topic-1', 'new-topic.html', 'profile.html', 'user.html?id=2', 'search.html', 'settings.html', 'help.html', 'privacy.html', 'terms.html', 'message.html?room=room-2'];
   for (const viewport of [{ width: 1280, height: 900 }, { width: 390, height: 844 }, { width: 320, height: 568 }, { width: 844, height: 390 }]) {
     await page.setViewportSize(viewport);
     console.log(`Check notification layout at ${viewport.width}x${viewport.height}`);

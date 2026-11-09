@@ -15,7 +15,7 @@ Ignored local `db/` scripts, report, diagram and backups are historical/referenc
 
 ## Implemented domain and boundaries
 
-The platform connects graduates and lecturers through discovery, profiles and direct/group messaging. Announcement, education and certificate tables remain from the legacy domain; their full write APIs have not been implemented. The career forum now has its own authenticated API and frontend integration. `events.html` is a job/internship/training feed, with no event calendar, RSVP or attendance entity. Help, policies and tutorials remain static content. WorkExperience has no connected editor/API.
+The platform connects graduates and lecturers through discovery, profiles and direct/group messaging. Announcement, education and certificate tables remain from the legacy domain; their full write APIs have not been implemented. The career forum now has its own authenticated API and frontend integration. `events.html` is a job/internship/training feed, with no event calendar, RSVP or attendance entity. Help and policies remain static content. WorkExperience has no connected editor/API.
 
 | Area | Current server implementation |
 | --- | --- |
