@@ -25,9 +25,9 @@ try{
     await page.locator(`[name=role][value=${role}]`).check();assert.equal(await page.locator('#firstName,#lastName').count(),0);
     assert.equal(await page.getByLabel('Ֆակուլտետ/ինստիտւտ', {exact:true}).getAttribute('required'), '');
     await page.locator('#save-profile').click();await page.locator('#instituteId[aria-invalid=true]').waitFor();
-    await page.locator('#instituteId').selectOption({index:1});
-    if(role==='graduate') {await page.locator('#diplomaNumber').fill(email+'-wrong');await page.locator('#specializationId').selectOption({index:1});await page.locator('#startYear').fill('2021');await page.locator('#endYear').fill('2025');}
-    else {await page.locator('#departmentId').selectOption({index:1});await page.locator('#professionId').selectOption({index:1});}
+    await page.locator('#instituteId-trigger').click();await page.locator('#instituteId-option-1').click();
+    if(role==='graduate') {await page.locator('#diplomaNumber').fill(email+'-wrong');await page.locator('#specializationId-trigger').click();await page.locator('#specializationId-option-1').click();await page.locator('#startYear').fill('2021');await page.locator('#endYear').fill('2025');}
+    else {await page.locator('#departmentId-trigger').click();await page.locator('#departmentId-option-1').click();await page.locator('#professionId-trigger').click();await page.locator('#professionId-option-1').click();}
     if(role==='graduate') {
       await page.locator('#submit-profile').click();await page.getByText('Գրանցամատյանում համապատասխան տվյալներ չեն գտնվել։ Ստուգեք տվյալները կամ դիմեք համալսարանին։',{exact:true}).waitFor();
       assert.equal(await page.locator('#diplomaNumber').inputValue(),email+'-wrong');await page.locator('#diplomaNumber').fill(email);

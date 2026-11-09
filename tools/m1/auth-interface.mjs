@@ -32,13 +32,13 @@ try {
     await page.locator('#avatar-file').setInputFiles({ name: 'portrait.png', mimeType: 'image/png', buffer: Buffer.from(picture, 'base64') });
     await page.getByText('Լուսանկարը պահպանված է։', { exact: true }).waitFor({timeout:10000}).catch(async error => { console.log(await page.locator('main').innerText()); console.log(errors); throw error; });
     assert((await page.locator('#avatar-preview').getAttribute('src')).startsWith('blob:'));
-    await page.locator('#instituteId').selectOption('1');
+    await page.locator('#instituteId-trigger').click();await page.locator('#instituteId-option-1').click();
     if (role === 'graduate') {
-      await page.locator('#diplomaNumber').fill('DEMO-2025'); await page.locator('#specializationId').selectOption('1');
+      await page.locator('#diplomaNumber').fill('DEMO-2025'); await page.locator('#specializationId-trigger').click();await page.locator('#specializationId-option-1').click();
       await page.locator('#startYear').fill('2021'); await page.locator('#endYear').fill('2020');
       await page.locator('#submit-profile').click(); await page.getByText('Ուսման ավարտը չի կարող լինել սկզբից առաջ։', { exact: true }).waitFor();
       await page.locator('#endYear').fill('2025');
-    } else { await page.locator('#departmentId').selectOption('1'); await page.locator('#professionId').selectOption('1'); }
+    } else { await page.locator('#departmentId-trigger').click();await page.locator('#departmentId-option-1').click(); await page.locator('#professionId-trigger').click();await page.locator('#professionId-option-1').click(); }
     await fits(page);
     await page.locator('#save-profile').click(); await page.getByText('Տվյալները պահպանված են։', { exact: true }).waitFor();
     assert((await page.locator('#avatar-preview').getAttribute('src')).startsWith('blob:'));
