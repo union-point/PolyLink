@@ -25,9 +25,12 @@
 }
 .enrollment-select.is-open { z-index: 20; }
 
-.enrollment-select-list [role=option] { padding: 9px 8px; white-space: normal; overflow-wrap: anywhere; border-radius: 6px; }
-.enrollment-select-list [role=option][aria-selected=true] { background: var(--primary-blue) linear-gradient(var(--primary-blue), var(--primary-blue)); color: var(--card-background); }
-.enrollment-select-list [role=option].is-active { background: var(--surface); color: var(--font-color-primary); }
+.enrollment-select-list [role=option] { padding: 9px 8px; white-space: normal; overflow-wrap: anywhere; border-radius: 6px; transition: background-color 175ms ease; }
+.enrollment-select-list [role=option]:not([aria-disabled=true]):not([aria-selected=true]):hover,
+.enrollment-select-list [role=option].is-active { background-color: var(--surface); }
+.enrollment-select-list [role=option][aria-selected=true] { background-color: var(--primary-blue); color: var(--card-background); }
+.enrollment-select-list [role=option].is-active { outline: 2px solid var(--primary-blue); outline-offset: -2px; }
+.enrollment-select-list [role=option][aria-selected=true].is-active { outline-color: var(--card-background); }
 @media (max-width: 640px) {
   .enrollment-select-trigger { padding: 8px 10px; font-size: 13px; }
 }
