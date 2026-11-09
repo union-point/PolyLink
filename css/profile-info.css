@@ -35,3 +35,5 @@
 .enrollment-select-list [role=option] { cursor: pointer; }
 .enrollment-select-list [aria-disabled=true] { opacity: .55; cursor: default; }
 .enrollment-select-native { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; clip-path: inset(50%); }
+
+.enrollment-select-value { min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }

@@ -7,6 +7,9 @@ export function initializeProfileSelects(form) {
     const trigger = document.createElement('button');
     trigger.type = 'button';
     trigger.className = 'enrollment-select-trigger';
+    const valueText = document.createElement('span');
+    valueText.className = 'enrollment-select-value';
+    trigger.append(valueText);
     trigger.id = `${select.id}-trigger`;
     trigger.setAttribute('role', 'combobox');
     trigger.setAttribute('aria-haspopup', 'listbox');
@@ -63,7 +66,7 @@ export function initializeProfileSelects(form) {
       if (focus) trigger.focus();
     }
     function sync() {
-      trigger.textContent = select.selectedOptions[0]?.textContent || 'Ընտրեք…';
+      valueText.textContent = select.selectedOptions[0]?.textContent || 'Ընտրեք…';
       if (trigger.disabled !== select.disabled) trigger.disabled = select.disabled;
       options.forEach((item, index) => item.setAttribute('aria-selected', String(index === select.selectedIndex)));
       trigger.classList.toggle('error', select.classList.contains('error'));
