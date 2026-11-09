@@ -14,8 +14,10 @@
 .posts-page .create-post-container { display: flex; align-items: center; gap: 12px; margin-bottom: 18px; }
 .posts-page .avatar-wrapper { display: flex; flex-shrink: 0; }
 .posts-page .avatar-wrapper img { width: 44px; height: 44px; border-radius: 50%; object-fit: cover; }
-.posts-page .create-post-btn { flex: 1; min-width: 0; min-height: 48px; padding: 12px 18px; text-align: left; font: inherit; font-weight: 500; color: var(--font-color-secondary); background: transparent; border: 1px solid var(--border-color); border-radius: 24px; cursor: pointer; transition: background-color 160ms ease, border-color 160ms ease; }
-.posts-page .create-post-btn:hover { background: var(--window-background); border-color: var(--primary-blue); }
+.posts-page .create-post-btn { flex: 1; min-width: 0; min-height: 48px; padding: 12px 18px; text-align: center; font: inherit; font-weight: 600; color: #fff; background: #0a66c2; border: 1px solid #0958a7; border-radius: 12px; cursor: pointer; box-shadow: 0 3px 8px rgba(10, 102, 194, .22); transition: background-color 160ms ease, box-shadow 160ms ease; }
+.posts-page .create-post-btn::before { content: "+"; display: inline-block; margin-inline-end: 10px; font-size: 1.3em; line-height: 1; vertical-align: -1px; }
+.posts-page .create-post-btn:hover { background: #0856a4; box-shadow: 0 4px 12px rgba(10, 102, 194, .3); }
+.posts-page .create-post-btn:active { background: #074987; box-shadow: none; }
 .posts-page .filters { display: flex; gap: 10px; flex-wrap: wrap; }
 .posts-page .tag-selector { min-width: 0; width: min(260px, 100%); padding: 10px 14px; border: 1px solid var(--border-color); border-radius: 20px; background: var(--card-background); color: var(--font-color-secondary); font: inherit; font-size: 14px; cursor: pointer; transition: border-color 160ms ease; }
 .posts-page .tag-selector:hover { border-color: var(--primary-blue); }
