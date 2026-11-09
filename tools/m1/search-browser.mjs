@@ -5,6 +5,7 @@ const browser = await chromium.launch({ headless: true });
 try {
   const page = await browser.newPage();
   const errors = []; page.on('pageerror', error => { errors.push(error.message); console.error('Page error:', error.message); });
+  await page.route('**/js/shared/activity-notifications.js', route => route.fulfill({contentType:'text/javascript', body:'export const startActivityNotifications = () => () => {};'}));
   await page.route('**/js/config.js', route => route.fulfill({ contentType: 'text/javascript', body: `export const config={dataMode:'mock'};` }));
   await page.route('**/js/services/index.js', route => route.fulfill({ contentType: 'text/javascript', body: `
     const user={id:'1',onboardingComplete:true};
@@ -31,6 +32,7 @@ try {
   assert.equal(await page.locator('.search-education img').count(),0);
   await page.locator('[data-user-id="2"] summary').click();
   assert(await page.locator('[data-user-id="2"] details').evaluate(element=>element.open));
+  assert(await page.locator('#faculty-trigger').isDisabled());
   await page.locator('#filter-status button').click();
   await page.waitForFunction(()=>document.querySelector('#faculty option[value="1"]'));
   assert.equal(await page.locator('#year option').last().textContent(),'2026');
@@ -55,13 +57,26 @@ try {
   await page.locator('.search-bar input').fill('empty');
   await page.locator('.search-bar input').press('Enter');
   await page.waitForFunction(()=>document.querySelector('.graduates')?.textContent.includes('չեն գտնվել'));
-  await page.locator('.search-bar input').fill(''); await page.locator('#faculty').selectOption('1');
+  await page.locator('.search-bar input').fill(''); await page.locator('#faculty-trigger').click(); await page.locator('#faculty-option-1').click();
   await page.waitForFunction(()=>window.searchTest.calls.at(-1).specializationId==='1');
   assert.equal((await page.evaluate(()=>window.searchTest.calls.at(-1))).cursor,undefined);
   await page.waitForSelector('[data-user-id="2"]');
   await page.screenshot({path:'/tmp/polylink-search-desktop.png',fullPage:true});
   await page.setViewportSize({width:390,height:844});
+  for (const id of ['faculty','year','institute']) {
+    const trigger=page.locator(`#${id}-trigger`), menu=page.locator(`#${id}-list`);
+    await trigger.click();
+    const field=await trigger.boundingBox(), popup=await menu.boundingBox();
+    assert(popup.y>=field.y+field.height, 'Menu opens below the field');
+    assert(Math.abs(popup.width-field.width)<1, 'Menu matches field width');
+    await trigger.press('Home'); await trigger.press('ArrowDown'); await trigger.press('Enter');
+    assert.notEqual(await page.locator(`#${id}`).inputValue(),'');
+    await trigger.click(); await trigger.press('Escape');
+    assert(await menu.isHidden());
+  }
+  await page.locator('#institute-trigger').click();
   await page.screenshot({path:'/tmp/polylink-search-mobile.png',fullPage:true});
+  await page.locator('#institute-trigger').press('Escape');
   assert(await page.locator('.search-bar input').evaluate(element => element.getBoundingClientRect().top >= document.querySelector('.header').getBoundingClientRect().bottom));
   assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
   assert.deepEqual(errors,[]);

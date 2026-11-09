@@ -1,3 +1,4 @@
+import { initializeSelects } from './shared/select.js';
 import { educationRange } from './profile/contracts.js';
 import { openDirectWithUnblock } from './chat/direct-contact.js';
 import { search, chat } from './services/index.js';
@@ -15,6 +16,7 @@ start(async () => {
   const list = document.querySelector('.graduates'), query = document.querySelector('.search-bar input');
   const specialization = document.getElementById('faculty'), year = document.getElementById('year'), institute = document.getElementById('institute');
   const status = document.getElementById('search-status'), filterStatus = document.getElementById('filter-status'), more = document.getElementById('search-more');
+  const refreshSelects = initializeSelects(document.querySelector('.filters'));
   let generation = 0, debounce, cursor = null, loading = false, activeFilters;
   const people = new Map();
   const filters = () => ({ q: query.value, specializationId: specialization.value || undefined, year: year.value || undefined, instituteId: institute.value || undefined, limit: 50 });
@@ -56,6 +58,7 @@ start(async () => {
         for (const option of options) element.add(new Option(option.label, option.id));
         element.disabled = false;
       }
+      refreshSelects();
       filterStatus.replaceChildren();
     } catch (error) { stateMessage(filterStatus, error.message, { retry: loadFilters }); }
   }
