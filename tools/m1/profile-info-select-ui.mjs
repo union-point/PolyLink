@@ -12,7 +12,7 @@ try {
  for(const select of document.querySelectorAll('select'))select.replaceChildren(new Option('Ընտրեք…',''),new Option('Համակարգչային ճարտարագիտություն','1'),new Option('Երկար անվանումով համալսարանի ֆակուլտետ և մասնագիտություն','2'));
  window.dropdownEvents = {input: 0, change: 0};
  for (const type of ['input', 'change']) document.querySelector('form').addEventListener(type, () => window.dropdownEvents[type]++);
- const {initializeProfileSelects}=await import('/js/profile-info-select.js');initializeProfileSelects(document.querySelector('form'));
+ const {initializeSelects}=await import('/js/shared/select.js');initializeSelects(document.querySelector('form'));
  });
  for(const id of ['instituteId','specializationId','departmentId','professionId']) {
  await page.evaluate(()=>{document.querySelector('[data-lecturer]').hidden=false;});

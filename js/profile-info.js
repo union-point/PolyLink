@@ -2,7 +2,7 @@ import { auth } from './services/index.js';
 import { start, initializeTheme, pending, showError } from './shared/ui.js';
 import { finishLogin, inlineCode, initializePasswordControls } from './shared/auth-ui.js';
 import { initializeAvatarUpload } from './shared/avatar-upload.js';
-import { initializeProfileSelects } from './profile-info-select.js';
+import { initializeSelects } from './shared/select.js';
 import { DataError } from './data/errors.js';
 
 start(async () => {
@@ -71,7 +71,7 @@ start(async () => {
       for (const [field, list] of [['instituteId', options.institutes], ['specializationId', options.specializations], ['departmentId', options.departments], ['professionId', options.professions]])
         element(field).replaceChildren(new Option('Ընտրեք…', ''), ...list.map(item => new Option(item.name, String(item.id))));
     }
-    refreshSelects = initializeProfileSelects(form);
+    refreshSelects = initializeSelects(form);
     render(next);
   } catch (error) { showError(form, error); return; }
 

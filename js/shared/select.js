@@ -1,37 +1,40 @@
 // Preserve native form values and validation behind a consistently styled listbox.
-export function initializeProfileSelects(form) {
+export function initializeSelects(container) {
   const controls = [];
-  for (const select of form.querySelectorAll('select')) {
+  for (const select of container.querySelectorAll('select')) {
     const root = document.createElement('div');
-    root.className = 'enrollment-select';
+    root.className = 'app-select';
     const trigger = document.createElement('button');
     trigger.type = 'button';
-    trigger.className = 'enrollment-select-trigger';
+    trigger.className = 'app-select-trigger';
     const valueText = document.createElement('span');
-    valueText.className = 'enrollment-select-value';
+    valueText.className = 'app-select-value';
     trigger.append(valueText);
     trigger.id = `${select.id}-trigger`;
     trigger.setAttribute('role', 'combobox');
     trigger.setAttribute('aria-haspopup', 'listbox');
     trigger.setAttribute('aria-controls', `${select.id}-list`);
     trigger.setAttribute('aria-expanded', 'false');
-    const label = form.querySelector(`label[for="${select.id}"]`);
+    const label = container.querySelector(`label[for="${select.id}"]`);
     label.id ||= `${select.id}-label`;
     trigger.setAttribute('aria-labelledby', `${label.id} ${trigger.id}`);
     select.setAttribute('aria-labelledby', label.id);
     select.before(root);
     const list = document.createElement('div');
     list.id = `${select.id}-list`;
-    list.className = 'enrollment-select-list';
+    list.className = 'app-select-list';
     list.setAttribute('role', 'listbox');
     list.setAttribute('aria-labelledby', label.id);
     list.hidden = true;
     root.append(trigger, select, list);
-    select.classList.add('enrollment-select-native');
+    select.classList.add('app-select-native');
     select.setAttribute('aria-hidden', 'true');
     select.tabIndex = -1;
     let open = false, active = select.selectedIndex, search = '', searchedAt = 0;
-    const options = [...select.options].map((option, index) => {
+    let options;
+    function rebuild() {
+      list.replaceChildren();
+      options = [...select.options].map((option, index) => {
       const item = document.createElement('div');
       item.id = `${select.id}-option-${index}`;
       item.setAttribute('role', 'option');
@@ -41,7 +44,9 @@ export function initializeProfileSelects(form) {
       item.addEventListener('pointerdown', event => event.preventDefault());
       item.addEventListener('click', () => { if (!option.disabled) { active = index; choose(); } });
       return item;
-    });
+      });
+    }
+    rebuild();
     function highlight(index) {
       active = index;
       options.forEach((item, i) => item.classList.toggle('is-active', i === active));
@@ -122,13 +127,13 @@ export function initializeProfileSelects(form) {
     select.addEventListener('change', sync);
     root.addEventListener('focusout', event => { if (!root.contains(event.relatedTarget)) close(); });
     document.addEventListener('pointerdown', event => { if (!root.contains(event.target)) close(); });
-    controls.push({ close, sync });
+    controls.push({ close, sync, refresh() { close(); rebuild(); sync(); } });
     sync();
   }
   // Reflect validation errors, role switches and the enclosing busy fieldset.
-  new MutationObserver(() => controls.forEach(control => control.sync())).observe(form, {
+  new MutationObserver(() => controls.forEach(control => control.sync())).observe(container, {
     subtree: true, attributes: true,
     attributeFilter: ['disabled', 'required', 'hidden', 'aria-invalid', 'title'],
   });
-  return () => controls.forEach(control => control.sync());
+  return () => controls.forEach(control => control.refresh());
 }

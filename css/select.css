@@ -1,0 +1,45 @@
+/* Page-owned menus always open below their field, independently of OS popups. */
+.app-select { position: relative; min-width: 0; }
+.app-select-trigger {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  width: 100%; min-width: 0; padding: 9px 12px; text-align: left;
+  border: 1px solid var(--border); border-radius: 10px;
+  color: var(--font-color-primary); background: var(--card-background);
+}
+.app-select-trigger::after {
+  content: ''; flex: 0 0 7px; height: 7px; margin-right: 3px;
+  border-right: 2px solid currentColor; border-bottom: 2px solid currentColor;
+  transform: translateY(-2px) rotate(45deg);
+}
+.app-select-trigger:hover:not(:disabled) { border-color: var(--primary-blue); }
+.app-select-trigger:focus-visible { outline: 2px solid var(--primary-blue); outline-offset: 2px; }
+.app-select-trigger.error { border-color: var(--danger); }
+.app-select-list {
+  position: absolute; top: calc(100% + 4px); left: 0; z-index: 20;
+  width: 100%; height: auto; max-height: 240px; margin: 0; padding: 4px;
+  appearance: none; -webkit-appearance: none;
+  border: 1px solid var(--border); border-radius: 10px;
+  background: var(--card-background); color: var(--font-color-primary);
+  overflow-y: auto; box-shadow: 0 8px 24px #19395626;
+
+}
+.app-select.is-open { z-index: 20; }
+
+.app-select-list [role=option] { padding: 9px 8px; white-space: normal; overflow-wrap: anywhere; border-radius: 6px; transition: background-color 175ms ease; }
+.app-select-list [role=option]:not([aria-disabled=true]):not([aria-selected=true]):hover,
+.app-select-list [role=option].is-active { background-color: var(--surface); }
+.app-select-list [role=option][aria-selected=true] { background-color: var(--primary-blue); color: var(--card-background); }
+.app-select-list [role=option].is-active { outline: 2px solid var(--primary-blue); outline-offset: -2px; }
+.app-select-list [role=option][aria-selected=true].is-active { outline-color: var(--card-background); }
+
+
+.app-select-list [role=option] { cursor: pointer; }
+.app-select-list [aria-disabled=true] { opacity: .55; cursor: default; }
+.app-select-native { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; clip-path: inset(50%); }
+
+.app-select-value { min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+
+.app-select-list[hidden] { display: none; }
+.app-select-trigger { font: inherit; cursor: pointer; }
+.app-select-trigger:disabled { opacity: .55; cursor: default; }
+@media (prefers-reduced-motion: reduce) { .app-select-list [role=option] { transition: none; } }
