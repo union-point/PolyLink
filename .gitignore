@@ -92,3 +92,4 @@ Desktop.ini
 
 # Local alumni import environment
 .venv-alumni/
+db/alumni.xlsx
