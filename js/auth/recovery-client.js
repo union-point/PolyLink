@@ -31,6 +31,13 @@ export function createRecoveryClient(api,{local,readVault,finish}){
           await post('commit',{operationId:operation.operationId}).catch(async error=>{if(!ambiguous(error))throw error;await post('commit',{operationId:operation.operationId});});
           remove();return await finish(operation.email,newPassword);
         }
+        if(operation.keySetupRequired){
+          const settings={scheme:'PLK1',salt:b64(s.randombytes_buf(16)),opsLimit:2,memoryBytes:67108864};derived=await derive(newPassword,settings);
+          const request={derivation:settings,loginSecret:b64(derived.login)};
+          try{await post('password',request);}
+          catch(error){if(!ambiguous(error))throw error;await post('password',request);}
+          remove();return await finish(operation.email,newPassword);
+        }
         let request;
         if(draft?.operationId===operation.operationId){
           derived=await derive(newPassword,draft.derivation);let plain;

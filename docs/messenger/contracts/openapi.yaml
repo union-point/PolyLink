@@ -1025,6 +1025,33 @@ paths:
           application/json:
             schema:
               $ref: '#/components/schemas/OperationRequest'
+  /auth/recovery/password:
+    post:
+      operationId: recoveryPasswordBeforeSetup
+      description: Replace credentials after email proof only while the admitted account has no vault or identity. Revoke previous sessions and competing operations; leave key setup to login. Identical retries replay the completed result.
+      security:
+      - recoveryCookie: []
+      parameters:
+      - $ref: '#/components/parameters/Csrf'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EnrollmentPassword'
+      responses:
+        '200':
+          description: Credential replacement completed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OperationStatus'
+        '401':
+          description: Recovery authorization required
+        '403':
+          description: CSRF proof required
+        '409':
+          description: Account or operation changed, or a vault already exists
   /auth/recovery/prepare:
     post:
       operationId: recoveryPrepare
@@ -2581,6 +2608,8 @@ components:
           type: string
           format: email
           maxLength: 255
+        keySetupRequired:
+          type: boolean
         packagePrepared:
           type: boolean
       required:

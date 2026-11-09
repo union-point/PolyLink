@@ -39,6 +39,12 @@ public class RecoveryController {
         return recovery.status(request);
     }
 
+    @PostMapping("/password")
+    public Map<String, Object> password(
+            @Valid @RequestBody EnrollmentDtos.Password input, HttpServletRequest request) {
+        return recovery.password(input, request);
+    }
+
     @PostMapping("/unlock")
     public Map<String, Object> unlock(
             @Valid @RequestBody AuthDtos.OperationId input, HttpServletRequest request) {

@@ -136,6 +136,7 @@ public class RecoveryService {
         value.put("userId", "" + user(row));
         value.put("email", row.get("VerifiedEmail"));
         value.put("packagePrepared", row.get("PackageFingerprint") != null);
+        value.put("keySetupRequired", "0".equals(base(row).vaultKey()));
         if ("COMPLETED".equals(row.get("State")))
             value.put("resultVersions", mapper.readTree((byte[]) row.get("CompletionResult")));
         return value;
@@ -151,8 +152,7 @@ public class RecoveryService {
                                 a ->
                                         ("PENDING".equals(a.admission())
                                                 || (a.verified()
-                                                        && "ADMITTED".equals(a.admission())
-                                                        && a.vaultKey() > 0)))
+                                                        && "ADMITTED".equals(a.admission()))))
                         .orElse(null);
         String browser = secrets.token();
         var challenge =
@@ -189,8 +189,8 @@ public class RecoveryService {
                             var account = accounts.lock(proven.id());
                             account.requireAdmitted();
                             if (!account.versions().equals(proven.versions())
-                                    || !account.email().equals(proven.email())
-                                    || account.vaultKey() == 0) throw AuthFailure.conflict();
+                                    || !account.email().equals(proven.email()))
+                                throw AuthFailure.conflict();
                             db.update(
                                     "UPDATE keyvault.Operations SET State='CANCELLED',PreparedCiphertext=NULL,PreparedLoginVerifier=NULL WHERE UserId=? AND Kind IN ('RECOVERY_LOCAL','RECOVERY_SERVICE') AND State NOT IN ('COMPLETED','CANCELLED','EXPIRED')",
                                     account.id());
@@ -225,6 +225,73 @@ public class RecoveryService {
         return status(capability(request, false));
     }
 
+    /** Email-proven credential replacement before the first vault has been created. */
+    public Map<String, Object> password(EnrollmentDtos.Password input, HttpServletRequest request) {
+        var initial = capability(request, true);
+        limits.consume("RECOVERY_PREP", "" + user(initial), 20, 1800);
+        Secrets.decode(input.loginSecret(), 32);
+        byte[] salt = Secrets.decode(input.derivation().salt(), 16);
+        byte[] fingerprint = Secrets.digest(mapper.writeValueAsBytes(input));
+        String verifier = encoder.encode(input.loginSecret());
+        return tx.execute(
+                t -> {
+                    var account = accounts.lock(user(initial));
+                    var row = capability(request, true);
+                    if ("COMPLETED".equals(row.get("State"))
+                            && "0".equals(base(row).vaultKey())
+                            && Secrets.equal(fingerprint, (byte[]) row.get("PackageFingerprint")))
+                        return status(row);
+                    active(row);
+                    if (account.vaultKey() != 0
+                            || account.vaultRevision() != 0
+                            || account.identity() != 0
+                            || !"VERIFIED".equals(row.get("State"))
+                            || !"RECOVERY_LOCAL".equals(row.get("Kind")))
+                        throw AuthFailure.conflict();
+                    if (!Rows.query(
+                                            db,
+                                            "SELECT UserId FROM keyvault.Vaults WHERE UserId=?",
+                                            account.id())
+                                    .isEmpty()
+                            || !Rows.query(
+                                            db,
+                                            "SELECT UserId FROM keyvault.Identities WHERE UserId=?",
+                                            account.id())
+                                    .isEmpty()) throw AuthFailure.conflict();
+                    db.update(
+                            "UPDATE auth.AccountSecurity SET CredentialVersion=CredentialVersion+1,ClientSalt=?,ClientOpsLimit=?,ClientMemoryBytes=?,LoginVerifier=?,UpdatedAt=? WHERE UserId=?",
+                            salt,
+                            input.derivation().opsLimit(),
+                            input.derivation().memoryBytes(),
+                            verifier,
+                            now(),
+                            account.id());
+                    db.update(
+                            "UPDATE auth.Sessions SET RevokedAt=?,ReplayPacket=NULL WHERE UserId=? AND RevokedAt IS NULL",
+                            now(),
+                            account.id());
+                    db.update(
+                            "UPDATE auth.EnrollmentSessions SET RevokedAt=? WHERE UserId=? AND RevokedAt IS NULL",
+                            now(),
+                            account.id());
+                    db.update(
+                            "UPDATE auth.EmailChallenges SET ConsumedAt=? WHERE UserId=? AND ConsumedAt IS NULL",
+                            now(),
+                            account.id());
+                    db.update(
+                            "UPDATE keyvault.Operations SET State='CANCELLED',PreparedCiphertext=NULL,PreparedLoginVerifier=NULL WHERE UserId=? AND OperationId<>? AND State NOT IN ('COMPLETED','CANCELLED','EXPIRED')",
+                            account.id(),
+                            id(row));
+                    db.update(
+                            "UPDATE keyvault.Operations SET State='COMPLETED',PackageFingerprint=?,CompletionResult=?,CompletedAt=? WHERE OperationId=?",
+                            fingerprint,
+                            mapper.writeValueAsBytes(accounts.get(account.id()).versions()),
+                            now(),
+                            id(row));
+                    return status(row(id(row)));
+                });
+    }
+
     public Map<String, Object> unlock(AuthDtos.OperationId input, HttpServletRequest request) {
         var initial = capability(request, true);
         if (!id(initial).equals(input.operationId())) throw AuthFailure.denied();
@@ -235,6 +302,7 @@ public class RecoveryService {
                             accounts.lock(user(initial));
                             var row = capability(request, true);
                             var account = active(row);
+                            if (account.vaultKey() == 0) throw AuthFailure.conflict();
                             if (!Set.of("VERIFIED", "WAITING_SERVICE").contains(row.get("State"))
                                     || row.get("PackageFingerprint") != null)
                                 throw AuthFailure.conflict();

@@ -93,6 +93,58 @@ class RecoveryIT {
     }
 
     @Test
+    void setupAfterEmailProofInvalidatesPasswordOnlyRecovery() throws Exception {
+        var a = fixture.enroll("graduate");
+        var browser = fixture.new Browser();
+        verify(a, browser);
+        var setup = fixture.packageFor(a);
+        assertThat(a.browser().post("/keys/setup/prepare", setup).statusCode()).isEqualTo(200);
+        assertThat(
+                        a.browser()
+                                .post(
+                                        "/keys/setup/commit",
+                                        Map.of("operationId", setup.get("operationId")))
+                                .statusCode())
+                .isEqualTo(200);
+        var old = mapper.writeValueAsString(passwords.vault(a.id()));
+        var input =
+                Map.of(
+                        "derivation",
+                        fixture.registration(
+                                        a.email(),
+                                        "graduate",
+                                        IdentityIT.secret(),
+                                        IdentityIT.salt())
+                                .get("derivation"),
+                        "loginSecret",
+                        IdentityIT.secret());
+        assertThat(browser.post("/auth/recovery/password", input).statusCode()).isEqualTo(409);
+        assertThat(mapper.writeValueAsString(passwords.vault(a.id()))).isEqualTo(old);
+    }
+
+    @Test
+    void passwordOnlyRecoveryCannotReplaceAnExistingVault() throws Exception {
+        var a = passwords.configured();
+        var old = passwords.vault(a.id());
+        var browser = fixture.new Browser();
+        verify(a, browser);
+        var input =
+                Map.of(
+                        "derivation",
+                        fixture.registration(
+                                        a.email(),
+                                        "graduate",
+                                        IdentityIT.secret(),
+                                        IdentityIT.salt())
+                                .get("derivation"),
+                        "loginSecret",
+                        IdentityIT.secret());
+        assertThat(browser.post("/auth/recovery/password", input).statusCode()).isEqualTo(409);
+        assertThat(mapper.writeValueAsString(passwords.vault(a.id())))
+                .isEqualTo(mapper.writeValueAsString(old));
+    }
+
+    @Test
     void serviceRecoveryRotatesAtomicallyAndCompletedCookieOnlyReplaysItsResult() throws Exception {
         var a = passwords.configured();
         var old = passwords.vault(a.id());

@@ -144,6 +144,86 @@ class EnrollmentIT {
     }
 
     @Test
+    void admittedAccountCanRecoverBeforeFirstLogin() throws Exception {
+        var a = applicant("graduate");
+        admit(a);
+        var browser = f.new Browser();
+        var challenge =
+                browser.json(browser.post("/auth/recovery/request", Map.of("email", a.email)));
+        var verified =
+                browser.post(
+                        "/auth/recovery/verify",
+                        Map.of(
+                                "challengeId",
+                                challenge.path("challengeId").asText(),
+                                "code",
+                                f.mailCode(a.email)));
+        assertThat(verified.statusCode()).as(verified.body()).isEqualTo(200);
+        assertThat(browser.json(verified).path("operation").path("keySetupRequired").asBoolean())
+                .isTrue();
+        assertThat(browser.get("/auth/me").statusCode()).isEqualTo(401);
+        String next = IdentityIT.secret();
+        var input =
+                Map.of(
+                        "derivation",
+                        f.registration(a.email, "graduate", next, IdentityIT.salt())
+                                .get("derivation"),
+                        "loginSecret",
+                        next);
+        browser.csrf = false;
+        assertThat(browser.post("/auth/recovery/password", input).statusCode()).isEqualTo(403);
+        browser.csrf = true;
+        assertThat(a.browser.post("/auth/recovery/password", input).statusCode()).isEqualTo(401);
+        var changed = browser.post("/auth/recovery/password", input);
+        assertThat(changed.statusCode()).as(changed.body()).isEqualTo(200);
+        assertThat(browser.post("/auth/recovery/password", input).statusCode()).isEqualTo(200);
+        assertThat(
+                        db.queryForObject(
+                                "SELECT CredentialVersion FROM auth.AccountSecurity WHERE UserId=?",
+                                Long.class,
+                                a.id))
+                .isEqualTo(2L);
+        assertThat(
+                        db.queryForObject(
+                                "SELECT COUNT(*) FROM keyvault.Vaults WHERE UserId=?",
+                                Integer.class,
+                                a.id))
+                .isZero();
+        assertThat(
+                        a.browser
+                                .post(
+                                        "/auth/login",
+                                        Map.of(
+                                                "email",
+                                                a.email,
+                                                "scheme",
+                                                "PLK1",
+                                                "loginSecret",
+                                                a.secret))
+                                .statusCode())
+                .isEqualTo(401);
+        var login =
+                browser.post(
+                        "/auth/recovery/login",
+                        Map.of("email", a.email, "scheme", "PLK1", "loginSecret", next));
+        assertThat(login.statusCode()).as(login.body()).isEqualTo(200);
+        assertThat(browser.json(login).path("session").path("keySetupRequired").asBoolean())
+                .isTrue();
+        assertThat(
+                        browser.post(
+                                        "/auth/recovery/login",
+                                        Map.of(
+                                                "email",
+                                                a.email,
+                                                "scheme",
+                                                "PLK1",
+                                                "loginSecret",
+                                                next))
+                                .statusCode())
+                .isEqualTo(401);
+    }
+
+    @Test
     void avatarUploadPersistsReplacesAndRemovesPhotoAndEnforcesRateLimit() throws Exception {
         var a = applicant("graduate");
         var source = new ByteArrayOutputStream();

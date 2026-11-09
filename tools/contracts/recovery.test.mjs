@@ -49,3 +49,18 @@ test('reload resumes exact encrypted candidate; wrong password cannot replace an
   f.recover();await resumed.resetPassword({newPassword:'Retry fixture pass!9'});
   const requests=f.calls.filter(c=>c.url.endsWith('/prepare'));assert.deepEqual(requests[0].data,requests[1].data);assert.equal(f.calls.filter(c=>c.url.endsWith('/unlock')).length,1);
 });
+
+test('pre-vault recovery retries a lost response with identical credentials then finishes login',async()=>{
+  records.clear();const calls=[];let lost=true,finished=false;
+  const api={request:async request=>{
+    calls.push(structuredClone(request));
+    if(request.url.endsWith('/status'))return {state:'VERIFIED',keySetupRequired:true,email:'fixture@example.invalid'};
+    assert(request.url.endsWith('/password'));
+    if(lost){lost=false;throw Object.assign(new Error('Lost response'),{code:'NETWORK'});}
+    return {state:'COMPLETED'};
+  }};
+  const client=createRecoveryClient(api,{finish:async(email,password)=>{assert.equal(email,'fixture@example.invalid');assert.equal(password,'Recovery fixture pass!9');finished=true;return {status:'authenticated'};}});
+  assert.equal((await client.resetPassword({newPassword:'Recovery fixture pass!9'})).status,'authenticated');
+  assert(finished);assert.equal(calls.length,3);assert.deepEqual(calls[1].data,calls[2].data);
+  assert(!JSON.stringify(calls).includes('Recovery fixture pass!9'));assert.equal(records.size,0);
+});

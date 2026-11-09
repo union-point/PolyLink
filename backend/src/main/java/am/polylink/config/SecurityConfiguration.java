@@ -54,6 +54,7 @@ public class SecurityConfiguration {
                                 .requestMatchers(
                                         HttpMethod.POST,
                                         "/auth/recovery/request",
+                                        "/auth/recovery/password",
                                         "/auth/recovery/verify",
                                         "/auth/recovery/unlock",
                                         "/auth/recovery/prepare",
